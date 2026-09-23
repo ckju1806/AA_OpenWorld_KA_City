@@ -25,8 +25,8 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 | Ordner | Inhalt |
 |---|---|
 | `project.godot`, `export_presets.cfg` | Godot-Projekt- und Exportkonfiguration |
-| `src/` | GDScript-Quellcode, getrennt nach Systemen (autoload, core, player, vehicles, world, traffic, npc, police, missions, ui, audio, save) |
-| `scenes/` | Szenen (Boot, Hauptmenü, Spiel) |
+| `src/` | GDScript-Quellcode, getrennt nach Systemen (autoload, core, game, player, vehicles, world, traffic, npc, police, missions, ui, save, debug) |
+| `scenes/` | Einstiegsszenen (Hauptmenü, Spiel); Inhalte entstehen zur Laufzeit aus Daten |
 | `data/` | Datengetriebene Inhalte: Karte (`world/`), Fahrzeuge (`vehicles/`), Missionen (`missions/`) |
 | `assets/` | Shader, Audio, Icons (selbst erzeugt) |
 | `tests/` | Automatisierte Unit- und Integrationstests |
@@ -37,10 +37,10 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 | `scripts/` | Start-, Build-, Test- und Setup-Skripte (Windows/Linux) |
 | `tools/` | Generatoren (Audio, Icon) – nicht Teil des Spiels |
 | `config/` | Toolchain-Versionen, keine Secrets |
-| `artifacts/` | Screenshots und Testlogs |
+| `artifacts/` | Screenshots je Meilenstein (`screenshots/A`–`G`, `H_export_pck` = aus dem exportierten Paket) und Test-/Exportlogs |
 | `backups/` | Dateisicherungen vor Änderungen |
 | `logs/`, `tmp/` | lokal, nicht versioniert |
 | `sensitive/` | leer – Projekt benötigt keine Zugangsdaten |
 | `_inventory/` | Werkzeug-Inventar |
 | `_quarantine/` | ungeprüfte Dateien (leer) |
-| `build/` | Windows-Build (nicht versioniert) |
+| `build/` | Windows-Build `build/windows/Faecherstadt.exe` + `.pck`, ZIP (nicht versioniert, Nutzerentscheidung) |

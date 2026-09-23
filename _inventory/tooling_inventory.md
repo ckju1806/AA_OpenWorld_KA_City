@@ -8,7 +8,7 @@
 | Mesa lavapipe (Vulkan, Software) | per apt installiert | Forward+-Rendering ohne GPU |
 | Mesa llvmpipe (OpenGL, Software) | vorhanden | Fallback-Rendering |
 | Python 3.11 | vorhanden | Audio-/Icon-Generatoren (nur Stdlib) |
-| Wine | nicht installiert | optionaler Rauchtest (kein Windows-Ersatz) |
+| Wine 9.0 (Ubuntu-Paket `wine64`) | installiert (Meilenstein H) | Rauchtest versucht: offizielles Godot-4.7.2-Template stürzt darin bereits bei `--version` ab → Rauchtest blockiert |
 | Echtes Windows 11 | **nicht verfügbar** | Windows-Start nicht prüfbar |
 
 Netzwerk: godotengine.org, tuxfamily, Wikipedia, OpenStreetMap, Asset-Portale durch Egress-Policy blockiert; GitHub-Releases (godotengine) und Ubuntu-Archiv erreichbar.

@@ -165,3 +165,18 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   blockierte Position → Startpunkt, Autosave, Pause/Karte pausieren und geben frei, Codec-Feld `mission`.
   Screenshots `artifacts/screenshots/G/` (Hauptmenü, Vollkarte, Pausenmenü, F3 + Minikarte) visuell geprüft.
 - **Hinweis:** Die F3-Anzeige zeigt unter Software-Rendering (Xvfb/lavapipe) ca. 4 FPS – das ist **kein** Maß für echte Hardware.
+
+## 2026-09-23 – Meilenstein H: Gesamttest, Windows-Export, Dokumentation
+
+- **Ziel:** reproduzierbarer Windows-x64-Build mit Prüfung, vollständige Doku, ehrliche Testübersicht.
+- **Änderungsklasse:** mittel (Export-Profil, Skripte, Doku; kein Spielcode) → Restore-Punkt: `866c482`.
+- **Umgesetzt:** `export_presets.cfg` (Windows Desktop x86_64, Release, JSON-Daten eingeschlossen, Nicht-Spiel-Ordner ausgeschlossen,
+  Symbol + Metadaten), `scripts/linux/{setup_godot.sh,build_windows.sh}`, `scripts/windows/{start_game.bat,build_windows.ps1,
+  build_windows.bat,run_tests.bat}`, README.md, CONTROLS.md, ASSET_LICENSES.md, TEST_REPORT.md, KNOWN_ISSUES.md,
+  docs/ARCHITEKTUR.md, docs/ENTWICKLUNG.md, Inhaltsverzeichnis aktualisiert.
+- **Prüfung:** Gesamttestlauf (Ergebnis in TEST_REPORT.md); Export mit PE-Prüfung (x86_64, GUI), PCK-Kennung `GDPC`,
+  Symbol/Metadaten in der EXE, Bootstest und 22-Bilder-Screenshot-Tour aus der exportierten PCK unter Linux, ZIP-Integrität,
+  `setup_godot.sh` idempotent gegen vorhandene, SHA512-geprüfte Downloads.
+- **Blockiert:** Wine-Rauchtest (Wine 9.0 startet bereits das unveränderte offizielle Template nicht). **Nicht durchgeführt:**
+  Start unter echtem Windows, FPS-Messung auf Hardware, Windows-Skripte.
+- **Auslieferung:** ZIP per Datei-Übergabe in der Sitzung (Nutzerentscheidung), `build/` bleibt unversioniert; SHA256 in TEST_REPORT.md.
