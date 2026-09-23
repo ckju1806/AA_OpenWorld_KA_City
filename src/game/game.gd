@@ -11,6 +11,13 @@ var entities: Node3D = null      ## Fahrzeuge, Passanten usw.
 var paused_by_menu: bool = false
 var hud: Hud = null
 var missions: MissionSystem = null
+var lights: TrafficLights = null
+var traffic: TrafficManager = null
+var peds: PedestrianManager = null
+var police: PoliceManager = null
+## Umgebungsleben (Verkehr/Passanten/Streife); Tests können es abschalten
+var ambient_life: bool = true
+var _player_vehicles: Array[Vehicle] = []
 var _respawn_t: float = -1.0
 var _respawn_kind: String = "klinik"
 
@@ -30,6 +37,7 @@ func _ready() -> void:
 	add_child(hud)
 	hud.setup(self)
 	if world is CityWorld:
+		_setup_city_systems(world as CityWorld)
 		missions = MissionSystem.new()
 		missions.name = "Missionen"
 		add_child(missions)
@@ -88,6 +96,91 @@ func request_pause() -> void:
 	pass
 
 
+func _setup_city_systems(city: CityWorld) -> void:
+	if App.has_arg("--no-ambient"):
+		ambient_life = false
+	lights = TrafficLights.new()
+	lights.name = "Ampeln"
+	city.add_child(lights)
+	lights.setup(city.graph, city.slab_h)
+	traffic = TrafficManager.new()
+	traffic.name = "Verkehr"
+	add_child(traffic)
+	traffic.setup(self, city.graph, lights)
+	traffic.enabled = ambient_life
+	peds = PedestrianManager.new()
+	peds.name = "Passanten"
+	add_child(peds)
+	peds.setup(self, city)
+	peds.enabled = ambient_life
+	police = PoliceManager.new()
+	police.name = "Polizei"
+	add_child(police)
+	police.setup(self, city.graph, lights)
+	police.patrol_enabled = ambient_life
+	EventBus.player_busted.connect(_on_busted)
+	EventBus.player_entered_vehicle.connect(_on_player_entered_vehicle)
+
+
+# ------------------------------------------------------------------ Schnittstellen für Missionen/Systeme
+
+func get_wanted_level() -> int:
+	return police.wanted_level() if police != null else 0
+
+
+func set_wanted(level: int, reason: String, pos: Vector3) -> void:
+	if police != null:
+		police.set_wanted(level, reason, pos)
+
+
+func reset_wanted() -> void:
+	if police != null:
+		police.reset_wanted()
+
+
+func police_within(pos: Vector3, radius: float) -> bool:
+	return police != null and police.police_within(pos, radius)
+
+
+func police_can_see(pos: Vector3) -> bool:
+	return police != null and police.police_can_see(pos)
+
+
+func clear_area(pos: Vector3, radius: float) -> void:
+	if traffic != null:
+		traffic.clear_area(pos, radius)
+
+
+func on_driver_ejected(v: Vehicle) -> void:
+	if peds != null:
+		var door: Vector3 = v.global_position + v.global_basis.x * -(v.spec.width * 0.5 + 1.0)
+		peds.spawn_victim(door, player.global_position)
+
+
+func _on_busted() -> void:
+	EventBus.big_message.emit("FESTGENOMMEN", "Ab aufs Revier – das kostet Gebühren.", 3.0)
+	player.input_enabled = false
+	_respawn_kind = "revier"
+	_respawn_t = 3.0
+
+
+## Vom Spieler benutzte, zurückgelassene Fahrzeuge begrenzen (keine wachsende Objektmenge).
+func _on_player_entered_vehicle(v: Node) -> void:
+	var veh: Vehicle = v as Vehicle
+	if veh == null or _player_vehicles.has(veh):
+		return
+	_player_vehicles.append(veh)
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	while _player_vehicles.size() > 5:
+		var old: Vehicle = _player_vehicles[0]
+		_player_vehicles.remove_at(0)
+		if not is_instance_valid(old) or old == player.current_vehicle or old.ownership == Vehicle.Ownership.MISSION:
+			continue
+		var visible: bool = cam != null and cam.is_position_in_frustum(old.global_position) and cam.global_position.distance_to(old.global_position) < 150.0
+		if not visible and old.global_position.distance_to(player.global_position) > 60.0:
+			old.queue_free()
+
+
 func _physics_process(delta: float) -> void:
 	if _respawn_t > 0.0:
 		_respawn_t -= delta
@@ -103,6 +196,8 @@ func _on_player_died(cause: String) -> void:
 
 ## Wiederbelebung an der Klinik bzw. nach Festnahme am Revier (mit Gebühr).
 func _respawn_player() -> void:
+	player.input_enabled = true
+	reset_wanted()
 	var xf: Transform3D = get_spawn_transform()
 	if world is CityWorld:
 		xf = (world as CityWorld).respawn_point(_respawn_kind)
@@ -273,6 +368,45 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		van.driver = Vehicle.Driver.AI
 		camera_rig.yaw = -PI * 0.5
 	, 120)
+	tour.add_station("verkehr_kreuzung", func() -> void:
+		if missions.active != null:
+			missions.fail("Tour")
+			missions.abort()
+		player.force_leave_vehicle(Vector3(-482, y, 452))
+		camera_rig.yaw = deg_to_rad(-135.0)
+		camera_rig.pitch = -0.28
+		camera_rig._target_distance = 9.0
+		camera_rig.snap()
+		for i: int in 240:
+			await get_tree().physics_frame
+	, 30)
+	tour.add_station("passanten_kaiserstrasse", func() -> void:
+		camera_rig._target_distance = 4.2
+		player.global_position = Vector3(-80, y, 333)
+		camera_rig.yaw = deg_to_rad(90.0)
+		camera_rig.pitch = -0.12
+		camera_rig.snap()
+		for i: int in 180:
+			await get_tree().physics_frame
+	, 30)
+	tour.add_station("verfolgung_polizei", func() -> void:
+		var v: Vehicle = spawn_vehicle("sport", Vector3(-300, 0.1, 462.6), -PI * 0.5)
+		await get_tree().physics_frame
+		player.global_position = v.global_position + Vector3(0, 0, -3)
+		v.enter(player)
+		set_wanted(2, "Tour", player.global_position)
+		for i: int in 400:
+			await get_tree().physics_frame
+			if police.units.size() > 0:
+				var u: Vehicle = police.units[0]
+				v.teleport_to(u.global_position + (-u.global_basis.z) * 16.0 + u.global_basis.x * 2.0, u.global_rotation.y)
+				break
+		camera_rig.yaw = v.global_rotation.y + PI
+		camera_rig.pitch = -0.22
+		camera_rig.snap()
+		for i2: int in 60:
+			await get_tree().physics_frame
+	, 30)
 	tour.add_station("luftbild_faecher", func() -> void:
 		player.global_position = Vector3(0, y, 250)
 		camera_rig.yaw = 0.0

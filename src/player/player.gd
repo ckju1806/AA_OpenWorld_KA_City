@@ -42,6 +42,7 @@ var _last_hint: String = ""
 var _air_time: float = 0.0
 var _max_fall_speed: float = 0.0
 var _collision: CollisionShape3D
+var _hit_area: Area3D
 
 
 func _ready() -> void:
@@ -59,6 +60,19 @@ func _ready() -> void:
 	_collision.shape = cap
 	_collision.position = Vector3(0, 0.9, 0)
 	add_child(_collision)
+	_hit_area = Area3D.new()
+	_hit_area.name = "Trefferzone"
+	_hit_area.collision_layer = 0
+	_hit_area.collision_mask = Layers.VEHICLE
+	var hs := CollisionShape3D.new()
+	var hcap := CapsuleShape3D.new()
+	hcap.radius = 0.42
+	hcap.height = 1.8
+	hs.shape = hcap
+	hs.position = Vector3(0, 0.9, 0)
+	_hit_area.add_child(hs)
+	add_child(_hit_area)
+	_hit_area.body_entered.connect(_on_vehicle_touch)
 	rig = HumanoidRig.new()
 	rig.name = "Rig"
 	add_child(rig)
@@ -237,6 +251,7 @@ func attach_to_vehicle(v: Node3D) -> void:
 	current_vehicle = v
 	velocity = Vector3.ZERO
 	_collision.disabled = true
+	_hit_area.set_deferred("monitoring", false)
 	rig.visible = false
 	_set_hint("")
 	if camera_rig != null:
@@ -252,6 +267,7 @@ func detach_from_vehicle(exit_pos: Vector3, facing_yaw: float) -> void:
 	rotation = Vector3(0, facing_yaw, 0)
 	velocity = Vector3.ZERO
 	_collision.disabled = false
+	_hit_area.set_deferred("monitoring", true)
 	rig.visible = true
 	reset_physics_interpolation()
 	if camera_rig != null:
@@ -265,6 +281,7 @@ func force_leave_vehicle(pos: Vector3) -> void:
 		current_vehicle.call("release_driver")
 	current_vehicle = null
 	_collision.disabled = false
+	_hit_area.set_deferred("monitoring", true)
 	rig.visible = true
 	global_position = pos
 	velocity = Vector3.ZERO
@@ -326,6 +343,22 @@ func take_damage(amount: float, cause: String = "") -> void:
 	set_health(health - amount)
 	if health <= 0.0:
 		die(cause)
+
+
+func _on_vehicle_touch(body: Node3D) -> void:
+	if is_in_vehicle() or is_dead or not body is Vehicle or body == current_vehicle:
+		return
+	var v: Vehicle = body as Vehicle
+	var vel: Vector3 = v.linear_velocity
+	var spd: float = vel.length()
+	if spd < 2.5:
+		# Langsames Fahrzeug schiebt den Spieler nur zur Seite
+		var push: Vector3 = global_position - v.global_position
+		push.y = 0.0
+		velocity += push.normalized() * 2.0
+		return
+	knock_down(vel * 0.45, (spd - 2.5) * 7.0)
+	AudioManager.play_3d("crash", global_position, -6.0, 1.3)
 
 
 ## Umgestoßen werden (z. B. von einem Fahrzeug erfasst).

@@ -1,0 +1,131 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== Fächer-City Tests (Godot 4.7.2-stable (official)) ===
+OK      test_audio_assets.gd::test_required_sounds_exist (3 ms)
+OK      test_audio_assets.gd::test_loop_stream_has_loop_points (0 ms)
+WARNING: Sound fehlt: res://assets/audio/gibt_es_nicht_123.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:72)
+         [1] test_missing_sound_is_graceful (res://tests/unit/test_audio_assets.gd:19)
+         [2] _run_file (res://tests/test_runner.gd:79)
+OK      test_audio_assets.gd::test_missing_sound_is_graceful (0 ms)
+        Graph: 112 Knoten, 158 Kanten, 47 Flächen
+OK      test_city_graph.gd::test_graph_builds (5 ms)
+OK      test_city_graph.gd::test_no_crossing_edges (9 ms)
+OK      test_city_graph.gd::test_drive_network_connected (1 ms)
+OK      test_city_graph.gd::test_no_dead_ends_for_traffic (0 ms)
+OK      test_city_graph.gd::test_blocks_and_park (0 ms)
+OK      test_city_graph.gd::test_fan_streets_start_at_zirkel (0 ms)
+OK      test_city_graph.gd::test_paths_between_pois (3 ms)
+OK      test_game_state.gd::test_start_money (0 ms)
+OK      test_game_state.gd::test_reward_only_once (0 ms)
+OK      test_game_state.gd::test_money_never_negative (0 ms)
+OK      test_game_state.gd::test_best_time_only_improves (0 ms)
+OK      test_game_state.gd::test_roundtrip_dict (0 ms)
+OK      test_game_state.gd::test_from_dict_tolerates_garbage (0 ms)
+OK      test_poly_util.gd::test_area_and_orientation (0 ms)
+OK      test_poly_util.gd::test_inset_uniform (0 ms)
+OK      test_poly_util.gd::test_inset_per_edge (0 ms)
+OK      test_poly_util.gd::test_inset_collapse_returns_empty (0 ms)
+OK      test_poly_util.gd::test_polar (0 ms)
+OK      test_save_codec.gd::test_roundtrip (0 ms)
+OK      test_save_codec.gd::test_corrupt_json (0 ms)
+OK      test_save_codec.gd::test_empty_and_wrong_format (0 ms)
+OK      test_save_codec.gd::test_future_version_rejected (0 ms)
+OK      test_save_codec.gd::test_missing_fields_use_defaults (0 ms)
+OK      test_save_codec.gd::test_invalid_position_dropped (0 ms)
+OK      test_vehicle_spec.gd::test_catalog_loads_required_types (0 ms)
+OK      test_vehicle_spec.gd::test_all_specs_valid (0 ms)
+OK      test_vehicle_spec.gd::test_types_differ_in_handling (0 ms)
+WARNING: Unbekannter Fahrzeugtyp 'gibt_es_nicht' – verwende Kompaktwagen.
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_spec (res://src/vehicles/vehicle_spec.gd:130)
+         [1] test_unknown_spec_falls_back (res://tests/unit/test_vehicle_spec.gd:29)
+         [2] _run_file (res://tests/test_runner.gd:79)
+OK      test_vehicle_spec.gd::test_unknown_spec_falls_back (0 ms)
+OK      test_wanted_logic.gd::test_unwitnessed_crime_has_no_effect (0 ms)
+OK      test_wanted_logic.gd::test_witnessed_crime_sets_level_and_position (0 ms)
+OK      test_wanted_logic.gd::test_escalation_capped_at_three (0 ms)
+OK      test_wanted_logic.gd::test_search_phase_and_decay_to_zero (0 ms)
+OK      test_wanted_logic.gd::test_resighting_restarts_pursuit (0 ms)
+OK      test_wanted_logic.gd::test_configurable_search_duration (0 ms)
+[Welt] Stadt aufgebaut in 1156 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_city_world.gd::test_city_builds_and_player_spawns (1677 ms)
+[Welt] Stadt aufgebaut in 1248 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_city_world.gd::test_pois_on_free_walkable_ground (1470 ms)
+[Welt] Stadt aufgebaut in 1172 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+        Fahrspurproben: 4440, blockiert: 1
+FEHLER  test_city_world.gd::test_drivable_roads_free_of_buildings (1390 ms)
+        - test_drivable_roads_free_of_buildings: Fahrspur blockiert bei (319.499, 327.4) (Kaiserstraße)
+        - test_drivable_roads_free_of_buildings: Blockierte Fahrspurproben erwartet <0>, erhalten <1>
+[Welt] Stadt aufgebaut in 1212 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+FEHLER  test_city_world.gd::test_parked_vehicles_stable (1711 ms)
+        - test_parked_vehicles_stable: Fahrzeug_sport_856845984291 steht still erwartet < 0.400, erhalten 9.650
+        - test_parked_vehicles_stable: Fahrzeug_polizei_857936502881 steht still erwartet < 0.400, erhalten 6.242
+        - test_parked_vehicles_stable: Fahrzeug_sport_888991130138 steht still erwartet < 0.400, erhalten 8.805
+        - test_parked_vehicles_stable: Fahrzeug_kompakt_922629447760 steht still erwartet < 0.400, erhalten 10.969
+        - test_parked_vehicles_stable: Fahrzeug_limousine_959354773991 steht still erwartet < 0.400, erhalten 9.222
+        - test_parked_vehicles_stable: Fahrzeug_transporter_959774205110 steht still erwartet < 0.400, erhalten 9.225
+        - test_parked_vehicles_stable: Fahrzeug_transporter_1042452325341 steht still erwartet < 0.400, erhalten 8.142
+        - test_parked_vehicles_stable: Fahrzeug_limousine_1087163606436 steht still erwartet < 0.400, erhalten 4.937
+[Welt] Stadt aufgebaut in 1295 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_city_world.gd::test_landmarks_present (1543 ms)
+[Welt] Stadt aufgebaut in 1263 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_city_world.gd::test_recovery_point_on_road (1478 ms)
+[Welt] Stadt aufgebaut in 1297 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+        Mission 1 durchgespielt, Spielzeit 96 s simuliert
+OK      test_mission_m01.gd::test_m01_full_playthrough (7711 ms)
+[Welt] Stadt aufgebaut in 1282 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m01.gd::test_m01_fail_and_retry_without_growth (1626 ms)
+[Welt] Stadt aufgebaut in 1222 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m01.gd::test_mission_data_valid (1420 ms)
+[Welt] Stadt aufgebaut in 1256 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_pedestrians.gd::test_pedestrians_walk_and_stay_out_of_walls (4999 ms)
+[Welt] Stadt aufgebaut in 1229 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+        Beobachtete Zustände: [1, 2, 0], gemeldete Taten: []
+OK      test_pedestrians.gd::test_pedestrian_dodges_and_hit_is_reported (1928 ms)
+[Welt] Stadt aufgebaut in 1280 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_pedestrians.gd::test_hit_pedestrian_is_reported_with_witness (1618 ms)
+OK      test_player.gd::test_player_stands_on_ground (84 ms)
+OK      test_player.gd::test_walk_and_sprint (140 ms)
+OK      test_player.gd::test_step_up_curb (131 ms)
+OK      test_player.gd::test_jump (95 ms)
+OK      test_player.gd::test_damage_and_revive (29 ms)
+OK      test_player.gd::test_camera_follows_and_avoids_walls (44 ms)
+[Welt] Stadt aufgebaut in 1196 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_police.gd::test_witnessed_theft_triggers_wanted (1523 ms)
+[Welt] Stadt aufgebaut in 1292 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_police.gd::test_unwitnessed_theft_no_wanted (1522 ms)
+[Welt] Stadt aufgebaut in 1235 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_police.gd::test_police_spawn_hidden_search_and_decay (4779 ms)
+[Welt] Stadt aufgebaut in 1376 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_police.gd::test_arrest_respawns_at_station_and_fails_mission (2303 ms)
+[Welt] Stadt aufgebaut in 1277 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_police.gd::test_ramming_police_is_crime (1813 ms)
+[Welt] Stadt aufgebaut in 1214 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+        Verkehr: 13 aktiv, 27 gesamt erzeugt, 14 entfernt
+OK      test_traffic.gd::test_traffic_spawns_and_drives (8988 ms)
+[Welt] Stadt aufgebaut in 1251 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_traffic.gd::test_stops_at_red_light (2024 ms)
+[Welt] Stadt aufgebaut in 1214 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_traffic.gd::test_keeps_distance_to_obstacle (2220 ms)
+[Welt] Stadt aufgebaut in 1217 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_traffic.gd::test_object_count_bounded_after_teleports (6791 ms)
+OK      test_vehicle.gd::test_vehicles_rest_stably (104 ms)
+OK      test_vehicle.gd::test_accelerate_brake_reverse (285 ms)
+OK      test_vehicle.gd::test_steering_turns_right_and_speed_dependent (116 ms)
+OK      test_vehicle.gd::test_handbrake_slows_down (175 ms)
+OK      test_vehicle.gd::test_multiple_enter_exit_and_switch (172 ms)
+OK      test_vehicle.gd::test_exit_refused_when_fast (101 ms)
+OK      test_vehicle.gd::test_exit_refused_when_boxed_in (55 ms)
+OK      test_vehicle.gd::test_crash_causes_damage (122 ms)
+OK      test_vehicle.gd::test_recovery_when_flipped (126 ms)
+OK      test_vehicle.gd::test_lights_and_horn (32 ms)
+OK      test_vehicle.gd::test_autopilot_drives_200m (1095 ms)
+=== Ergebnis: 75 Tests, 2 fehlgeschlagen, 64.2 s ===
+WARNING: 8 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 1 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)

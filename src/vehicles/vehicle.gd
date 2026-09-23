@@ -61,6 +61,7 @@ var _audio_check: float = 0.0
 var _reverse_mode: bool = false
 var _braking_visual: bool = false
 var _damage_cooldown: float = 0.0
+var _impact_grace: float = 0.6            ## Schonzeit nach Spawn/Teleport (keine Aufprallwertung)
 
 static var _mat_front_on: StandardMaterial3D
 static var _mat_rear_on: StandardMaterial3D
@@ -230,6 +231,7 @@ func _physics_process(delta: float) -> void:
 		return
 	_recover_cd = maxf(0.0, _recover_cd - delta)
 	_damage_cooldown = maxf(0.0, _damage_cooldown - delta)
+	_impact_grace = maxf(0.0, _impact_grace - delta)
 	if driver == Driver.PLAYER:
 		_read_player_input()
 	elif driver == Driver.AI and ai_controller != null:
@@ -393,7 +395,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _detect_impacts(_delta: float) -> void:
 	var dv: float = (linear_velocity - _prev_velocity).length()
-	if dv < IMPACT_THRESHOLD or _damage_cooldown > 0.0:
+	if dv < IMPACT_THRESHOLD or _damage_cooldown > 0.0 or _impact_grace > 0.0:
 		return
 	_damage_cooldown = 0.15
 	var other: Node = null
@@ -804,3 +806,4 @@ func teleport_to(pos: Vector3, yaw: float) -> void:
 	PhysicsServer3D.body_set_state(get_rid(), PhysicsServer3D.BODY_STATE_ANGULAR_VELOCITY, Vector3.ZERO)
 	reset_physics_interpolation()
 	sleeping = false
+	_impact_grace = 0.4

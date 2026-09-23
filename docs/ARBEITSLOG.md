@@ -88,3 +88,29 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   Testausgang nicht). Ursache: Auftraggeber-Kollision auf Welt-Ebene verfälschte die Bodenhöhe am POI.
   Behoben durch NPC-Ebene für Figuren (Spieler/Fahrzeuge kollidieren weiter). Seitdem wird vor jedem Commit
   der Exit-Code der Testsuite explizit geprüft. Ergebnis: 57/57 Tests grün.
+
+## 2026-09-23 – Meilenstein E: Verkehr, Ampeln, Passanten, Polizei/Fahndung
+
+- **Ziel:** belebte Stadt (Verkehr, Passanten) und nachvollziehbares Fahndungssystem Stufe 0–3 mit Festnahme/Respawn.
+- **Änderungsklasse:** groß (drei neue Module, Änderungen an Physik-Ebenen, Spieler, Fahrzeug, HUD) → Restore-Punkt: `ece86ef`.
+- **Umgesetzt:**
+  - `src/traffic/`: `TrafficLights` (zwei Phasengruppen, fester Zyklus mit Versatz je Kreuzung, Masten neben der Fahrbahn,
+    Haltelinien), `LaneDriver` (Pure Pursuit mit vorwärtslaufendem Segment-Cursor, Kurven-/Ampel-/Vorfahrtslogik,
+    Hindernis-Box-Abfrage, Festfahr-Behandlung mit Rückwärtsmanöver), `TrafficDriver`, `TrafficManager`
+    (Obergrenze aus Einstellungen, Spawn 75–230 m außer Sicht, Despawn > 270 m bzw. festgefahren und unsichtbar).
+  - `src/npc/`: `SidewalkNetwork`, `Pedestrian` (Gehen/Warten/Ausweichen/Flucht/Umgestoßen, Wand-Raycast, Animations-LOD),
+    `PedestrianManager` (Pool, Zeugenzählung, Meldung „Fußgänger angefahren“).
+  - `src/police/`: `WantedLogic` (reine Logik: nur beobachtete Taten, zuletzt bekannte Position, Sichtverlust-Verzögerung,
+    Suchdauer je Stufe), `PoliceDriver` (A*-Neuplanung, direkte Verfolgung bei Sicht, Sirene), `PoliceManager`
+    (Einheiten je Stufe, Spawn außer Sicht, Festnahme bei langsamem Spieler < 7 m für 2,8 s, Streife bei Stufe 0).
+  - Game: Festnahme → Revier (150 €), Tod → Klinik (100 €), Missionsfehlschlag; HUD-Fahndungsanzeige (3 Segmente,
+    Zustandstext, Festnahmebalken); Treffer-Zone des Spielers (Umfahren durch Fahrzeuge).
+- **Behobene Befunde:** Lookahead suchte nur die ersten 8 Segmente (Ziel hinter dem Fahrzeug → Abkommen von der Straße)
+  → Segment-Cursor + Bézier-Abbiegespuren; Spawn-Anschub zählte als Aufprall (jedes Verkehrsauto 144 Schaden)
+  → Aufprall-Schonzeit; Ampelmast auf Fahrspur an spitzwinkliger Kreuzung → Rücksetzung per Fahrbahnprüfung;
+  Hindernisabstand zur Objektmitte gemessen → Front-zu-Heck-Abstand.
+- **Prüfung:** 75/75 Tests grün, Exit-Code 0 (u. a. Verkehr erreicht Sollzahl, kein Überschlag, ≥ 90 % auf Fahrbahnen,
+  Halt an roter Ampel, Abstand zu Hindernis ohne Auffahrunfall, begrenzte Objektzahl nach Teleports, Passanten nicht in Wänden,
+  Ausweichen/Anfahren gemeldet, beobachteter vs. unbeobachteter Diebstahl, Spawn außer Sicht, Suche an zuletzt bekannter
+  Position, Abbau auf 0, Festnahme am Revier mit Gebühr und Missionsfehlschlag, Rammen eines Streifenwagens).
+  Screenshots `artifacts/screenshots/E/` (u. a. 14 Kreuzung mit Ampel, 15 Passanten Kaiserstraße, 16 Verfolgung) visuell geprüft.

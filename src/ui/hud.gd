@@ -32,6 +32,12 @@ var _veh_status: Label
 var _result_panel: PanelContainer
 var _result_title: Label
 var _result_reason: Label
+var _wanted_panel: PanelContainer
+var _wanted_segments: Array[ColorRect] = []
+var _wanted_state: Label
+var _arrest_bar: ProgressBar
+var _arrest_label: Label
+var _blink_t: float = 0.0
 var root: Control
 
 
@@ -49,6 +55,7 @@ func setup(p_game: Node) -> void:
 	_build_status()
 	_build_vehicle()
 	_build_result()
+	_build_wanted()
 	EventBus.context_hint.connect(_on_hint)
 	EventBus.notify.connect(_on_notify)
 	EventBus.big_message.connect(_on_big)
@@ -221,6 +228,71 @@ func _build_result() -> void:
 	_result_panel.visible = false
 
 
+## Fahndungsanzeige: drei Blaulicht-Segmente, Zustand, Festnahme-Balken.
+func _build_wanted() -> void:
+	_wanted_panel = UiStyle.panel()
+	_wanted_panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_wanted_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_wanted_panel.offset_right = -36
+	_wanted_panel.offset_top = 32
+	_wanted_panel.offset_left = -330
+	root.add_child(_wanted_panel)
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", 6)
+	_wanted_panel.add_child(v)
+	v.add_child(UiStyle.label("FAHNDUNG", 18, UiStyle.TEXT_DIM))
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	v.add_child(row)
+	for i: int in 3:
+		var seg := ColorRect.new()
+		seg.custom_minimum_size = Vector2(76, 18)
+		seg.color = Color(0.15, 0.17, 0.25)
+		row.add_child(seg)
+		_wanted_segments.append(seg)
+	_wanted_state = UiStyle.label("", 20)
+	v.add_child(_wanted_state)
+	_arrest_label = UiStyle.label("Festnahme droht!", 18, UiStyle.BAD)
+	v.add_child(_arrest_label)
+	_arrest_bar = UiStyle.bar(UiStyle.BAD, 8)
+	_arrest_bar.max_value = 1.0
+	_arrest_bar.step = 0.01
+	v.add_child(_arrest_bar)
+	_wanted_panel.visible = false
+
+
+func _update_wanted(delta: float) -> void:
+	var pm: PoliceManager = game.get("police") as PoliceManager
+	if pm == null:
+		_wanted_panel.visible = false
+		return
+	var w: WantedLogic = pm.wanted
+	_wanted_panel.visible = w.level > 0
+	if w.level == 0:
+		return
+	_blink_t += delta
+	var blink: bool = fmod(_blink_t, 0.5) < 0.25
+	for i: int in 3:
+		var on: bool = i < w.level
+		var c: Color = Color(0.15, 0.17, 0.25)
+		if on:
+			if w.state == "verfolgung":
+				c = UiStyle.POLICE_BLUE if (blink != (i % 2 == 0)) else Color(0.9, 0.2, 0.25)
+			else:
+				c = UiStyle.POLICE_BLUE.darkened(0.35)
+		_wanted_segments[i].color = c
+	if w.state == "verfolgung":
+		_wanted_state.text = "Verfolgung – Sichtkontakt"
+		_wanted_state.add_theme_color_override("font_color", UiStyle.BAD)
+	else:
+		var rest: float = w.search_duration() - w.search_time
+		_wanted_state.text = "Suche läuft – noch %d s" % int(ceil(rest))
+		_wanted_state.add_theme_color_override("font_color", UiStyle.ACCENT)
+	_arrest_bar.visible = pm.arrest_progress > 0.01
+	_arrest_label.visible = _arrest_bar.visible
+	_arrest_bar.value = pm.arrest_progress
+
+
 # ------------------------------------------------------------------ Ereignisse
 
 func _on_hint(text: String) -> void:
@@ -316,6 +388,7 @@ func _process(delta: float) -> void:
 	elif _big_title.text != "":
 		_big_title.text = ""
 		_big_sub.text = ""
+	_update_wanted(delta)
 	# Status
 	if p != null:
 		_health_bar.value = p.health

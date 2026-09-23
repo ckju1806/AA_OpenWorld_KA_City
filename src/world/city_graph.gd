@@ -158,33 +158,68 @@ func find_path(from_node: int, to_node: int, mode: String = "drive") -> PackedIn
 
 
 ## Wegpunkte auf der rechten Fahrspur (Rechtsverkehr) entlang einer Knotenfolge.
-## An Zwischenknoten wird der Versatz beider Richtungen gemittelt (weiche Kurven).
+## An Kreuzungen: Eckpunkt = Schnitt der versetzten Spurlinien, darüber eine Bézier-Abbiegekurve,
+## damit Fahrzeuge in ihrer Spur bleiben und keine Bordsteinecken schneiden.
 func lane_path(path: PackedInt32Array, offset: float = 2.6, y: float = 0.0, sample: float = 18.0) -> PackedVector3Array:
 	var out: PackedVector3Array = PackedVector3Array()
 	var n: int = path.size()
 	if n < 2:
 		return out
+	var zones: Array[float] = []   # Länge der Abbiegezone je Knoten
+	var turn_pts: Array[PackedVector2Array] = []
 	for i: int in n:
 		var p: Vector2 = node_pos[path[i]]
-		var d_in: Vector2 = (p - node_pos[path[i - 1]]).normalized() if i > 0 else Vector2.ZERO
-		var d_out: Vector2 = (node_pos[path[i + 1]] - p).normalized() if i < n - 1 else Vector2.ZERO
-		var d: Vector2 = (d_in + d_out)
-		if d.length() < 0.01:
-			d = d_out if d_out.length() > 0.0 else d_in
-		d = d.normalized()
-		var right: Vector2 = Vector2(-d.y, d.x)
-		var q: Vector2 = p + right * offset
-		out.append(Vector3(q.x, y, q.y))
-		# Zwischenpunkte auf langen Kanten
-		if i < n - 1:
-			var nxt: Vector2 = node_pos[path[i + 1]]
-			var seg: float = p.distance_to(nxt)
-			var r2: Vector2 = Vector2(-d_out.y, d_out.x)
-			var k: int = int(seg / sample)
-			for j: int in range(1, k):
-				var t: float = float(j) / float(k)
-				var m: Vector2 = p.lerp(nxt, t) + r2 * offset
+		var pts: PackedVector2Array = PackedVector2Array()
+		var zone: float = 0.0
+		if i == 0 or i == n - 1:
+			var d: Vector2 = (node_pos[path[1]] - p).normalized() if i == 0 else (p - node_pos[path[i - 1]]).normalized()
+			pts.append(p + Vector2(-d.y, d.x) * offset)
+		else:
+			var d_in: Vector2 = (p - node_pos[path[i - 1]]).normalized()
+			var d_out: Vector2 = (node_pos[path[i + 1]] - p).normalized()
+			var r_in: Vector2 = Vector2(-d_in.y, d_in.x)
+			var r_out: Vector2 = Vector2(-d_out.y, d_out.x)
+			var cr: float = d_in.cross(d_out)
+			if absf(cr) < 0.17:
+				if d_in.dot(d_out) > 0.0:
+					# nahezu geradeaus
+					pts.append(p + ((r_in + r_out) * 0.5).normalized() * offset)
+				else:
+					# Wende (nur in Sonderfällen)
+					pts.append(p + r_in * offset + d_in * 3.0)
+					pts.append(p + d_in * 5.0)
+					pts.append(p - r_in * offset + d_in * 3.0)
+					zone = 5.0
+			else:
+				var a: Vector2 = p + r_in * offset
+				var b: Vector2 = p + r_out * offset
+				var t: float = (b - a).cross(d_out) / cr
+				var corner: Vector2 = a + d_in * t
+				var k: float = clampf(node_radius(path[i], "all") + 1.5, 4.0, 11.0)
+				var s0: Vector2 = corner - d_in * k
+				var s1: Vector2 = corner + d_out * k
+				for j: int in 5:
+					var u: float = float(j) / 4.0
+					pts.append(s0.lerp(corner, u).lerp(corner.lerp(s1, u), u))
+				zone = k + absf(t)
+		zones.append(zone)
+		turn_pts.append(pts)
+	for i2: int in n:
+		for q: Vector2 in turn_pts[i2]:
+			out.append(Vector3(q.x, y, q.y))
+		if i2 < n - 1:
+			var a2: Vector2 = node_pos[path[i2]]
+			var b2: Vector2 = node_pos[path[i2 + 1]]
+			var seg: float = a2.distance_to(b2)
+			var dd: Vector2 = (b2 - a2) / maxf(seg, 0.001)
+			var rr: Vector2 = Vector2(-dd.y, dd.x) * offset
+			var t0: float = zones[i2] + 2.0
+			var t1: float = seg - zones[i2 + 1] - 2.0
+			var tt: float = t0 + sample
+			while tt < t1:
+				var m: Vector2 = a2 + dd * tt + rr
 				out.append(Vector3(m.x, y, m.y))
+				tt += sample
 	return out
 
 

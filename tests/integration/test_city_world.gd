@@ -7,6 +7,7 @@ var game: Game
 func before_each() -> void:
 	game = (load("res://scenes/game.tscn") as PackedScene).instantiate() as Game
 	game.world_mode = "city"
+	game.ambient_life = false
 	add_child(game)
 	await wait_physics(20)
 

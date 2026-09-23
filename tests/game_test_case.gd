@@ -6,10 +6,11 @@ extends TestCase
 var game: Game
 
 
-func start_city_game() -> void:
+func start_city_game(ambient: bool = false) -> void:
 	GameState.reset_new_game()
 	game = (load("res://scenes/game.tscn") as PackedScene).instantiate() as Game
 	game.world_mode = "city"
+	game.ambient_life = ambient
 	add_child(game)
 	game.player.use_sim_input = true
 	if game.missions != null:

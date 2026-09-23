@@ -9,6 +9,8 @@ const NPC: int = 8          ## Passanten (nur Erkennung, blockieren keine Fahrze
 const TRIGGER: int = 16     ## Missions-/Interaktionsbereiche
 
 const PLAYER_MASK: int = WORLD | VEHICLE | NPC
-const VEHICLE_MASK: int = WORLD | VEHICLE | PLAYER | NPC
+## Fahrzeuge kollidieren nicht physikalisch mit dem Spieler (Treffer über Trefferzone des Spielers),
+## sonst würde der kinematische Spieler wie eine Wand wirken.
+const VEHICLE_MASK: int = WORLD | VEHICLE | NPC
 const CAMERA_MASK: int = WORLD | VEHICLE
 const GROUND_MASK: int = WORLD
