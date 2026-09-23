@@ -7,3 +7,5 @@
 *.ico binary
 *.ogg binary
 *.zip binary
+# Auslieferungs-Installer byte-genau (CRLF) speichern, da er per "raw"-Download bezogen wird
+release/*.bat -text
