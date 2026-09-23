@@ -9,6 +9,10 @@ var player: Player = null
 var camera_rig: PlayerCamera = null
 var entities: Node3D = null      ## Fahrzeuge, Passanten usw.
 var paused_by_menu: bool = false
+var hud: Hud = null
+var missions: MissionSystem = null
+var _respawn_t: float = -1.0
+var _respawn_kind: String = "klinik"
 
 
 func _ready() -> void:
@@ -21,7 +25,19 @@ func _ready() -> void:
 	add_child(entities)
 	_spawn_player()
 	_spawn_initial_vehicles()
+	hud = Hud.new()
+	hud.name = "HUD"
+	add_child(hud)
+	hud.setup(self)
+	if world is CityWorld:
+		missions = MissionSystem.new()
+		missions.name = "Missionen"
+		add_child(missions)
+		missions.setup(self)
+	player.died.connect(_on_player_died)
 	App.set_mouse_captured(true)
+	AudioManager.play_ambience("ambience_city")
+	AudioManager.stop_music()
 	if App.has_arg("--screenshot-tour"):
 		var tour := ScreenshotTour.new()
 		tour.game = self
@@ -69,6 +85,56 @@ func _spawn_player() -> void:
 
 
 func request_pause() -> void:
+	pass
+
+
+func _physics_process(delta: float) -> void:
+	if _respawn_t > 0.0:
+		_respawn_t -= delta
+		if _respawn_t <= 0.0:
+			_respawn_player()
+
+
+func _on_player_died(cause: String) -> void:
+	EventBus.big_message.emit("AUSGESCHALTET", cause if cause != "" else "Das war knapp daneben.", 3.0)
+	_respawn_kind = "klinik"
+	_respawn_t = 3.5
+
+
+## Wiederbelebung an der Klinik bzw. nach Festnahme am Revier (mit Gebühr).
+func _respawn_player() -> void:
+	var xf: Transform3D = get_spawn_transform()
+	if world is CityWorld:
+		xf = (world as CityWorld).respawn_point(_respawn_kind)
+	player.revive(xf.origin, xf.basis.get_euler().y)
+	camera_rig.yaw = xf.basis.get_euler().y
+	camera_rig.snap()
+	var fee: int = 100 if _respawn_kind == "klinik" else 150
+	var paid: int = mini(fee, GameState.money)
+	GameState.add_money(-paid)
+	var place: String = "St.-Fächer-Klinik" if _respawn_kind == "klinik" else "Polizeirevier Innenstadt"
+	EventBus.notify.emit("%s: %s bezahlt." % [place, UiStyle.money(paid)], "warnung")
+	EventBus.player_respawned.emit()
+
+
+## Vor einem Missions-Neustart: Spieler zum Auftraggeber, Zustand bereinigen.
+func prepare_mission_retry(_mission_id: String, xf: Transform3D) -> void:
+	_respawn_t = -1.0
+	if player.is_dead:
+		player.revive(xf.origin, xf.basis.get_euler().y)
+	elif player.is_in_vehicle():
+		player.force_leave_vehicle(xf.origin)
+	player.global_position = xf.origin
+	player.rotation = Vector3(0, xf.basis.get_euler().y, 0)
+	player.velocity = Vector3.ZERO
+	player.reset_physics_interpolation()
+	if has_method("reset_wanted"):
+		call("reset_wanted")
+	camera_rig.yaw = player.rotation.y
+	camera_rig.snap()
+
+
+func on_mission_completed(_mission_id: String) -> void:
 	pass
 
 
@@ -171,6 +237,42 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 	_cam_station(tour, "europaplatz", Vector3(-430, y, 345), 270.0, -0.08)
 	_cam_station(tour, "durlacher_tor", Vector3(575, 0.05, 345), 70.0, -0.1)
 	_cam_station(tour, "kriegsstrasse", Vector3(60, 0.05, 646), 90.0, -0.06)
+	tour.add_station("mission_dialog", func() -> void:
+		var giver: MissionGiver = missions.givers["m01_erste_schicht"]
+		player.global_position = giver.global_position + (-giver.global_basis.z) * 2.2 + Vector3.UP * 0.1
+		camera_rig.yaw = giver.rotation.y + PI + 0.5
+		camera_rig.pitch = -0.15
+		camera_rig.snap()
+		await get_tree().physics_frame
+		missions.start_mission("m01_erste_schicht")
+	, 60)
+	tour.add_station("mission_lieferwagen_markierung", func() -> void:
+		missions.auto_skip_dialog = true
+		for i: int in 30:
+			await get_tree().physics_frame
+		missions.auto_skip_dialog = false
+		var van: Vehicle = missions.mission_vehicle("van")
+		if van != null:
+			player.global_position = van.global_position + Vector3(-9, 0.2, 4)
+			camera_rig.yaw = deg_to_rad(-60.0)
+			camera_rig.pitch = -0.25
+			camera_rig.snap()
+	, 50)
+	tour.add_station("hud_fahrt_mit_ziel", func() -> void:
+		var van: Vehicle = missions.mission_vehicle("van")
+		if van == null:
+			return
+		van.teleport_to(Vector3(-150, 0, 462.6), -PI * 0.5)
+		player.global_position = van.global_position + Vector3(0, 0, -3)
+		await get_tree().physics_frame
+		van.enter(player)
+		van.set_lights(true)
+		var ap := Autopilot.new()
+		ap.set_path(PackedVector3Array([Vector3(-40, 0, 462.6), Vector3(200, 0, 462.6)]), 13.0)
+		van.ai_controller = ap
+		van.driver = Vehicle.Driver.AI
+		camera_rig.yaw = -PI * 0.5
+	, 120)
 	tour.add_station("luftbild_faecher", func() -> void:
 		player.global_position = Vector3(0, y, 250)
 		camera_rig.yaw = 0.0

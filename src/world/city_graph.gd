@@ -157,6 +157,37 @@ func find_path(from_node: int, to_node: int, mode: String = "drive") -> PackedIn
 	return out
 
 
+## Wegpunkte auf der rechten Fahrspur (Rechtsverkehr) entlang einer Knotenfolge.
+## An Zwischenknoten wird der Versatz beider Richtungen gemittelt (weiche Kurven).
+func lane_path(path: PackedInt32Array, offset: float = 2.6, y: float = 0.0, sample: float = 18.0) -> PackedVector3Array:
+	var out: PackedVector3Array = PackedVector3Array()
+	var n: int = path.size()
+	if n < 2:
+		return out
+	for i: int in n:
+		var p: Vector2 = node_pos[path[i]]
+		var d_in: Vector2 = (p - node_pos[path[i - 1]]).normalized() if i > 0 else Vector2.ZERO
+		var d_out: Vector2 = (node_pos[path[i + 1]] - p).normalized() if i < n - 1 else Vector2.ZERO
+		var d: Vector2 = (d_in + d_out)
+		if d.length() < 0.01:
+			d = d_out if d_out.length() > 0.0 else d_in
+		d = d.normalized()
+		var right: Vector2 = Vector2(-d.y, d.x)
+		var q: Vector2 = p + right * offset
+		out.append(Vector3(q.x, y, q.y))
+		# Zwischenpunkte auf langen Kanten
+		if i < n - 1:
+			var nxt: Vector2 = node_pos[path[i + 1]]
+			var seg: float = p.distance_to(nxt)
+			var r2: Vector2 = Vector2(-d_out.y, d_out.x)
+			var k: int = int(seg / sample)
+			for j: int in range(1, k):
+				var t: float = float(j) / float(k)
+				var m: Vector2 = p.lerp(nxt, t) + r2 * offset
+				out.append(Vector3(m.x, y, m.y))
+	return out
+
+
 func path_to_points(path: PackedInt32Array, y: float = 0.0) -> PackedVector3Array:
 	var out: PackedVector3Array = PackedVector3Array()
 	for n: int in path:

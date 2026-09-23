@@ -70,3 +70,17 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   Aufbauzeit der Stadt headless ca. 1,2 s. Screenshots: `artifacts/screenshots/C/`.
 - **Behobene Befunde:** Möblierung auf der Schloss-Sichtachse, violetter Farbstich, zu helle Schaufenster,
   fensterlose freiliegende Brandwände, Hofeinfahrt traf falsche Parzelle (Auftraggeber stand auf Dach).
+
+## 2026-09-23 – Meilenstein D: Missionssystem + Mission 1 „Erste Schicht“
+
+- **Ziel:** datengetriebenes Missionssystem und erste vollständig abschließbare Mission.
+- **Änderungsklasse:** mittel (neue Module, kleine Erweiterungen an Game/CityGraph) → Restore-Punkt: `2c1f623`.
+- **Umgesetzt:** `MissionDefinition` (JSON + Validierung gegen Kartendaten), `MissionSystem` (Schritte talk,
+  spawn_vehicle, enter_vehicle, goto, wait_zone, exit_vehicle, interact, countdown, checkpoints, trigger_wanted,
+  lose_wanted; Fehlschlag bei Tod/Festnahme/Fahrzeugverlust/Zurücklassen/Zeitablauf; Wiederholung ohne Einleitungsdialog;
+  Aufräumen; einmalige Belohnung), `MissionGiver`, `MissionMarker` (eigenes Design), `MissionInteractPoint`,
+  HUD (`Hud`, `UiStyle`), Spieler-Tod mit Wiederbelebung an der Klinik (Gebühr), `CityGraph.lane_path` (Rechtsverkehr).
+  Mission 1 in `data/missions/m01_erste_schicht.json`.
+- **Prüfung:** automatischer Durchlauf (Auftrag per E, Lieferwagen, Fahrt per Autopilot über das Straßennetz zur Bäckerei,
+  Haltezone, Fahrt zur Kanzlei, Aussteigen, zu Fuß zur Tür, Abgabe) → Mission erfüllt, +250 € genau einmal;
+  3× Fehlschlag + Wiederholung ohne wachsende Fahrzeugzahl. Screenshots `artifacts/screenshots/D/`.

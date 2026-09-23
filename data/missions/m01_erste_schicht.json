@@ -1,0 +1,43 @@
+{
+  "id": "m01_erste_schicht",
+  "title": "Erste Schicht",
+  "order": 1,
+  "reward": 250,
+  "repeatable": false,
+  "requires": [],
+  "giver": {
+    "poi": "hanne",
+    "name": "Hanne Brettschneider",
+    "role": "Chefin Fächerblitz-Kurier",
+    "prompt": "Mit Hanne sprechen (Auftrag)",
+    "look": {"skin": "#e0b39a", "shirt": "#f08a24", "jacket": "#2a3b4c", "pants": "#1d2430", "shoes": "#2b2b2b", "hair": "#8a4b2a", "hair_style": 1},
+    "done_line": "Heut isch nix mehr zu fahren. Gut g'macht übrigens!"
+  },
+  "fail_vehicle": "van",
+  "steps": [
+    {"type": "talk", "lines": [
+      ["Hanne", "Ah, du bisch de Neue? Hanne Brettschneider, Fächerblitz-Kurier. Pünktlich, schnell, meistens heil."],
+      ["Hanne", "Erste Schicht, nix Wildes: Bei der Bäckerei Brezelglück in der Kronenstraße wartet ein Paket."],
+      ["Hanne", "Das geht an die Kanzlei Dr. Hagedorn in der Kanzleistraße, gleich hinterm Marktplatz. Persönlich abgeben, gell?"],
+      ["Du", "Wird erledigt."],
+      ["Hanne", "Der Lieferwagen steht im Hof. Und denk dran: rechts fahren – Ampeln gelten auch für Kuriere."]
+    ]},
+    {"type": "spawn_vehicle", "tag": "van", "spec": "transporter", "poi": "depot_van", "color": "#f2f1ec", "livery": "Fächerblitz Kurier"},
+    {"type": "enter_vehicle", "tag": "van", "text": "Steig in den Fächerblitz-Lieferwagen im Hof."},
+    {"type": "goto", "poi": "baeckerei_parken", "radius": 10, "vehicle": "van", "marker": "abholung",
+     "text": "Fahr zur Bäckerei Brezelglück in der Kronenstraße."},
+    {"type": "wait_zone", "poi": "baeckerei_parken", "radius": 10, "vehicle": "van", "seconds": 3.0, "max_speed": 2.0,
+     "text": "Halte an – die Sendung wird eingeladen.", "progress": "Sendung wird eingeladen"},
+    {"type": "talk", "lines": [
+      ["Bäckerin Özlem", "Vorsichtig mit der Kiste – da sind auch Laugenbrezeln für die Kanzlei drin!"]
+    ]},
+    {"type": "goto", "poi": "kanzlei_parken", "radius": 10, "vehicle": "van", "marker": "ziel",
+     "text": "Bring die Sendung zur Kanzlei in der Kanzleistraße (hinter dem Marktplatz)."},
+    {"type": "exit_vehicle", "text": "Steig aus und bring die Kiste zur Tür."},
+    {"type": "interact", "poi": "kanzlei", "prompt": "Sendung abgeben", "text": "Gib die Sendung in der Kanzlei ab.", "radius": 3.0},
+    {"type": "talk", "lines": [
+      ["Sekretär Pfisterer", "Na endlich. Dr. Hagedorn wartet seit halb auf die Unterlagen … und auf die Brezeln."],
+      ["Hanne (Funk)", "Sauber! Die 250 Euro sind drin. Toni am Durlacher Tor und der alte Riegel suchen übrigens auch Fahrer."]
+    ]}
+  ]
+}
