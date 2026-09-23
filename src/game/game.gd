@@ -29,11 +29,22 @@ func _ready() -> void:
 
 
 func _build_world() -> void:
-	var tg := TestGround.new()
-	tg.name = "World"
-	add_child(tg)
-	tg.build()
-	world = tg
+	if world_mode == "test":
+		var tg := TestGround.new()
+		tg.name = "World"
+		add_child(tg)
+		tg.build()
+		world = tg
+	else:
+		var cw := CityWorld.new()
+		cw.name = "World"
+		add_child(cw)
+		cw.build()
+		world = cw
+
+
+func get_city() -> CityWorld:
+	return world as CityWorld
 
 
 func get_spawn_transform() -> Transform3D:
@@ -64,8 +75,9 @@ func request_pause() -> void:
 func _spawn_initial_vehicles() -> void:
 	if world != null and world.has_method("get_parked_vehicles"):
 		for pv: Dictionary in world.call("get_parked_vehicles"):
-			spawn_vehicle(str(pv.spec), pv.position, float(pv.yaw), pv.get("color", Color(-1, 0, 0)),
+			var v: Vehicle = spawn_vehicle(str(pv.spec), pv.position, float(pv.yaw), pv.get("color", Color(-1, 0, 0)),
 				int(pv.get("ownership", Vehicle.Ownership.PUBLIC)), str(pv.get("livery", "")))
+			v.locked = bool(pv.get("locked", false))
 
 
 ## Erzeugt ein Fahrzeug in der Welt.
@@ -91,6 +103,9 @@ func find_recovery_point(pos: Vector3, spec: VehicleSpec) -> Dictionary:
 
 ## Stationen der Screenshot-Tour (visuelle Kontrolle).
 func register_screenshot_stations(tour: ScreenshotTour) -> void:
+	if world_mode != "test":
+		_register_city_stations(tour)
+		return
 	tour.add_station("spieler_idle", func() -> void:
 		camera_rig.yaw = 0.6
 		camera_rig.pitch = -0.2
@@ -129,3 +144,37 @@ func register_screenshot_stations(tour: ScreenshotTour) -> void:
 		v.ai_controller = ap
 		v.driver = Vehicle.Driver.AI
 	, 150)
+
+
+func _cam_station(tour: ScreenshotTour, station_name: String, player_pos: Vector3, yaw_deg: float, pitch: float, frames: int = 40) -> void:
+	tour.add_station(station_name, func() -> void:
+		if player.is_in_vehicle():
+			player.force_leave_vehicle(player_pos)
+		player.global_position = player_pos
+		player.velocity = Vector3.ZERO
+		camera_rig.yaw = deg_to_rad(yaw_deg)
+		camera_rig.pitch = pitch
+		camera_rig.snap()
+	, frames)
+
+
+func _register_city_stations(tour: ScreenshotTour) -> void:
+	var cw: CityWorld = get_city()
+	var y: float = cw.slab_h + 0.05
+	_cam_station(tour, "start_marktplatz_blick_schloss", cw.get_spawn().origin, 0.0, -0.12)
+	_cam_station(tour, "marktplatz_pyramide", Vector3(0, y, 385), 0.0, -0.05)
+	_cam_station(tour, "rathaus", Vector3(-8, y, 416), 90.0, -0.08)
+	_cam_station(tour, "stadtkirche", Vector3(8, y, 416), 270.0, -0.08)
+	_cam_station(tour, "schlossplatz", Vector3(0, y, 150), 0.0, -0.08)
+	_cam_station(tour, "kaiserstrasse", Vector3(-150, y, 330), 90.0, -0.08)
+	_cam_station(tour, "faecherstrasse_zirkel", Vector3(-110, 0.05, 258), 146.0, -0.1)
+	_cam_station(tour, "europaplatz", Vector3(-430, y, 345), 270.0, -0.08)
+	_cam_station(tour, "durlacher_tor", Vector3(575, 0.05, 345), 70.0, -0.1)
+	_cam_station(tour, "kriegsstrasse", Vector3(60, 0.05, 646), 90.0, -0.06)
+	tour.add_station("luftbild_faecher", func() -> void:
+		player.global_position = Vector3(0, y, 250)
+		camera_rig.yaw = 0.0
+		camera_rig.pitch = -1.2
+		camera_rig._target_distance = 60.0
+		camera_rig.snap()
+	, 40)

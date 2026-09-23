@@ -52,3 +52,21 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   Durchdringen der Wand, Bergung nach Überschlag, Autopilot mit Wende). Screenshots: `artifacts/screenshots/B/`.
 - **Behobene Testfehler:** Startpositionen im Test (Auffahren auf geparktes Fahrzeug, fehlender Anlauf).
 - **Offen:** Fahrgefühl subjektiv nicht beurteilbar (nur messbare Kriterien getestet).
+
+## 2026-09-23 – Meilenstein C: Innenstadt, Landmarken, Ausstattung
+
+- **Ziel:** zusammenhängende, wiedererkennbare Innenstadt mit Landmarken als gemeinsame Datenbasis.
+- **Änderungsklasse:** groß (viele neue Dateien, zentrale Datenstruktur) → Restore-Punkt: Commit `ce29572`.
+- **Umgesetzt:** `data/world/karlsruhe_layout.json` (27 Straßen, Plätze, Höfe, Landmarken, POIs, Parkplätze),
+  `CityGraph`/`CityGraphBuilder` (Planarisierung, Knoten-Snapping, Face-Extraktion, A*), `GroundBuilder`
+  (Asphalt, Blockplatten mit Bordstein, erhöhte Fußgängerzonen, Markierungen, Zebrastreifen, Gleise),
+  `BuildingBuilder` (1 429 Parzellen, Blockrand mit Innenhöfen, Hofeinfahrten per Korridor, Baulücken, Baustelle),
+  `LandmarkBuilder` (Schloss, Pyramide, Rathaus, Stadtkirche, Säule, Brunnen, U-Strab, Torbogen, Pavillon,
+  Haltestelle), `PropsBuilder` (557 Laternen, Bäume, Bänke, Fahrräder, Poller, Litfaßsäulen, Kioske, Schilder),
+  `EnvironmentSetup` (Abendsonne, Nebel, Glow, Laternen-Lichtpool), eigene Shader (Fassade, Dach, Pflaster, Asphalt, Rasen).
+- **Recherche:** Lagebeziehungen per Websuche, dokumentiert in `docs/KARTE_KARLSRUHE.md`.
+- **Prüfung:** 54/54 Tests (u. a. keine Kanten-Kreuzung ohne Knoten, zusammenhängendes Netz, keine Sackgassen,
+  alle POIs frei/erreichbar, 4 440 Fahrspurproben ohne Hindernis, geparkte Fahrzeuge stabil, Landmarken vorhanden).
+  Aufbauzeit der Stadt headless ca. 1,2 s. Screenshots: `artifacts/screenshots/C/`.
+- **Behobene Befunde:** Möblierung auf der Schloss-Sichtachse, violetter Farbstich, zu helle Schaufenster,
+  fensterlose freiliegende Brandwände, Hofeinfahrt traf falsche Parzelle (Auftraggeber stand auf Dach).

@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "meta": {
+    "name": "Fächer-City – Innenstadt (künstlerische Interpretation von Karlsruhe)",
+    "hinweis": "Verdichtete, vereinfachte Spielwelt – kein digitaler Zwilling. Koordinaten in Metern, Ursprung = Schlossturm, Norden = -Z, Osten = +X. Winkel: 0° = Süden, 90° = Osten.",
+    "verdichtung": 0.55,
+    "quellen": "siehe docs/KARTE_KARLSRUHE.md"
+  },
+  "sidewalk_width": 3.4,
+  "slab_height": 0.12,
+  "street_kinds": {
+    "ring":       {"width": 15.0, "speed": 16.0, "drivable": true,  "traffic": true,  "parking": true},
+    "main":       {"width": 12.5, "speed": 13.5, "drivable": true,  "traffic": true,  "parking": true},
+    "street":     {"width": 10.5, "speed": 11.0, "drivable": true,  "traffic": true,  "parking": false},
+    "narrow":     {"width": 8.0,  "speed": 7.0,  "drivable": true,  "traffic": false, "parking": false},
+    "pedestrian": {"width": 16.0, "speed": 0.0,  "drivable": false, "traffic": false, "parking": false}
+  },
+  "streets": [
+    {"id": "adenauerring", "name": "Adenauerring", "kind": "ring", "arc": {"center": [0, 0], "radius": 560, "from": 270, "to": 90, "step": 7.5}},
+    {"id": "westring", "name": "Westring (fiktiv)", "kind": "ring", "points": [[-560, 0], [-560, 640]]},
+    {"id": "ostring", "name": "Ostring (fiktiv)", "kind": "ring", "points": [[560, 0], [560, 640]]},
+    {"id": "kriegsstrasse", "name": "Kriegsstraße", "kind": "ring", "points": [[-560, 640], [560, 640]]},
+
+    {"id": "zirkel", "name": "Zirkel", "kind": "main", "arc": {"center": [0, 0], "radius": 200, "from": -90, "to": 90, "step": 5.625}},
+    {"id": "schlossallee_w", "name": "Schlossallee West (fiktiv)", "kind": "main", "points": [[-200, 0], [-560, 0]]},
+    {"id": "schlossallee_o", "name": "Schlossallee Ost (fiktiv)", "kind": "main", "points": [[200, 0], [560, 0]]},
+
+    {"id": "waldstrasse", "name": "Waldstraße", "kind": "street", "ray": {"angle": -45, "r0": 200, "to_z": 330}, "continue_south_to": 640},
+    {"id": "herrenstrasse", "name": "Herrenstraße", "kind": "street", "ray": {"angle": -33.75, "r0": 200, "to_z": 330}, "continue_south_to": 640},
+    {"id": "ritterstrasse", "name": "Ritterstraße", "kind": "street", "ray": {"angle": -22.5, "r0": 200, "to_z": 330}, "continue_south_to": 640},
+    {"id": "lammstrasse", "name": "Lammstraße", "kind": "narrow", "ray": {"angle": -11.25, "r0": 200, "to_z": 330}},
+    {"id": "kfstrasse_nord", "name": "Karl-Friedrich-Straße", "kind": "pedestrian", "ray": {"angle": 0, "r0": 200, "to_z": 330}},
+    {"id": "kreuzstrasse", "name": "Kreuzstraße", "kind": "narrow", "ray": {"angle": 11.25, "r0": 200, "to_z": 330}},
+    {"id": "adlerstrasse", "name": "Adlerstraße", "kind": "street", "ray": {"angle": 22.5, "r0": 200, "to_z": 330}, "continue_south_to": 640},
+    {"id": "kronenstrasse", "name": "Kronenstraße", "kind": "street", "ray": {"angle": 33.75, "r0": 200, "to_z": 330}, "continue_south_to": 640},
+    {"id": "waldhornstrasse", "name": "Waldhornstraße", "kind": "street", "ray": {"angle": 45, "r0": 200, "to_z": 330}, "continue_south_to": 640},
+
+    {"id": "kfstrasse_sued", "name": "Karl-Friedrich-Straße", "kind": "pedestrian", "points": [[0, 330], [0, 460], [0, 545]]},
+    {"id": "kfstrasse_ettlinger", "name": "Karl-Friedrich-Straße", "kind": "street", "points": [[0, 545], [0, 640]]},
+
+    {"id": "kaiserstrasse_w", "name": "Kaiserstraße", "kind": "main", "points": [[-560, 330], [-470, 330]]},
+    {"id": "kaiserstrasse_fz", "name": "Kaiserstraße (Fußgängerzone)", "kind": "pedestrian", "points": [[-470, 330], [220.52, 330]]},
+    {"id": "kaiserstrasse_o", "name": "Kaiserstraße", "kind": "main", "points": [[220.52, 330], [560, 330]]},
+
+    {"id": "karlstrasse", "name": "Karlstraße", "kind": "main", "points": [[-470, 0], [-470, 640]]},
+    {"id": "kutschergasse", "name": "Kutschergasse (fiktiv)", "kind": "street", "points": [[445, 0], [445, 640]]},
+    {"id": "hofgartenstrasse", "name": "Hofgartenstraße (fiktiv)", "kind": "street", "points": [[-165, 165], [-560, 165]]},
+    {"id": "stallhofstrasse", "name": "Stallhofstraße (fiktiv)", "kind": "street", "points": [[165, 165], [560, 165]]},
+    {"id": "kanzleistrasse", "name": "Kanzleistraße (fiktiv)", "kind": "main", "points": [[-560, 460], [560, 460]]},
+    {"id": "rondellstrasse", "name": "Rondellstraße (fiktiv)", "kind": "street", "points": [[-560, 545], [560, 545]]}
+  ],
+  "parks": [
+    {"id": "schlossbezirk", "name": "Schlossplatz und Schlossgarten", "seed": [0, -250]}
+  ],
+  "clearings": [
+    {"id": "marktplatz", "name": "Marktplatz", "rect": [-44, 336, 44, 452], "surface": "platz"},
+    {"id": "europaplatz", "name": "Europaplatz", "circle": [-470, 330, 36], "surface": "platz"},
+    {"id": "kronenplatz", "name": "Kronenplatz", "circle": [252, 350, 28], "surface": "platz"},
+    {"id": "durlacher_tor", "name": "Durlacher Tor", "circle": [560, 330, 38], "surface": "platz"},
+    {"id": "rondellplatz", "name": "Rondellplatz", "circle": [0, 545, 32], "surface": "platz"},
+    {"id": "ettlinger_tor", "name": "Ettlinger Tor", "circle": [0, 640, 36], "surface": "platz"}
+  ],
+  "yards": [
+    {"id": "depot_hof", "name": "Hof Fächerblitz-Kurier", "seed": [-270, 500], "gate_toward": [-330, 500], "gate_width": 12},
+    {"id": "riegel_hof", "name": "Hinterhof Antiquitäten Riegel", "seed": [500, 250], "gate_toward": [445, 250], "gate_width": 12},
+    {"id": "maeule_hof", "name": "Hof Schrauberei Mäule", "seed": [-510, 80], "gate_toward": [-470, 80], "gate_width": 14},
+    {"id": "lager_hof", "name": "Lagerhof Westring", "seed": [-515, 592], "gate_toward": [-470, 592], "gate_width": 14}
+  ],
+  "landmarks": [
+    {"id": "schloss", "type": "schloss", "name": "Schloss", "pos": [0, 0], "reserve": [-140, -40, 140, 100]},
+    {"id": "pyramide", "type": "pyramide", "name": "Pyramide", "pos": [0, 360]},
+    {"id": "rathaus", "type": "rathaus", "name": "Rathaus", "pos": [-58, 416], "reserve": [-78, 382, -44, 450]},
+    {"id": "stadtkirche", "type": "stadtkirche", "name": "Stadtkirche", "pos": [58, 416], "reserve": [44, 382, 78, 450]},
+    {"id": "saeule", "type": "saeule", "name": "Rondellplatz-Säule", "pos": [0, 522]},
+    {"id": "europaplatz_brunnen", "type": "brunnen", "name": "Brunnen Europaplatz", "pos": [-448, 350]},
+    {"id": "ustrab_europaplatz", "type": "ustrab", "name": "U-Strab-Zugang", "pos": [-452, 316], "rot": 90},
+    {"id": "ustrab_marktplatz", "type": "ustrab", "name": "U-Strab-Zugang", "pos": [-30, 344], "rot": 90},
+    {"id": "ustrab_kronenplatz", "type": "ustrab", "name": "U-Strab-Zugang", "pos": [262, 348], "rot": 0},
+    {"id": "tor_skulptur", "type": "torbogen", "name": "Torbogen-Skulptur Durlacher Tor", "pos": [536, 352], "rot": 45},
+    {"id": "ettlinger_pavillon", "type": "pavillon", "name": "Pavillon Ettlinger Tor", "pos": [-18, 618]},
+    {"id": "tram_halt_kriegsstrasse", "type": "haltestelle", "name": "Haltestelle (stilisiert)", "pos": [80, 630.6], "rot": 0}
+  ],
+  "map_labels": [
+    {"text": "Schloss", "pos": [0, 30]},
+    {"text": "Schlossplatz", "pos": [0, 130]},
+    {"text": "Schlossgarten", "pos": [0, -300]},
+    {"text": "Marktplatz", "pos": [0, 395]},
+    {"text": "Kaiserstraße", "pos": [-230, 330]},
+    {"text": "Europaplatz", "pos": [-470, 330]},
+    {"text": "Kronenplatz", "pos": [252, 350]},
+    {"text": "Durlacher Tor", "pos": [560, 330]},
+    {"text": "Rondellplatz", "pos": [0, 545]},
+    {"text": "Ettlinger Tor", "pos": [0, 640]},
+    {"text": "Zirkel", "pos": [-140, 150]},
+    {"text": "Kriegsstraße", "pos": [-250, 640]},
+    {"text": "Adenauerring", "pos": [-400, -400]}
+  ],
+  "pois": [
+    {"id": "spawn", "name": "Startpunkt Marktplatz", "pos": [5, 447], "yaw": 0},
+    {"id": "hanne", "name": "Hanne Brettschneider (Fächerblitz-Kurier)", "pos": [-318, 494], "yaw": 90, "kind": "auftraggeber"},
+    {"id": "depot_van", "name": "Lieferwagen Fächerblitz", "pos": [-290, 502], "yaw": 90, "kind": "fahrzeug"},
+    {"id": "baeckerei", "name": "Bäckerei Brezelglück", "pos": [213.2, 500], "yaw": -90, "kind": "abholung", "sign": "Bäckerei Brezelglück"},
+    {"id": "baeckerei_parken", "name": "Halt Bäckerei", "pos": [222.5, 500], "kind": "fahrziel"},
+    {"id": "kanzlei", "name": "Kanzlei Dr. Hagedorn", "pos": [22, 453.0], "yaw": 180, "kind": "abgabe", "sign": "Kanzlei Dr. Hagedorn"},
+    {"id": "kanzlei_parken", "name": "Ladezone Kanzleistraße", "pos": [22, 464.5], "kind": "fahrziel"},
+    {"id": "toni", "name": "Toni „Turbo“ Kessler", "pos": [550.5, 298], "yaw": -90, "kind": "auftraggeber"},
+    {"id": "rennwagen", "name": "Fächer GT", "pos": [563.5, 292], "yaw": 0, "kind": "fahrzeug"},
+    {"id": "ewald", "name": "Ewald Riegel (Antiquitäten)", "pos": [458, 252], "yaw": 90, "kind": "auftraggeber", "sign": "Antiquitäten Riegel"},
+    {"id": "riegel_wagen", "name": "Dunkle Limousine", "pos": [482, 250], "yaw": 90, "kind": "fahrzeug"},
+    {"id": "lager", "name": "Lagerhof Westring", "pos": [-478, 592], "kind": "fahrziel"},
+    {"id": "maeule", "name": "Schrauberei Mäule", "pos": [-508, 80], "yaw": 90, "kind": "hofziel", "gate": [-470, 80], "sign": "Schrauberei Mäule"},
+    {"id": "klinikum", "name": "St.-Fächer-Klinik (fiktiv)", "pos": [500, 631], "yaw": 180, "kind": "respawn"},
+    {"id": "revier", "name": "Polizeirevier Innenstadt (fiktiv)", "pos": [-300, 538], "yaw": 180, "kind": "respawn"}
+  ],
+  "parked_vehicles": [
+    {"spec": "kompakt", "pos": [-12, 454.8], "yaw": 90, "locked": false},
+    {"spec": "limousine", "pos": [34, 465.2], "yaw": -90, "locked": true},
+    {"spec": "kompakt", "pos": [-475.2, 250], "yaw": 180, "locked": false},
+    {"spec": "limousine", "pos": [-475.2, 420], "yaw": 180, "locked": false},
+    {"spec": "kompakt", "pos": [-100, 646.2], "yaw": -90, "locked": true},
+    {"spec": "sport", "pos": [250, 646.2], "yaw": -90, "locked": false},
+    {"spec": "kompakt", "pos": [566.2, 100], "yaw": 0, "locked": false},
+    {"spec": "limousine", "pos": [-566.2, 400], "yaw": 180, "locked": true},
+    {"spec": "transporter", "pos": [-566.2, 250], "yaw": 180, "locked": false},
+    {"spec": "kompakt", "pos": [300, 454.8], "yaw": 90, "locked": false},
+    {"spec": "limousine", "pos": [-300, 465.2], "yaw": -90, "locked": false},
+    {"spec": "kompakt", "pos": [400, 336.2], "yaw": -90, "locked": true}
+  ],
+  "construction_sites": [
+    {"id": "baustelle_herren", "near": [-238, 590]}
+  ]
+}

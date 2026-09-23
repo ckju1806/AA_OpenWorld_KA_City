@@ -8,9 +8,11 @@ const DIRS: Array[String] = ["res://tests/unit", "res://tests/integration"]
 var _total: int = 0
 var _failed: int = 0
 var _lines: Array[String] = []
+var _errors: TestErrorCounter = TestErrorCounter.new()
 
 
 func _ready() -> void:
+	OS.add_logger(_errors)
 	# Testläufe dürfen den echten Spielstand/Einstellungen nicht verändern
 	SaveManager.set_paths("user://test_savegame.json", "user://test_savegame.bak.json", "user://test_savegame.tmp")
 	_run.call_deferred()
@@ -71,12 +73,16 @@ func _run_file(path: String) -> void:
 		inst.current_test = mname
 		_total += 1
 		var t0: int = Time.get_ticks_msec()
+		var err0: int = _errors.error_count()
 		if inst.has_method("before_each"):
 			await inst.call("before_each")
 		await inst.call(mname)
 		if inst.has_method("after_each"):
 			await inst.call("after_each")
 		var ms: int = Time.get_ticks_msec() - t0
+		var new_errors: int = _errors.error_count() - err0
+		if new_errors > 0:
+			inst.fail("%d Engine-/Skriptfehler während des Tests, zuletzt: %s" % [new_errors, " | ".join(_errors.last_errors())])
 		if inst.failures.is_empty():
 			_log("OK      %s::%s (%d ms)" % [path.get_file(), mname, ms])
 		else:
