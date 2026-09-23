@@ -1,0 +1,41 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== Fächer-City Tests (Godot 4.7.2-stable (official)) ===
+[Welt] Stadt aufgebaut in 974 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+        Mission 1 durchgespielt, Spielzeit 96 s simuliert
+OK      test_mission_m01.gd::test_m01_full_playthrough (8177 ms)
+[Welt] Stadt aufgebaut in 837 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m01.gd::test_m01_fail_and_retry_without_growth (1211 ms)
+[Welt] Stadt aufgebaut in 1058 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m01.gd::test_mission_data_valid (1272 ms)
+[Welt] Stadt aufgebaut in 1062 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m02.gd::test_m02_locked_until_m01 (1293 ms)
+[Welt] Stadt aufgebaut in 1090 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+        Fächer-Runde per Autopilot: 142.6 s
+SCRIPT ERROR: Invalid access to property or key 'global_basis' on a base object of type 'Nil'.
+          at: enter (res://tests/game_test_case.gd:34)
+          GDScript backtrace (most recent call first):
+              [0] enter (res://tests/game_test_case.gd:34)
+              [1] _to_race_start (res://tests/integration/test_mission_m02.gd:31)
+              [2] wait_until (res://tests/test_case.gd:74)
+              [3] wait_physics (res://tests/test_case.gd:58)
+SCRIPT ERROR: Invalid access to property or key 'rotation' on a base object of type 'Nil'.
+          at: test_m02_full_race_best_time_and_repeat (res://tests/integration/test_mission_m02.gd:84)
+          GDScript backtrace (most recent call first):
+              [0] test_m02_full_race_best_time_and_repeat (res://tests/integration/test_mission_m02.gd:84)
+              [1] _to_race_start (res://tests/integration/test_mission_m02.gd:34)
+              [2] wait_until (res://tests/test_case.gd:74)
+              [3] wait_physics (res://tests/test_case.gd:58)
+FEHLER  test_mission_m02.gd::test_m02_full_race_best_time_and_repeat (13956 ms)
+        - test_m02_full_race_best_time_and_repeat: Erneut gestartet
+        - test_m02_full_race_best_time_and_repeat: Rennwagen bereit
+        - test_m02_full_race_best_time_and_repeat: In den Fächer GT eingestiegen
+        - test_m02_full_race_best_time_and_repeat: Countdown abgelaufen
+        - test_m02_full_race_best_time_and_repeat: 2 Engine-/Skriptfehler während des Tests, zuletzt: Invalid access to property or key 'global_basis' on a base object of type 'Nil'. (game_test_case.gd:34 enter) | Invalid access to property or key 'rotation' on a base object of type 'Nil'. (test_mission_m02.gd:84 test_m02_full_race_best_time_and_repeat)
+[Welt] Stadt aufgebaut in 1078 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m02.gd::test_m02_time_limit_fail_and_retry (1843 ms)
+=== Ergebnis: 6 Tests, 1 fehlgeschlagen, 28.2 s ===
+WARNING: 11 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 4 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)

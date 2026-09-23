@@ -1,0 +1,43 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== Fächer-City Tests (Godot 4.7.2-stable (official)) ===
+OK      test_game_state.gd::test_start_money (0 ms)
+OK      test_game_state.gd::test_reward_only_once (0 ms)
+OK      test_game_state.gd::test_money_never_negative (0 ms)
+OK      test_game_state.gd::test_best_time_only_improves (0 ms)
+OK      test_game_state.gd::test_roundtrip_dict (1 ms)
+OK      test_game_state.gd::test_from_dict_tolerates_garbage (0 ms)
+OK      test_poly_util.gd::test_area_and_orientation (0 ms)
+OK      test_poly_util.gd::test_inset_uniform (0 ms)
+OK      test_poly_util.gd::test_inset_per_edge (0 ms)
+OK      test_poly_util.gd::test_inset_collapse_returns_empty (0 ms)
+OK      test_poly_util.gd::test_polar (0 ms)
+OK      test_save_codec.gd::test_roundtrip (0 ms)
+OK      test_save_codec.gd::test_corrupt_json (0 ms)
+OK      test_save_codec.gd::test_empty_and_wrong_format (0 ms)
+OK      test_save_codec.gd::test_future_version_rejected (0 ms)
+OK      test_save_codec.gd::test_missing_fields_use_defaults (0 ms)
+OK      test_save_codec.gd::test_invalid_position_dropped (0 ms)
+OK      test_player.gd::test_player_stands_on_ground (63 ms)
+WARNING: Sound fehlt: res://assets/audio/step.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] play_3d (res://src/autoload/audio_manager.gd:96)
+         [2] _footsteps (res://src/player/player.gd:172)
+         [3] _move (res://src/player/player.gd:158)
+         [4] _physics_process (res://src/player/player.gd:87)
+OK      test_player.gd::test_walk_and_sprint (88 ms)
+FEHLER  test_player.gd::test_step_up_curb (67 ms)
+        - test_step_up_curb: Spieler hat den Bordstein überquert erwartet > 7.500, erhalten 6.767
+WARNING: Sound fehlt: res://assets/audio/jump.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] play_3d (res://src/autoload/audio_manager.gd:96)
+         [2] _move (res://src/player/player.gd:130)
+         [3] _physics_process (res://src/player/player.gd:87)
+OK      test_player.gd::test_jump (62 ms)
+OK      test_player.gd::test_damage_and_revive (15 ms)
+OK      test_player.gd::test_camera_follows_and_avoids_walls (18 ms)
+=== Ergebnis: 23 Tests, 1 fehlgeschlagen, 0.4 s ===

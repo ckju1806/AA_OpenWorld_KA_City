@@ -1,0 +1,25 @@
+# Godot
+.godot/
+*.translation
+export_credentials.cfg
+.import/
+
+# Builds (Nutzerentscheidung: nicht versionieren, ZIP wird separat übergeben)
+build/
+
+# Lokale/temporäre Inhalte
+tmp/*
+!tmp/README.md
+!tmp/.gdignore
+logs/*
+!logs/README.md
+!logs/.gdignore
+sensitive/*
+!sensitive/README.md
+!sensitive/.gdignore
+
+# System
+.DS_Store
+Thumbs.db
+*.swp
+__pycache__/

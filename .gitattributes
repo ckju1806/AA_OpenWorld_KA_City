@@ -1,0 +1,11 @@
+# Einheitliche Zeilenenden, Windows-Skripte mit CRLF
+* text=auto eol=lf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+*.png binary
+*.wav binary
+*.ico binary
+*.ogg binary
+*.zip binary
+# Auslieferungs-Installer byte-genau (CRLF) speichern, da er per "raw"-Download bezogen wird
+release/*.bat -text

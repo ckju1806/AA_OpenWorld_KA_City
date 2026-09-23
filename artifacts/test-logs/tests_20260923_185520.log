@@ -1,0 +1,19 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== Fächer-City Tests (Godot 4.7.2-stable (official)) ===
+OK      test_vehicle.gd::test_vehicles_rest_stably (239 ms)
+OK      test_vehicle.gd::test_accelerate_brake_reverse (376 ms)
+OK      test_vehicle.gd::test_steering_turns_right_and_speed_dependent (126 ms)
+OK      test_vehicle.gd::test_handbrake_slows_down (167 ms)
+OK      test_vehicle.gd::test_multiple_enter_exit_and_switch (190 ms)
+OK      test_vehicle.gd::test_exit_refused_when_fast (106 ms)
+OK      test_vehicle.gd::test_exit_refused_when_boxed_in (47 ms)
+OK      test_vehicle.gd::test_crash_causes_damage (107 ms)
+OK      test_vehicle.gd::test_recovery_when_flipped (138 ms)
+OK      test_vehicle.gd::test_lights_and_horn (29 ms)
+OK      test_vehicle.gd::test_autopilot_drives_200m (1278 ms)
+        Geschwindigkeit nach 4 s: { "kompakt": 15.9404697418213, "limousine": 16.0516777038574, "sport": 24.983470916748, "transporter": 12.807258605957, "polizei": 20.3721904754639 }
+OK      test_vehicle.gd::test_all_vehicle_types_drive_brake_and_steer (1219 ms)
+=== Ergebnis: 12 Tests, 0 fehlgeschlagen, 4.4 s ===
+WARNING: 2 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)

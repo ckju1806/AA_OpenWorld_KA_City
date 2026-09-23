@@ -1,0 +1,26 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== Fächer-City Tests (Godot 4.7.2-stable (official)) ===
+OK      test_player.gd::test_player_stands_on_ground (57 ms)
+WARNING: Sound fehlt: res://assets/audio/step.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] play_3d (res://src/autoload/audio_manager.gd:96)
+         [2] _footsteps (res://src/player/player.gd:172)
+         [3] _move (res://src/player/player.gd:158)
+         [4] _physics_process (res://src/player/player.gd:87)
+OK      test_player.gd::test_walk_and_sprint (97 ms)
+FEHLER  test_player.gd::test_step_up_curb (66 ms)
+        - test_step_up_curb: Spieler hat den Bordstein überquert erwartet > 7.500, erhalten 6.767
+WARNING: Sound fehlt: res://assets/audio/jump.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] play_3d (res://src/autoload/audio_manager.gd:96)
+         [2] _move (res://src/player/player.gd:130)
+         [3] _physics_process (res://src/player/player.gd:87)
+OK      test_player.gd::test_jump (62 ms)
+OK      test_player.gd::test_damage_and_revive (13 ms)
+OK      test_player.gd::test_camera_follows_and_avoids_walls (24 ms)
+=== Ergebnis: 6 Tests, 1 fehlgeschlagen, 0.4 s ===
