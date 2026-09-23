@@ -20,6 +20,7 @@ func _ready() -> void:
 	_build_world()
 	add_child(entities)
 	_spawn_player()
+	_spawn_initial_vehicles()
 	App.set_mouse_captured(true)
 	if App.has_arg("--screenshot-tour"):
 		var tour := ScreenshotTour.new()
@@ -60,6 +61,34 @@ func request_pause() -> void:
 	pass
 
 
+func _spawn_initial_vehicles() -> void:
+	if world != null and world.has_method("get_parked_vehicles"):
+		for pv: Dictionary in world.call("get_parked_vehicles"):
+			spawn_vehicle(str(pv.spec), pv.position, float(pv.yaw), pv.get("color", Color(-1, 0, 0)),
+				int(pv.get("ownership", Vehicle.Ownership.PUBLIC)), str(pv.get("livery", "")))
+
+
+## Erzeugt ein Fahrzeug in der Welt.
+func spawn_vehicle(spec_id: String, pos: Vector3, yaw: float, color: Color = Color(-1, 0, 0),
+		ownership: int = Vehicle.Ownership.PUBLIC, livery: String = "") -> Vehicle:
+	var v := Vehicle.new()
+	v.setup(VehicleSpec.get_spec(spec_id), color)
+	v.ownership = ownership as Vehicle.Ownership
+	v.livery_text = livery
+	v.name = "Fahrzeug_%s_%d" % [spec_id, v.get_instance_id()]
+	entities.add_child(v)
+	v.global_transform = Transform3D(Basis(Vector3.UP, yaw), pos + Vector3.UP * 0.15)
+	v.reset_physics_interpolation()
+	return v
+
+
+## Bergungspunkt: delegiert an die Welt (Straßennetz); Testgelände: aufrichten an Ort und Stelle.
+func find_recovery_point(pos: Vector3, spec: VehicleSpec) -> Dictionary:
+	if world != null and world.has_method("find_recovery_point"):
+		return world.call("find_recovery_point", pos, spec)
+	return {"ok": true, "position": Vector3(pos.x, 0.0, pos.z), "yaw": 0.0}
+
+
 ## Stationen der Screenshot-Tour (visuelle Kontrolle).
 func register_screenshot_stations(tour: ScreenshotTour) -> void:
 	tour.add_station("spieler_idle", func() -> void:
@@ -81,3 +110,22 @@ func register_screenshot_stations(tour: ScreenshotTour) -> void:
 		camera_rig.pitch = -0.15
 		camera_rig.snap()
 	)
+	tour.add_station("fahrzeuge_uebersicht", func() -> void:
+		player.global_position = Vector3(-6, 0.2, 8)
+		camera_rig.yaw = -2.3
+		camera_rig.pitch = -0.35
+		camera_rig.snap()
+	)
+	tour.add_station("fahrzeug_fahrt", func() -> void:
+		var vs: Array[Node] = get_tree().get_nodes_in_group("vehicles")
+		if vs.is_empty():
+			return
+		var v: Vehicle = vs[0] as Vehicle
+		player.global_position = v.global_position + Vector3(-2.0, 0.1, 0)
+		v.enter(player)
+		v.set_lights(true)
+		var ap := Autopilot.new()
+		ap.set_path(PackedVector3Array([Vector3(3, 0, -60), Vector3(3, 0, -160)]), 14.0)
+		v.ai_controller = ap
+		v.driver = Vehicle.Driver.AI
+	, 150)

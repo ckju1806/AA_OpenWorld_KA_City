@@ -36,3 +36,19 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
 - **Gefundene und behobene Fehler:** falsch dimensionierter Bordstein-Test (Laufzeit zu kurz), Kamera-Wand-Test
   prüfte falsche Seite, Jackengeometrie wirkte wie Rucksack.
 - **Erkenntnis:** Nach neuen `class_name`-Dateien ist ein `--import` nötig (Skripte machen das automatisch).
+
+## 2026-09-23 – Meilenstein B: Fahrzeuge, Ein-/Ausstieg, Audio
+
+- **Ziel:** vollständig fahrbares Fahrzeug inkl. Ein-/Ausstieg, danach weitere Typen.
+- **Änderungsklasse:** mittel (neue Dateien, keine bestehende Logik ersetzt) → Restore-Punkt: Commit `b619ed7`.
+- **Umgesetzt:** `VehicleSpec` + `data/vehicles/vehicles.json` (Kompakt, Limousine, Sport, Transporter, Polizei –
+  eigene fiktive Modelle), `VehicleModelBuilder` (Seitenprofil-Extrusion, gecachte Geometrie, Lack per Override),
+  `Vehicle` (RigidBody3D mit 4 Raycast-Federbeinen, Quergrip, Handbremse, geschwindigkeitsabhängiger Lenkung,
+  Aufrichthilfe, Schaden mit Rauch/Totalschaden, Licht/Bremslicht/Blaulicht, Hupe, Ausstiegsprüfung mit
+  Boden-, Wand- und Platztest, Bergung mit Abklingzeit), `Autopilot` (Pure Pursuit).
+  Audio-Generator `tools/generate_audio.py` (20 eigene Synthese-Klänge, deterministisch).
+- **Prüfung:** 41/41 Tests (u. a. Beschleunigen/Bremsen/Rückwärts, Rechtskurve, Handbremse, 2× Wechsel zwischen
+  drei Fahrzeugen, Ausstieg bei Fahrt verweigert, Ausstieg bei Einkesselung verweigert, Crash-Schaden ohne
+  Durchdringen der Wand, Bergung nach Überschlag, Autopilot mit Wende). Screenshots: `artifacts/screenshots/B/`.
+- **Behobene Testfehler:** Startpositionen im Test (Auffahren auf geparktes Fahrzeug, fehlender Anlauf).
+- **Offen:** Fahrgefühl subjektiv nicht beurteilbar (nur messbare Kriterien getestet).

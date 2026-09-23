@@ -8,6 +8,8 @@ var _tools: Dictionary = {}      # String -> SurfaceTool
 var _materials: Dictionary = {}  # String -> Material
 var _custom: Dictionary = {}     # String -> bool (CUSTOM0 aktiv)
 var _counts: Dictionary = {}     # String -> int (Vertices)
+## Nach commit(): Material-Schlüssel -> Oberflächenindex im erzeugten Mesh
+var surface_index: Dictionary = {}
 
 ## Aktuelle Vertex-Attribute (werden auf neue Vertices angewendet)
 var color: Color = Color.WHITE
@@ -207,6 +209,42 @@ func add_polygon_walls(key: String, poly: PackedVector2Array, y0: float, y1: flo
 			Vector2(0, y0), Vector2(d.length(), y0), Vector2(d.length(), y1), Vector2(0, y1))
 
 
+## Extrudiert ein Seitenprofil (Vector2(z, y), beliebiger Umlaufsinn) zwischen x0 und x1.
+## side_key: Material der Seitenflächen, band_keys: optional Material je Profilkante (sonst side_key).
+func add_extruded_profile(side_key: String, profile: PackedVector2Array, x0: float, x1: float,
+		band_keys: Array = [], basis: Basis = Basis.IDENTITY, offset: Vector3 = Vector3.ZERO) -> void:
+	var cnt: int = profile.size()
+	var idx: PackedInt32Array = Geometry2D.triangulate_polygon(profile)
+	var bx: Vector3 = basis.x
+	for side: int in 2:
+		var x: float = x0 if side == 0 else x1
+		var n: Vector3 = (-bx if side == 0 else bx).normalized()
+		for i: int in range(0, idx.size(), 3):
+			var a: Vector2 = profile[idx[i]]
+			var b: Vector2 = profile[idx[i + 1]]
+			var c: Vector2 = profile[idx[i + 2]]
+			add_tri(side_key, offset + basis * Vector3(x, a.y, a.x), offset + basis * Vector3(x, b.y, b.x),
+				offset + basis * Vector3(x, c.y, c.x), n, Vector2(a.x, a.y), Vector2(b.x, b.y), Vector2(c.x, c.y))
+	var ccw: bool = PolyUtil.signed_area(profile) > 0.0
+	for i: int in cnt:
+		var a2: Vector2 = profile[i]
+		var b2: Vector2 = profile[(i + 1) % cnt]
+		var d: Vector2 = b2 - a2
+		if d.length() < 0.0001:
+			continue
+		# Außen-Normale in der (z, y)-Ebene
+		var out2: Vector2 = Vector2(d.y, -d.x).normalized()
+		if not ccw:
+			out2 = -out2
+		var n3: Vector3 = (basis * Vector3(0, out2.y, out2.x)).normalized()
+		var key: String = side_key
+		if i < band_keys.size() and str(band_keys[i]) != "":
+			key = str(band_keys[i])
+		add_quad(key, offset + basis * Vector3(x0, a2.y, a2.x), offset + basis * Vector3(x1, a2.y, a2.x),
+			offset + basis * Vector3(x1, b2.y, b2.x), offset + basis * Vector3(x0, b2.y, b2.x), n3,
+			Vector2(0, 0), Vector2(x1 - x0, 0), Vector2(x1 - x0, d.length()), Vector2(0, d.length()))
+
+
 func commit(existing: ArrayMesh = null) -> ArrayMesh:
 	var mesh: ArrayMesh = existing if existing != null else ArrayMesh.new()
 	var keys: Array = _tools.keys()
@@ -218,6 +256,7 @@ func commit(existing: ArrayMesh = null) -> ArrayMesh:
 		st.index()
 		st.commit(mesh)
 		var surf: int = mesh.get_surface_count() - 1
+		surface_index[key] = surf
 		if _materials.has(key):
 			mesh.surface_set_material(surf, _materials[key])
 	return mesh

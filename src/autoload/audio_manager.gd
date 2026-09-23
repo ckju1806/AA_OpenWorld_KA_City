@@ -3,6 +3,10 @@ extends Node
 ## Fehlende Dateien führen nicht zum Absturz (Sound entfällt dann still, einmalige Warnung).
 
 const AUDIO_DIR: String = "res://assets/audio/"
+## Vom Spiel verwendete Sounds (Test prüft Vorhandensein; fehlende Dateien -> stumm, kein Absturz)
+const REQUIRED_SOUNDS: Array[String] = ["step", "jump", "door", "crash", "horn", "siren", "engine_kompakt",
+	"engine_sport", "engine_transporter", "ambience_city", "ui_click", "ui_confirm", "checkpoint",
+	"countdown_beep", "countdown_go", "money", "mission_success", "mission_fail", "wanted_up", "music_menu"]
 const POOL_3D: int = 16
 const POOL_2D: int = 8
 
@@ -72,9 +76,7 @@ func get_stream(sound_name: String, loop: bool = false) -> AudioStream:
 		var w: AudioStreamWAV = (s as AudioStreamWAV).duplicate() as AudioStreamWAV
 		w.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		w.loop_begin = 0
-		var bytes_per_sample: int = 2 if w.format == AudioStreamWAV.FORMAT_16_BITS else 1
-		var channels: int = 2 if w.stereo else 1
-		w.loop_end = w.data.size() / (bytes_per_sample * channels)
+		w.loop_end = int(w.get_length() * float(w.mix_rate))
 		s = w
 	_streams[key] = s
 	return s

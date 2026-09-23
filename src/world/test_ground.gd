@@ -64,5 +64,15 @@ func _add_light() -> void:
 	add_child(env)
 
 
+## Geparkte Fahrzeuge auf der Teststraße (drei Typen).
+func get_parked_vehicles() -> Array[Dictionary]:
+	return [
+		{"spec": "kompakt", "position": Vector3(3.0, 0, 0), "yaw": 0.0},
+		{"spec": "sport", "position": Vector3(-3.0, 0, 12), "yaw": PI},
+		{"spec": "transporter", "position": Vector3(3.0, 0, 22), "yaw": 0.0, "livery": "Fächerblitz Kurier"},
+		{"spec": "polizei", "position": Vector3(-3.0, 0, 30), "yaw": PI, "ownership": Vehicle.Ownership.POLICE},
+	]
+
+
 func get_spawn() -> Transform3D:
 	return Transform3D(Basis.IDENTITY, spawn_position)

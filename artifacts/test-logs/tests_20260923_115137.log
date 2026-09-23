@@ -1,0 +1,108 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== Fächer-City Tests (Godot 4.7.2-stable (official)) ===
+OK      test_game_state.gd::test_start_money (0 ms)
+OK      test_game_state.gd::test_reward_only_once (1 ms)
+OK      test_game_state.gd::test_money_never_negative (0 ms)
+OK      test_game_state.gd::test_best_time_only_improves (0 ms)
+OK      test_game_state.gd::test_roundtrip_dict (0 ms)
+OK      test_game_state.gd::test_from_dict_tolerates_garbage (0 ms)
+OK      test_poly_util.gd::test_area_and_orientation (0 ms)
+OK      test_poly_util.gd::test_inset_uniform (0 ms)
+OK      test_poly_util.gd::test_inset_per_edge (0 ms)
+OK      test_poly_util.gd::test_inset_collapse_returns_empty (0 ms)
+OK      test_poly_util.gd::test_polar (0 ms)
+OK      test_save_codec.gd::test_roundtrip (0 ms)
+OK      test_save_codec.gd::test_corrupt_json (0 ms)
+OK      test_save_codec.gd::test_empty_and_wrong_format (0 ms)
+OK      test_save_codec.gd::test_future_version_rejected (0 ms)
+OK      test_save_codec.gd::test_missing_fields_use_defaults (0 ms)
+OK      test_save_codec.gd::test_invalid_position_dropped (0 ms)
+OK      test_vehicle_spec.gd::test_catalog_loads_required_types (0 ms)
+OK      test_vehicle_spec.gd::test_all_specs_valid (0 ms)
+OK      test_vehicle_spec.gd::test_types_differ_in_handling (0 ms)
+WARNING: Unbekannter Fahrzeugtyp 'gibt_es_nicht' – verwende Kompaktwagen.
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_spec (res://src/vehicles/vehicle_spec.gd:130)
+         [1] test_unknown_spec_falls_back (res://tests/unit/test_vehicle_spec.gd:29)
+         [2] _run_file (res://tests/test_runner.gd:76)
+OK      test_vehicle_spec.gd::test_unknown_spec_falls_back (0 ms)
+OK      test_player.gd::test_player_stands_on_ground (126 ms)
+WARNING: Sound fehlt: res://assets/audio/step.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] play_3d (res://src/autoload/audio_manager.gd:96)
+         [2] _footsteps (res://src/player/player.gd:172)
+         [3] _move (res://src/player/player.gd:158)
+         [4] _physics_process (res://src/player/player.gd:87)
+OK      test_player.gd::test_walk_and_sprint (116 ms)
+OK      test_player.gd::test_step_up_curb (111 ms)
+WARNING: Sound fehlt: res://assets/audio/jump.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] play_3d (res://src/autoload/audio_manager.gd:96)
+         [2] _move (res://src/player/player.gd:130)
+         [3] _physics_process (res://src/player/player.gd:87)
+OK      test_player.gd::test_jump (70 ms)
+OK      test_player.gd::test_damage_and_revive (16 ms)
+OK      test_player.gd::test_camera_follows_and_avoids_walls (29 ms)
+OK      test_vehicle.gd::test_vehicles_rest_stably (91 ms)
+WARNING: Sound fehlt: res://assets/audio/door.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] play_3d (res://src/autoload/audio_manager.gd:96)
+         [2] enter (res://src/vehicles/vehicle.gd:673)
+         [3] _drive (res://tests/integration/test_vehicle.gd:31)
+         [4] wait_physics (res://tests/test_case.gd:58)
+WARNING: Sound fehlt: res://assets/audio/engine_kompakt.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] _update_engine_audio (res://src/vehicles/vehicle.gd:540)
+         [2] _process (res://src/vehicles/vehicle.gd:525)
+OK      test_vehicle.gd::test_accelerate_brake_reverse (230 ms)
+OK      test_vehicle.gd::test_steering_turns_right_and_speed_dependent (90 ms)
+WARNING: Sound fehlt: res://assets/audio/engine_sport.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] _update_engine_audio (res://src/vehicles/vehicle.gd:540)
+         [2] _process (res://src/vehicles/vehicle.gd:525)
+WARNING: Sound fehlt: res://assets/audio/crash.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] play_3d (res://src/autoload/audio_manager.gd:96)
+         [2] _detect_impacts (res://src/vehicles/vehicle.gd:406)
+         [3] _physics_process (res://src/vehicles/vehicle.gd:363)
+FEHLER  test_vehicle.gd::test_handbrake_slows_down (132 ms)
+        - test_handbrake_slows_down: Handbremse verzögert erwartet < 3.054, erhalten 3.589
+WARNING: Sound fehlt: res://assets/audio/engine_transporter.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] _update_engine_audio (res://src/vehicles/vehicle.gd:540)
+         [2] _process (res://src/vehicles/vehicle.gd:525)
+OK      test_vehicle.gd::test_multiple_enter_exit_and_switch (143 ms)
+OK      test_vehicle.gd::test_exit_refused_when_fast (68 ms)
+OK      test_vehicle.gd::test_exit_refused_when_boxed_in (35 ms)
+FEHLER  test_vehicle.gd::test_crash_causes_damage (211 ms)
+        - test_crash_causes_damage: Aufprall verursacht Schaden
+        - test_crash_causes_damage: Lebenspunkte gesunken erwartet < 1000.000, erhalten 1000.000
+OK      test_vehicle.gd::test_recovery_when_flipped (104 ms)
+WARNING: Sound fehlt: res://assets/audio/horn.wav
+     at: push_warning (core/variant/variant_utility.cpp:1033)
+     GDScript backtrace (most recent call first):
+         [0] get_stream (res://src/autoload/audio_manager.gd:68)
+         [1] play_3d (res://src/autoload/audio_manager.gd:96)
+         [2] honk (res://src/vehicles/vehicle.gd:591)
+         [3] test_lights_and_horn (res://tests/integration/test_vehicle.gd:183)
+         [4] _drive (res://tests/integration/test_vehicle.gd:31)
+         [5] wait_physics (res://tests/test_case.gd:58)
+OK      test_vehicle.gd::test_lights_and_horn (21 ms)
+OK      test_vehicle.gd::test_autopilot_drives_200m (948 ms)
+=== Ergebnis: 38 Tests, 2 fehlgeschlagen, 2.7 s ===
