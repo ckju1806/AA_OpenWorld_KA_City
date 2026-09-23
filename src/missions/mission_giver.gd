@@ -32,7 +32,7 @@ func setup(p_mission_id: String, giver: Dictionary, p_system: Node) -> void:
 	add_child(_rig)
 	_rig.build(colors)
 	var body := StaticBody3D.new()
-	body.collision_layer = Layers.WORLD
+	body.collision_layer = Layers.NPC
 	var cs := CollisionShape3D.new()
 	var cap := CapsuleShape3D.new()
 	cap.radius = 0.3

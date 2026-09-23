@@ -84,3 +84,7 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
 - **Prüfung:** automatischer Durchlauf (Auftrag per E, Lieferwagen, Fahrt per Autopilot über das Straßennetz zur Bäckerei,
   Haltezone, Fahrt zur Kanzlei, Aussteigen, zu Fuß zur Tür, Abgabe) → Mission erfüllt, +250 € genau einmal;
   3× Fehlschlag + Wiederholung ohne wachsende Fahrzeugzahl. Screenshots `artifacts/screenshots/D/`.
+- **Korrektur nach Commit `f92eacd`:** Der Commit enthielt einen fehlschlagenden Test (Befehlskette prüfte den
+  Testausgang nicht). Ursache: Auftraggeber-Kollision auf Welt-Ebene verfälschte die Bodenhöhe am POI.
+  Behoben durch NPC-Ebene für Figuren (Spieler/Fahrzeuge kollidieren weiter). Seitdem wird vor jedem Commit
+  der Exit-Code der Testsuite explizit geprüft. Ergebnis: 57/57 Tests grün.
