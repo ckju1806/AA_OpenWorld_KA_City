@@ -94,3 +94,12 @@ weil zwischen den Läufen Doku-Dateien geändert wurden (und ZIP-Einträge Zeits
 3. Auftrag 1 bei Hanne (Kurierhof südwestlich des Marktplatzes, orange Raute auf der Karte) vollständig spielen.
 4. Pausenmenü → Speichern → Hauptmenü → Fortsetzen: Geld/Fortschritt prüfen.
 5. `%APPDATA%\Faecherstadt\savegame.json` vorhanden?
+
+## 6. Auslieferung
+Das ZIP (36,7 MiB) überschritt das Upload-Limit der Sitzung (30 MiB) und wurde daher binär in zwei Teile geteilt übergeben:
+```
+106befee5d4d7129d3d166bb362ce471d89f12ce8d5b67d4d34d3ff996b460fd  Faecherstadt_Windows_x64_v0.1.0.zip.part00
+752e526b387d48455f30e5b8e4f870afd3b7f469692771fa8805f90de650ab7e  Faecherstadt_Windows_x64_v0.1.0.zip.part01
+```
+Zusammensetzen unter Windows: `copy /b Faecherstadt_Windows_x64_v0.1.0.zip.part00 + Faecherstadt_Windows_x64_v0.1.0.zip.part01 Faecherstadt_Windows_x64_v0.1.0.zip`,
+Prüfung: `certutil -hashfile Faecherstadt_Windows_x64_v0.1.0.zip SHA256` → `794122ba…3010` (siehe oben). Zusammensetzen unter Linux geprüft (identische Prüfsumme).
