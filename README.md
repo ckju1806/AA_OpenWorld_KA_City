@@ -21,7 +21,12 @@ Namen, Logos, Figuren oder Musik aus anderen Spielen. Alle Figuren und Firmen si
 
 ## Spielen (Windows 10/11, 64 Bit)
 
-1. ZIP `Faecherstadt_Windows_x64_v0.1.0.zip` entpacken (Ordner `Faecherstadt`).
+**Download und Schritt-für-Schritt-Anleitung: [ANLEITUNG.md](ANLEITUNG.md)** – Dateien im Ordner [`release/`](release/)
+(ZIP + Installer `GTA_KA_installieren_und_starten.bat`, der nach `C:\GTA_KA` installiert und startet).
+
+Kurzfassung von Hand:
+
+1. ZIP `release/Faecherstadt_Windows_x64_v0.1.0.zip` entpacken (Ordner `Faecherstadt`).
 2. `Faecherstadt.exe` starten. **`Faecherstadt.pck` muss im selben Ordner liegen.**
 3. Windows SmartScreen kann bei unsignierten Programmen warnen („Weitere Informationen“ → „Trotzdem ausführen“).
    Das Programm ist nicht code-signiert.

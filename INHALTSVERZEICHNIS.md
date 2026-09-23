@@ -5,6 +5,8 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 ## Einstieg
 | Datei | Inhalt |
 |---|---|
+| [ANLEITUNG.md](ANLEITUNG.md) | Download, Installation nach `C:\GTA_KA`, Start, Fehlerbehebung (für Spieler) |
+| [release/](release/) | Versionierte Auslieferung: Windows-ZIP, Installer-.bat, SHA256SUMS |
 | [README.md](README.md) | Überblick, Voraussetzungen, Start, Build, Spielstände, Fehlerbehebung |
 | [CONTROLS.md](CONTROLS.md) | Steuerung |
 | [TEST_REPORT.md](TEST_REPORT.md) | Durchgeführte / nicht durchgeführte / blockierte Prüfungen |
@@ -43,4 +45,5 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 | `sensitive/` | leer – Projekt benötigt keine Zugangsdaten |
 | `_inventory/` | Werkzeug-Inventar |
 | `_quarantine/` | ungeprüfte Dateien (leer) |
-| `build/` | Windows-Build `build/windows/Faecherstadt.exe` + `.pck`, ZIP (nicht versioniert, Nutzerentscheidung) |
+| `build/` | lokale Build-Ausgabe `build/windows/Faecherstadt.exe` + `.pck`, ZIP (nicht versioniert) |
+| `release/` | freigegebene Auslieferung (versioniert, Nutzerentscheidung 2026-09-23), `.gdignore` |

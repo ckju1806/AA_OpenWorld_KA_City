@@ -103,3 +103,7 @@ Das ZIP (36,7 MiB) überschritt das Upload-Limit der Sitzung (30 MiB) und wurde 
 ```
 Zusammensetzen unter Windows: `copy /b Faecherstadt_Windows_x64_v0.1.0.zip.part00 + Faecherstadt_Windows_x64_v0.1.0.zip.part01 Faecherstadt_Windows_x64_v0.1.0.zip`,
 Prüfung: `certutil -hashfile Faecherstadt_Windows_x64_v0.1.0.zip SHA256` → `794122ba…3010` (siehe oben). Zusammensetzen unter Linux geprüft (identische Prüfsumme).
+
+Ergänzung (Nutzerentscheidung 2026-09-23): Dasselbe ZIP (SHA256 `794122ba…3010`) liegt zusätzlich versioniert unter
+`release/` im Repository, zusammen mit `GTA_KA_installieren_und_starten.bat` (Installation nach `C:\GTA_KA`, Prüfsummenkontrolle,
+Start) und `SHA256SUMS.txt`. Die `.bat` ist **nicht auf Windows ausgeführt** worden.

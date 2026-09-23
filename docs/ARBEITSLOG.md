@@ -180,3 +180,15 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
 - **Blockiert:** Wine-Rauchtest (Wine 9.0 startet bereits das unveränderte offizielle Template nicht). **Nicht durchgeführt:**
   Start unter echtem Windows, FPS-Messung auf Hardware, Windows-Skripte.
 - **Auslieferung:** ZIP per Datei-Übergabe in der Sitzung (Nutzerentscheidung), `build/` bleibt unversioniert; SHA256 in TEST_REPORT.md.
+
+## 2026-09-23 – Auslieferung über GitHub
+
+- **Ziel:** Spiel, Installer und Anleitung direkt im Repository bereitstellen; Übernahme nach `main` per Pull Request.
+- **Entscheidung (Nutzer):** ein ZIP im Repo + Pull Request. Damit wird „Build nicht versionieren“ **nur für das freigegebene
+  Release-ZIP** aufgehoben (`release/`); `build/` bleibt ignoriert. GitHub-Releases kann ich mit meinen Werkzeugen nicht anlegen –
+  Anleitung dafür in `ANLEITUNG.md` §9.
+- **Änderungsklasse:** mittel (37-MB-Binärdatei, Doku) → Restore-Punkt: `97bb8ec`.
+- **Umgesetzt:** `release/` (ZIP, `GTA_KA_installieren_und_starten.bat` für ZIP oder zwei Teile, `SHA256SUMS.txt`, `README.md`,
+  `.gdignore`), `ANLEITUNG.md`, Verweise in README/Inhaltsverzeichnis/Testbericht, `.gitattributes`: `*.zip binary`.
+- **Prüfung:** Hash der versionierten ZIP = dokumentierter Hash; `.bat` ASCII/CRLF; Godot-Import ignoriert `release/`.
+  Nicht geprüft: Ausführung der `.bat` unter Windows.
