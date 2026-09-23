@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- Eigenes Symbol: Fächer-Straßen, die vom Schlossturm ausgehen, vor Abendhimmel -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b1d3a"/>
+      <stop offset="0.6" stop-color="#b8563a"/>
+      <stop offset="1" stop-color="#f2a65a"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="240" height="240" rx="44" fill="url(#sky)"/>
+  <g stroke="#1b1420" stroke-width="9" stroke-linecap="round" opacity="0.9">
+    <line x1="128" y1="92" x2="36" y2="222"/>
+    <line x1="128" y1="92" x2="66" y2="230"/>
+    <line x1="128" y1="92" x2="96" y2="236"/>
+    <line x1="128" y1="92" x2="128" y2="238"/>
+    <line x1="128" y1="92" x2="160" y2="236"/>
+    <line x1="128" y1="92" x2="190" y2="230"/>
+    <line x1="128" y1="92" x2="220" y2="222"/>
+  </g>
+  <path d="M60 104 h136 v14 h-136 z" fill="#1b1420"/>
+  <path d="M116 104 v-34 h24 v34 z M112 70 h32 l-16 -26 z" fill="#1b1420"/>
+  <circle cx="128" cy="92" r="9" fill="#ffd27a"/>
+</svg>
