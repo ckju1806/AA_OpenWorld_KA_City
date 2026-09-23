@@ -48,3 +48,12 @@ func test_invalid_position_dropped() -> void:
 	assert_true(res2.ok, "Decode ok")
 	assert_false((res2.data.player as Dictionary).has("position"), "Nicht-numerische Position verworfen")
 	assert_near(float(res2.data.player.health), 10.0, 0.01, "Lebenspunkte auf Minimum angehoben")
+
+
+func test_mission_field_roundtrip_and_invalid() -> void:
+	var text: String = SaveCodec.encode({"money": 10}, {"position": [1.0, 0.2, 3.0], "yaw": 0.5, "health": 90.0, "mission": "m02_faecher_runde"})
+	var r: Dictionary = SaveCodec.decode(text)
+	assert_true(r.ok, "Dekodiert")
+	assert_eq(str(r.data.player.mission), "m02_faecher_runde", "Laufender Auftrag erhalten")
+	var r2: Dictionary = SaveCodec.decode(SaveCodec.encode({}, {"position": [1.0, 0.2, 3.0], "mission": 42}))
+	assert_eq(str(r2.data.player.mission), "", "Ungültiger Auftragswert verworfen")

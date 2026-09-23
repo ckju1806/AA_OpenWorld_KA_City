@@ -17,9 +17,18 @@ var peds: PedestrianManager = null
 var police: PoliceManager = null
 ## Umgebungsleben (Verkehr/Passanten/Streife); Tests können es abschalten
 var ambient_life: bool = true
+var pause_menu: PauseMenu = null
+var map_overlay: MapOverlay = null
+var minimap: MapView = null
+var dev_overlay: DevOverlay = null
+## Autosave nach Missionsabschluss (Tests leiten den Speicherort um)
+var autosave_enabled: bool = true
 var _player_vehicles: Array[Vehicle] = []
 var _respawn_t: float = -1.0
 var _respawn_kind: String = "klinik"
+## Letzter sicherer Fortsetzungspunkt (zu Fuß, am Boden, ohne Fahndung, ohne laufenden Auftrag)
+var _safe_xf: Transform3D = Transform3D.IDENTITY
+var _safe_t: float = 0.0
 
 
 func _ready() -> void:
@@ -42,10 +51,21 @@ func _ready() -> void:
 		missions.name = "Missionen"
 		add_child(missions)
 		missions.setup(self)
+		_setup_maps(world as CityWorld)
+	pause_menu = PauseMenu.new()
+	pause_menu.name = "Pausenmenue"
+	add_child(pause_menu)
+	pause_menu.setup(self)
+	dev_overlay = DevOverlay.new()
+	dev_overlay.name = "Entwickleranzeige"
+	add_child(dev_overlay)
+	dev_overlay.setup(self)
+	_safe_xf = player.global_transform
 	player.died.connect(_on_player_died)
 	App.set_mouse_captured(true)
 	AudioManager.play_ambience("ambience_city")
 	AudioManager.stop_music()
+	_apply_pending_load()
 	if App.has_arg("--screenshot-tour"):
 		var tour := ScreenshotTour.new()
 		tour.game = self
@@ -93,7 +113,132 @@ func _spawn_player() -> void:
 
 
 func request_pause() -> void:
-	pass
+	if pause_menu != null and not pause_menu.is_open() and not App.has_arg("--screenshot-tour"):
+		if map_overlay != null and map_overlay.is_open():
+			map_overlay.close()
+		pause_menu.open()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("pause"):
+		request_pause()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("map") and map_overlay != null and not player.is_dead:
+		map_overlay.open()
+		get_viewport().set_input_as_handled()
+
+
+func _setup_maps(city: CityWorld) -> void:
+	minimap = MapView.new()
+	minimap.name = "Minikarte"
+	minimap.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	minimap.offset_left = 36
+	minimap.offset_right = 36 + 300
+	minimap.offset_bottom = -136
+	minimap.offset_top = -136 - 300
+	hud.root.add_child(minimap)
+	minimap.setup(self, city.graph, false)
+	map_overlay = MapOverlay.new()
+	map_overlay.name = "Karte"
+	add_child(map_overlay)
+	map_overlay.setup(self, city.graph)
+
+
+# ------------------------------------------------------------------ Speichern / Laden
+
+## Spielerdaten für den Spielstand. Gespeichert wird immer ein sicherer Punkt:
+## laufender Auftrag -> Auftraggeber (Auftrag beginnt neu), Fahndung -> letzter sicherer Punkt.
+func make_player_save() -> Dictionary:
+	var xf: Transform3D = _safe_xf
+	var mission_id: String = ""
+	if missions != null and missions.active != null:
+		mission_id = missions.active.id
+		xf = missions.giver_start_transform(mission_id)
+	elif get_wanted_level() == 0 and not player.is_dead:
+		if player.is_in_vehicle():
+			var ex: Dictionary = (player.current_vehicle as Vehicle).find_exit_position()
+			if ex.ok:
+				xf = Transform3D(Basis(Vector3.UP, player.current_vehicle.global_rotation.y), ex.position)
+		elif player.is_on_floor():
+			xf = player.global_transform
+	return {"position": SaveCodec.vec3_to_array(xf.origin), "yaw": xf.basis.get_euler().y,
+		"health": player.health, "mission": mission_id}
+
+
+## Speichert sofort. Rückgabe { ok, message }.
+func save_now() -> Dictionary:
+	if world_mode != "city":
+		return {"ok": false, "message": "Auf dem Testgelände wird nicht gespeichert."}
+	var ok: bool = SaveManager.save_game(make_player_save())
+	var msg: String = "Spiel gespeichert." if ok else "Speichern fehlgeschlagen – siehe Protokoll."
+	return {"ok": ok, "message": msg}
+
+
+func _apply_pending_load() -> void:
+	var data: Dictionary = App.pending_load
+	var message: String = App.pending_message
+	App.pending_load = {}
+	App.pending_message = ""
+	if data.is_empty() or world_mode != "city":
+		if message != "":
+			EventBus.notify.emit(message, "warnung")
+		return
+	var xf: Transform3D = get_spawn_transform()
+	if data.has("position"):
+		xf = Transform3D(Basis(Vector3.UP, float(data.get("yaw", 0.0))), data.position)
+	var mission_id: String = str(data.get("mission", ""))
+	if mission_id != "" and missions != null and missions.definitions.has(mission_id):
+		xf = missions.giver_start_transform(mission_id)
+		var title: String = (missions.definitions[mission_id] as MissionDefinition).title
+		message = ("%s " % message if message != "" else "") + "Der Auftrag „%s“ lief beim Speichern – sprich erneut mit dem Auftraggeber." % title
+	player.set_health(float(data.get("health", player.MAX_HEALTH)))
+	_place_player(xf)
+	# Kollisionsformen sind erst nach einem Physikschritt abfragbar
+	await get_tree().physics_frame
+	if not _position_is_free(xf.origin):
+		_place_player(get_spawn_transform())
+		message = ("%s " % message if message != "" else "") + "Gespeicherte Position war blockiert – Start am Marktplatz."
+	if message != "":
+		EventBus.notify.emit(message, "hinweis")
+	else:
+		EventBus.notify.emit("Spielstand geladen.", "erfolg")
+
+
+func _place_player(xf: Transform3D) -> void:
+	player.global_transform = xf
+	player.velocity = Vector3.ZERO
+	player.reset_physics_interpolation()
+	camera_rig.yaw = xf.basis.get_euler().y
+	camera_rig.snap()
+	_safe_xf = xf
+
+
+## Boden vorhanden und kein Hindernis in Körperhöhe?
+func _position_is_free(pos: Vector3) -> bool:
+	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
+	var ray := PhysicsRayQueryParameters3D.create(pos + Vector3.UP * 1.0, pos + Vector3.DOWN * 3.0, Layers.WORLD)
+	if space.intersect_ray(ray).is_empty():
+		return false
+	var cap := CapsuleShape3D.new()
+	cap.radius = 0.35
+	cap.height = 1.6
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = cap
+	q.transform = Transform3D(Basis.IDENTITY, pos + Vector3.UP * 1.0)
+	q.collision_mask = Layers.WORLD | Layers.VEHICLE
+	return space.intersect_shape(q, 1).is_empty()
+
+
+func _update_safe_point(delta: float) -> void:
+	_safe_t -= delta
+	if _safe_t > 0.0:
+		return
+	_safe_t = 1.0
+	if player.is_dead or player.is_in_vehicle() or not player.is_on_floor() or get_wanted_level() > 0:
+		return
+	if missions != null and missions.has_active():
+		return
+	_safe_xf = player.global_transform
 
 
 func _setup_city_systems(city: CityWorld) -> void:
@@ -182,6 +327,7 @@ func _on_player_entered_vehicle(v: Node) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	_update_safe_point(delta)
 	if _respawn_t > 0.0:
 		_respawn_t -= delta
 		if _respawn_t <= 0.0:
@@ -230,7 +376,9 @@ func prepare_mission_retry(_mission_id: String, xf: Transform3D) -> void:
 
 
 func on_mission_completed(_mission_id: String) -> void:
-	pass
+	if autosave_enabled:
+		var r: Dictionary = save_now()
+		EventBus.notify.emit("Automatisch gespeichert." if r.ok else str(r.message), "hinweis" if r.ok else "warnung")
 
 
 func _spawn_initial_vehicles() -> void:
@@ -453,7 +601,30 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		camera_rig._target_distance = 6.5
 		camera_rig.snap()
 	, 60)
+	tour.add_station("karte_vollbild", func() -> void:
+		if missions.active != null:
+			missions.fail("Tour")
+			missions.abort()
+		player.force_leave_vehicle(Vector3(5, y, 447))
+		missions.start_mission("m03_falsche_lieferung")
+		for i: int in 30:
+			await get_tree().physics_frame
+		map_overlay.open()
+	, 20)
+	tour.add_station("pausenmenue", func() -> void:
+		map_overlay.close()
+		pause_menu.open()
+	, 20)
+	tour.add_station("entwickleranzeige_minikarte", func() -> void:
+		pause_menu.close()
+		camera_rig.yaw = 0.0
+		camera_rig.pitch = -0.12
+		camera_rig._target_distance = 4.2
+		camera_rig.snap()
+		dev_overlay.toggle()
+	, 40)
 	tour.add_station("luftbild_faecher", func() -> void:
+		dev_overlay.toggle()
 		player.global_position = Vector3(0, y, 250)
 		camera_rig.yaw = 0.0
 		camera_rig.pitch = -1.2

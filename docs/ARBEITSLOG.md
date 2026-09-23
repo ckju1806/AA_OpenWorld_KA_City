@@ -141,3 +141,27 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   Screenshots `artifacts/screenshots/F/` visuell geprüft.
 - **Einschränkung (ehrlich):** Das Abschütteln wird im Test durch Versetzen des Fahrzeugs außer Sicht simuliert (die Such- und
   Abbaulogik läuft echt); eine echte Fluchtfahrt gegen die Polizei-KI ist nicht automatisiert getestet.
+
+## 2026-09-23 – Meilenstein G: Menüs, Speichern/Laden, Karte, Entwickleranzeige
+
+- **Ziel:** vollständiger Spielrahmen: Hauptmenü, Pause, Einstellungen, Spielstand-Integration, Minikarte/Karte, F3.
+- **Änderungsklasse:** mittel–groß (6 neue UI-Module, Integration in `game.gd`, Speicherformat erweitert) → Restore-Punkt: `9cde3ed`.
+- **Umgesetzt:**
+  - `MainMenu` (Neues Spiel mit Rückfrage bei vorhandenem Spielstand, Fortsetzen nur mit gültigem Spielstand inkl. Kurzinfo,
+    Einstellungen, Beenden), eigener animierter Hintergrund `MenuBackground` (stilisierter Fächergrundriss), Menümusik.
+  - `PauseMenu` (Esc; Fortsetzen, Speichern, Einstellungen, Steuerung, Hauptmenü/Beenden mit Speichern; pausiert, gibt Maus frei;
+    öffnet auch bei Fokusverlust des Fensters).
+  - `SettingsPanel` (Lautstärken, Mausempfindlichkeit, Y-Invertierung, Vollbild, V-Sync, Qualität, FPS-Anzeige, Verkehrsdichte).
+  - `MapView` (Minikarte unten links, Vollkarte `MapOverlay` mit M): Blöcke, Park, Plätze, Straßen in Metern, Beschriftungen,
+    Auftraggeber, Missionsziel (am Rand gehalten), Polizei bei Fahndung, Spielerpfeil, Legende. Datenquelle = Straßengraph.
+  - `DevOverlay` (F3): FPS, Frame-/Physikzeit, Draw Calls, Objekte, Videospeicher, Position, Fahrzeug, Verkehr/Passanten/Polizei,
+    Fahndung, Missionsschritt.
+  - Speichern/Laden im Spiel: `Game.save_now`, `make_player_save` mit sicherem Fortsetzungspunkt (laufender Auftrag →
+    Auftraggeber, Auftrag beginnt neu mit Hinweis; Fahndung → letzter sicherer Punkt zu Fuß), Autosave nach Missionsabschluss,
+    Prüfung der geladenen Position (Boden + frei, sonst Startpunkt mit Hinweis). Speicherformat v1 um Feld `mission` ergänzt
+    (abwärtskompatibel: fehlt es, gilt „kein Auftrag“).
+- **Prüfung:** 90/90 Tests grün, Exit-Code 0. Neu: Speichern → Fortsetzen (Geld, Aufträge, Bestzeit, Position),
+  Speichern während Auftrag → Fortsetzung beim Auftraggeber ohne altes Missionsfahrzeug, Fahndung → sicherer Punkt,
+  blockierte Position → Startpunkt, Autosave, Pause/Karte pausieren und geben frei, Codec-Feld `mission`.
+  Screenshots `artifacts/screenshots/G/` (Hauptmenü, Vollkarte, Pausenmenü, F3 + Minikarte) visuell geprüft.
+- **Hinweis:** Die F3-Anzeige zeigt unter Software-Rendering (Xvfb/lavapipe) ca. 4 FPS – das ist **kein** Maß für echte Hardware.

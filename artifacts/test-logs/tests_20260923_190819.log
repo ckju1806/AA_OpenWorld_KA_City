@@ -1,0 +1,11 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== Fächer-City Tests (Godot 4.7.2-stable (official)) ===
+OK      test_save_codec.gd::test_roundtrip (0 ms)
+OK      test_save_codec.gd::test_corrupt_json (0 ms)
+OK      test_save_codec.gd::test_empty_and_wrong_format (0 ms)
+OK      test_save_codec.gd::test_future_version_rejected (0 ms)
+OK      test_save_codec.gd::test_missing_fields_use_defaults (0 ms)
+OK      test_save_codec.gd::test_invalid_position_dropped (0 ms)
+OK      test_save_codec.gd::test_mission_field_roundtrip_and_invalid (0 ms)
+=== Ergebnis: 7 Tests, 0 fehlgeschlagen, 0.0 s ===

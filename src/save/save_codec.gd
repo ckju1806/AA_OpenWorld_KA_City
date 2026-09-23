@@ -5,7 +5,7 @@ extends RefCounted
 ## Format v1:
 ## { "format": "faecherstadt-save", "version": 1, "game_version": "0.1.0", "saved_at": "...",
 ##   "state": { money, completed_missions[], best_times{}, mission_attempts{}, play_time },
-##   "player": { "position": [x, y, z], "yaw": float, "health": float } }
+##   "player": { "position": [x, y, z], "yaw": float, "health": float, "mission": String } }
 
 const FORMAT_ID: String = "faecherstadt-save"
 const CURRENT_VERSION: int = 1
@@ -99,6 +99,8 @@ static func validate_player(p: Dictionary, warnings: Array) -> Dictionary:
 	out["yaw"] = wrapf(float(p.get("yaw", 0.0)), -PI, PI) if (p.get("yaw") is float or p.get("yaw") is int) else 0.0
 	var hp: float = float(p.get("health", 100.0)) if (p.get("health") is float or p.get("health") is int) else 100.0
 	out["health"] = clampf(hp, 10.0, 100.0)
+	# Beim Speichern laufender Auftrag (beginnt nach dem Laden beim Auftraggeber neu)
+	out["mission"] = str(p.get("mission", "")) if p.get("mission") is String else ""
 	return out
 
 

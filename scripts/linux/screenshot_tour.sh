@@ -14,3 +14,6 @@ mkdir -p "$OUT"
 timeout 900 xvfb-run -a -s "-screen 0 ${W}x${H}x24" "$GODOT" --path "$ROOT" --resolution "${W}x${H}" \
   -- --autostart --world="$WORLD" --screenshot-tour --shot-dir="$OUT" 2>&1 | grep -E "screenshot|SCRIPT ERROR|ERROR: Failed" || true
 ls -la "$OUT"
+# Zusätzlich: Hauptmenü (ohne Autostart)
+timeout 300 xvfb-run -a -s "-screen 0 ${W}x${H}x24" "$GODOT" --path "$ROOT" --resolution "${W}x${H}" \
+  -- --menu-shot --shot-dir="$OUT/menue" 2>&1 | grep -E "screenshot|SCRIPT ERROR|ERROR: Failed" || true
