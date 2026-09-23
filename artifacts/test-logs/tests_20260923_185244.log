@@ -1,0 +1,15 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== Fächer-City Tests (Godot 4.7.2-stable (official)) ===
+[Welt] Stadt aufgebaut in 1036 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m02.gd::test_m02_locked_until_m01 (1389 ms)
+[Welt] Stadt aufgebaut in 1029 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+        Fächer-Runde per Autopilot: 142.6 s
+OK      test_mission_m02.gd::test_m02_full_race_best_time_and_repeat (12793 ms)
+[Welt] Stadt aufgebaut in 787 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m02.gd::test_m02_time_limit_fail_and_retry (1511 ms)
+=== Ergebnis: 3 Tests, 0 fehlgeschlagen, 16.0 s ===
+WARNING: 17 ObjectDB instances were leaked at exit (run with `--verbose` for details).
+   at: cleanup (core/object/object.cpp:2536)
+ERROR: 5 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:822)

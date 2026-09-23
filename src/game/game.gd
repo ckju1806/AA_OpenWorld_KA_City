@@ -407,6 +407,52 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		for i2: int in 60:
 			await get_tree().physics_frame
 	, 30)
+	tour.add_station("m2_zeitfahren_kontrollpunkt", func() -> void:
+		reset_wanted()
+		police.enabled = false
+		for u: Vehicle in police.units:
+			u.queue_free()
+		police.units.clear()
+		player.force_leave_vehicle(missions.giver_start_transform("m02_faecher_runde").origin)
+		GameState.complete_mission("m01_erste_schicht", 0)
+		missions.auto_skip_dialog = true
+		missions.start_mission("m02_faecher_runde")
+		for i: int in 30:
+			await get_tree().physics_frame
+		var gt: Vehicle = missions.mission_vehicle("gt")
+		if gt == null:
+			return
+		player.global_position = gt.global_position + gt.global_basis.x * -2.0
+		await get_tree().physics_frame
+		gt.enter(player)
+		for i2: int in 260:
+			await get_tree().physics_frame
+		gt.teleport_to(Vector3(563.5, 0.1, 205), 0.0)
+		gt.set_lights(true)
+		var ap := Autopilot.new()
+		ap.set_path(PackedVector3Array([Vector3(563.5, 0, 150), Vector3(563.5, 0, 20)]), 18.0)
+		gt.ai_controller = ap
+		gt.driver = Vehicle.Driver.AI
+		camera_rig.yaw = 0.0
+		camera_rig.pitch = -0.16
+		camera_rig.snap()
+	, 100)
+	tour.add_station("m3_auftraggeber_ewald", func() -> void:
+		if missions.active != null:
+			missions.fail("Tour")
+			missions.abort()
+		missions.auto_skip_dialog = true
+		player.force_leave_vehicle(missions.giver_start_transform("m03_falsche_lieferung").origin)
+		missions.start_mission("m03_falsche_lieferung")
+		for i: int in 40:
+			await get_tree().physics_frame
+		var giver: MissionGiver = missions.givers["m03_falsche_lieferung"]
+		player.global_position = giver.global_position + Vector3(-4.5, 0.1, -2.0)
+		camera_rig.yaw = deg_to_rad(-100.0)
+		camera_rig.pitch = -0.2
+		camera_rig._target_distance = 6.5
+		camera_rig.snap()
+	, 60)
 	tour.add_station("luftbild_faecher", func() -> void:
 		player.global_position = Vector3(0, y, 250)
 		camera_rig.yaw = 0.0

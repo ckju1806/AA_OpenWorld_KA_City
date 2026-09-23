@@ -1,0 +1,12 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+=== Fächer-City Tests (Godot 4.7.2-stable (official)) ===
+[Welt] Stadt aufgebaut in 956 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m03.gd::test_m03_locked_until_m01 (1359 ms)
+[Welt] Stadt aufgebaut in 1018 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m03.gd::test_m03_full_playthrough (19769 ms)
+[Welt] Stadt aufgebaut in 1146 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m03.gd::test_m03_no_completion_with_police_nearby (2043 ms)
+[Welt] Stadt aufgebaut in 978 ms: 112 Knoten, 158 Kanten, 47 Blöcke, 1429 Parzellen, 557 Laternen
+OK      test_mission_m03.gd::test_m03_busted_fails_and_retry (1753 ms)
+=== Ergebnis: 4 Tests, 0 fehlgeschlagen, 25.3 s ===

@@ -1,0 +1,43 @@
+{
+  "id": "m03_falsche_lieferung",
+  "title": "Die falsche Lieferung",
+  "order": 3,
+  "reward": 800,
+  "repeatable": false,
+  "requires": ["m01_erste_schicht"],
+  "giver": {
+    "poi": "ewald",
+    "name": "Ewald Riegel",
+    "role": "Antiquitätenhändler (fiktiv)",
+    "prompt": "Mit Ewald sprechen (Auftrag)",
+    "look": {"skin": "#e3c1a6", "shirt": "#d8d0bc", "jacket": "#4a3b2c", "pants": "#3a3530", "shoes": "#3b2a1e", "hair": "#c9c4bb", "hair_style": 1},
+    "done_line": "Die Standuhr tickt wieder. Die Sache bleibt unter uns, gell?"
+  },
+  "fail_vehicle": "limo",
+  "steps": [
+    {"type": "talk", "lines": [
+      ["Ewald", "Ah, der Fahrer von der Hanne. Riegel, Antiquitäten. Ich hab ein kleines Problem."],
+      ["Ewald", "Im Lagerhof am Westring wartet eine Standuhr auf mich. Die muss heut noch zur Schrauberei Mäule – die richten das Werk."],
+      ["Ewald", "Nimm die dunkle Limousine hier im Hof. Und fahr ordentlich, das Stück ist älter als wir beide zusammen."]
+    ]},
+    {"type": "spawn_vehicle", "tag": "limo", "spec": "limousine", "poi": "riegel_wagen", "color": "#1c1f24"},
+    {"type": "enter_vehicle", "tag": "limo", "text": "Steig in Ewalds dunkle Limousine."},
+    {"type": "goto", "poi": "lager", "radius": 10, "vehicle": "limo", "marker": "abholung",
+     "text": "Fahr zum Lagerhof am Westring (bei der Kriegsstraße)."},
+    {"type": "wait_zone", "poi": "lager", "radius": 10, "vehicle": "limo", "seconds": 3.0, "max_speed": 2.0,
+     "text": "Halte an – die Kiste wird eingeladen.", "progress": "Kiste wird eingeladen"},
+    {"type": "talk", "lines": [
+      ["Lagerist Bruno", "Riegel, Standuhr … hier. Oh. Moment – das Siegel da, das ist doch die Kiste von der Asservatenstelle!"],
+      ["Lagerist Bruno", "Die haben uns die falsche Lieferung hingestellt. Und da drüben ruft grad einer die Polizei. Fahr, fahr!"]
+    ]},
+    {"type": "trigger_wanted", "level": 2, "reason": "Verdacht auf Hehlerei", "message": "FAHNDUNG!"},
+    {"type": "lose_wanted", "vehicle": "limo", "text": "Schüttle die Polizei ab – raus aus ihrem Blickfeld und abwarten."},
+    {"type": "goto", "poi": "maeule", "radius": 9, "vehicle": "limo", "marker": "ziel", "require_clean": true, "clean_radius": 60,
+     "text": "Bring die Limousine zur Schrauberei Mäule (Hof an der Karlstraße).",
+     "dirty_text": "Die Polizei ist noch zu nah – so kannst du nicht in die Werkstatt!"},
+    {"type": "talk", "lines": [
+      ["Gerda Mäule", "Rein damit, Tor zu. Ich ruf die Asservatenstelle an – die Kiste geht ordentlich zurück, die Standuhr holen wir morgen."],
+      ["Ewald (Telefon)", "Eine Verwechslung, ausgerechnet heute. Danke dir – die 800 Euro hast du dir verdient."]
+    ]}
+  ]
+}

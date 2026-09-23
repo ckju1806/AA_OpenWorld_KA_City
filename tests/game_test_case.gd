@@ -108,3 +108,35 @@ func interact_nearest() -> bool:
 		return false
 	it.call("interact", p)
 	return true
+
+
+## Wegpunkte über das Straßennetz durch eine Folge von Punkten (je nächster Knoten), rechte Spur.
+func route_through(start: Vector3, fwd: Vector3, targets: Array[Vector2]) -> PackedVector3Array:
+	var g: CityGraph = city().graph
+	var cur: int = _node_ahead(g, start, fwd)
+	var nodes: PackedInt32Array = PackedInt32Array([cur])
+	for t: Vector2 in targets:
+		var nk: int = g.nearest_node(t, "drive")
+		if nk == cur:
+			continue
+		var seg: PackedInt32Array = g.find_path(cur, nk, "drive")
+		for i: int in range(1, seg.size()):
+			nodes.append(seg[i])
+		cur = nk
+	var pts: PackedVector3Array = PackedVector3Array([start])
+	pts.append_array(g.lane_path(nodes, 2.6))
+	return pts
+
+
+## Lässt das Fahrzeug per Autopilot einer Wegpunktliste folgen, bis done() wahr ist.
+func follow_until(v: Vehicle, pts: PackedVector3Array, speed: float, done: Callable, timeout: float) -> bool:
+	var ap := Autopilot.new()
+	ap.set_path(pts, speed)
+	ap.arrive_radius = 4.0
+	v.ai_controller = ap
+	v.driver = Vehicle.Driver.AI
+	var ok: bool = await wait_until(done, timeout)
+	v.ai_controller = null
+	v.driver = Vehicle.Driver.PLAYER
+	v.set_controls(0.0, 1.0, 0.0, true)
+	return ok

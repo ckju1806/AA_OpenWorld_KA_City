@@ -204,3 +204,30 @@ func test_autopilot_drives_200m() -> void:
 	assert_true(done, "Autopilot erreicht das Ziel (Wende inklusive)")
 	assert_false(v.is_flipped(), "Kein Überschlag")
 	assert_gt(start.distance_to(Vector3(3, 0, -110)), 100.0, "Strecke > 100 m je Richtung")
+
+
+func test_all_vehicle_types_drive_brake_and_steer() -> void:
+	var speeds: Dictionary = {}
+	var i: int = 0
+	for id: String in ["kompakt", "limousine", "sport", "transporter", "polizei"]:
+		var v: Vehicle = game.spawn_vehicle(id, Vector3(100.0 + float(i) * 25.0, 0.1, 0.0), 0.0)
+		i += 1
+		await wait_physics(30)
+		v.driver = Vehicle.Driver.AI
+		v.set_controls(1.0, 0.0, 0.0, false)
+		await wait_seconds(4.0)
+		speeds[id] = v.get_forward_speed()
+		assert_gt(v.get_forward_speed(), 12.0, "%s beschleunigt (%.1f m/s)" % [id, v.get_forward_speed()])
+		var yaw0: float = v.rotation.y
+		v.set_controls(0.5, 0.0, 0.6, false)
+		await wait_seconds(1.5)
+		assert_gt(absf(angle_difference(yaw0, v.rotation.y)), 0.3, "%s lenkt ein" % id)
+		v.set_controls(0.0, 1.0, 0.0, false)
+		var stopped: bool = await wait_until(func() -> bool: return absf(v.get_forward_speed()) < 0.5, 8.0)
+		assert_true(stopped, "%s bremst bis zum Stillstand" % id)
+		assert_false(v.is_flipped(), "%s nicht überschlagen" % id)
+		v.set_controls(0.0, 0.0, 0.0, true)
+		v.queue_free()
+		await wait_physics(2)
+	assert_gt(float(speeds.sport), float(speeds.transporter), "Sportwagen schneller als Transporter")
+	print("        Geschwindigkeit nach 4 s: %s" % str(speeds))

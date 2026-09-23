@@ -89,4 +89,14 @@ func validate(graph: CityGraph) -> Array[String]:
 			var cps: Array = s.get("points", [])
 			if cps.size() < 2:
 				errs.append("%s: zu wenige Kontrollpunkte" % id)
+			for ci: int in cps.size():
+				var cp: Variant = cps[ci]
+				if cp is String:
+					if graph.get_poi(cp).is_empty():
+						errs.append("%s: Kontrollpunkt %d verweist auf fehlenden POI '%s'" % [id, ci, cp])
+					continue
+				var c2: Vector2 = Vector2(float(cp[0]), float(cp[1]))
+				var ne: Dictionary = graph.nearest_edge_point(c2, "drive")
+				if int(ne.edge) < 0 or float(ne.dist) > graph.edge_width(int(ne.edge)) * 0.5 + 1.0:
+					errs.append("%s: Kontrollpunkt %d liegt nicht auf einer Fahrbahn" % [id, ci])
 	return errs

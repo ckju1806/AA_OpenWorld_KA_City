@@ -105,7 +105,7 @@
     {"id": "kanzlei_parken", "name": "Ladezone Kanzleistraße", "pos": [22, 464.5], "kind": "fahrziel"},
     {"id": "toni", "name": "Toni „Turbo“ Kessler", "pos": [550.5, 298], "yaw": -90, "kind": "auftraggeber"},
     {"id": "rennwagen", "name": "Fächer GT", "pos": [563.5, 292], "yaw": 0, "kind": "fahrzeug"},
-    {"id": "ewald", "name": "Ewald Riegel (Antiquitäten)", "pos": [458, 252], "yaw": 90, "kind": "auftraggeber", "sign": "Antiquitäten Riegel"},
+    {"id": "ewald", "name": "Ewald Riegel (Antiquitäten)", "pos": [459, 255], "yaw": 90, "kind": "auftraggeber", "sign": "Antiquitäten Riegel"},
     {"id": "riegel_wagen", "name": "Dunkle Limousine", "pos": [482, 250], "yaw": 90, "kind": "fahrzeug"},
     {"id": "lager", "name": "Lagerhof Westring", "pos": [-478, 592], "kind": "fahrziel"},
     {"id": "maeule", "name": "Schrauberei Mäule", "pos": [-508, 80], "yaw": 90, "kind": "hofziel", "gate": [-470, 80], "sign": "Schrauberei Mäule"},

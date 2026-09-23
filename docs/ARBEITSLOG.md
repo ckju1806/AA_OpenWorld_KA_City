@@ -114,3 +114,30 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   Ausweichen/Anfahren gemeldet, beobachteter vs. unbeobachteter Diebstahl, Spawn außer Sicht, Suche an zuletzt bekannter
   Position, Abbau auf 0, Festnahme am Revier mit Gebühr und Missionsfehlschlag, Rammen eines Streifenwagens).
   Screenshots `artifacts/screenshots/E/` (u. a. 14 Kreuzung mit Ampel, 15 Passanten Kaiserstraße, 16 Verfolgung) visuell geprüft.
+
+## 2026-09-23 – Meilenstein F: Mission 2 „Die Fächer-Runde“, Mission 3 „Die falsche Lieferung“, Fahrzeugtypen
+
+- **Ziel:** zwei weitere vollständig abschließbare Missionen; alle Fahrzeugtypen fahrdynamisch geprüft.
+- **Änderungsklasse:** mittel (neue Datendateien und Tests, zwei kleine Code-Korrekturen) → Restore-Punkt: `985f0e0`.
+- **Umgesetzt:**
+  - `data/missions/m02_faecher_runde.json`: Toni „Turbo“ Kessler (fiktiv), Sportwagen „Fächer GT“, Countdown,
+    12 Kontrollpunkte (Ostring → Schlossallee Ost → Zirkel → Adlerstraße → Kanzleistraße → Herrenstraße → Kriegsstraße →
+    Ostring → Durlacher Tor), Zeitlimit 3:30, Bestzeit (`faecher_runde`), wiederholbar, 400 € nur beim ersten Abschluss.
+  - `data/missions/m03_falsche_lieferung.json`: Ewald Riegel (fiktiv), dunkle Limousine, Abholung Lagerhof Westring,
+    geskriptete Fahndung Stufe 2, Abschütteln, Abgabe Schrauberei Mäule nur bei Fahndung 0 und ohne Streifenwagen < 60 m, 800 €.
+    Handlung: Verwechslung einer Kiste – keine realen Firmen, niemand Reales wird als kriminell dargestellt.
+  - `MissionDefinition.validate`: Kontrollpunkte müssen auf befahrbarer Fahrbahn liegen.
+  - Testhilfen `route_through` / `follow_until` (Route über das Straßennetz durch Punktfolgen).
+  - Screenshot-Stationen `m2_zeitfahren_kontrollpunkt`, `m3_auftraggeber_ewald`.
+- **Behobene Befunde:**
+  - Spielerposition blieb beim Fahren am Einstiegsort stehen → „Polizei in der Nähe“-Prüfung und andere Abstandsprüfungen
+    nutzten eine falsche Position. Jetzt wird die Position mit dem Fahrzeug mitgeführt (`Player._physics_process`).
+  - Auftraggeber Ewald stand 0,8 m neben der Ausfahrt der Limousine → POI auf [459, 255] verschoben.
+- **Prüfung:** 83/83 Tests grün, Exit-Code 0. Neu u. a.: M2 gesperrt ohne M1; komplette Runde per Autopilot (142,6 s simuliert),
+  Bestzeit gespeichert, zweite Runde ohne erneute Belohnung und mit besserer Bestzeit; Zeitlimit-Fehlschlag + 2× Wiederholung ohne
+  Objektwachstum; M3 komplett (Fahrt zum Lager, Fahndung 2, Polizei rückt an, Abschütteln durch Sichtverlust und Ablauf der Suche,
+  Fahrt zur Werkstatt, 800 € genau einmal); kein Abschluss mit Fahndung bzw. mit Streifenwagen in der Nähe, Abschluss danach;
+  Festnahme → Fehlschlag → Wiederholung; alle 5 Fahrzeugtypen beschleunigen, lenken, bremsen ohne Überschlag.
+  Screenshots `artifacts/screenshots/F/` visuell geprüft.
+- **Einschränkung (ehrlich):** Das Abschütteln wird im Test durch Versetzen des Fahrzeugs außer Sicht simuliert (die Such- und
+  Abbaulogik läuft echt); eine echte Fluchtfahrt gegen die Polizei-KI ist nicht automatisiert getestet.

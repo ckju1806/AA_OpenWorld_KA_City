@@ -97,6 +97,8 @@ func _physics_process(delta: float) -> void:
 	if not is_dead and health < MAX_HEALTH and _since_damage > REGEN_DELAY:
 		set_health(minf(MAX_HEALTH, health + REGEN_RATE * delta))
 	if is_in_vehicle():
+		# Position mitführen (Kollision ist deaktiviert), damit Abstandsprüfungen die echte Lage nutzen
+		global_position = current_vehicle.global_position
 		return
 	_move(delta)
 	_scan_timer -= delta
