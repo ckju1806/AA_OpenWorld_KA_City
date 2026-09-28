@@ -244,6 +244,7 @@ func _spawn_vehicle(s: Dictionary) -> void:
 		_remove_vehicle(old)
 	var city: CityWorld = game.call("get_city")
 	var poi: String = str(s.get("poi", ""))
+	city.ensure_loaded(city.graph.poi_pos3(poi))
 	var pos: Vector3 = city.poi_position(poi)
 	var yaw: float = city.graph.poi_yaw(poi)
 	if game.has_method("clear_area"):

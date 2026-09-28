@@ -44,10 +44,11 @@ func test_traffic_spawns_and_drives() -> void:
 func test_stops_at_red_light() -> void:
 	await start_city_game(false)
 	var g: CityGraph = city().graph
-	# Signalisierte Kreuzung Karlstraße/Kanzleistraße suchen
-	var node: int = g.nearest_node(Vector2(-470, 460), "drive")
+	# Signalisierte Kreuzung Kriegsstraße/Karlstraße (Karlstor), Zufahrt über die Karlstraße von Norden
+	var node: int = g.nearest_node(Vector2(-520, 905), "drive")
+	load_at(g.pos3(node))
 	assert_true(game.lights.is_signalized(node), "Kreuzung ist ampelgeregelt")
-	var from_node: int = g.nearest_node(Vector2(-470, 330), "drive")
+	var from_node: int = neighbor_on(node, "Karlstraße")
 	var e: int = g.find_edge(from_node, node)
 	assert_gt(float(e), -1.0, "Zufahrtskante vorhanden")
 	# Ampel für diese Zufahrt auf Rot stellen (Zeit so wählen, dass die Gruppe ~20 s rot bleibt)
@@ -57,7 +58,8 @@ func test_stops_at_red_light() -> void:
 			break
 	assert_eq(game.lights.light_for(node, e), TrafficLights.Light.RED, "Ampel rot")
 	var dir: Vector2 = (g.node_pos[node] - g.node_pos[from_node]).normalized()
-	var start: Vector2 = g.node_pos[node] - dir * 70.0 + Vector2(-dir.y, dir.x) * LaneDriver.LANE_OFFSET
+	var back: float = minf(55.0, g.node_pos[node].distance_to(g.node_pos[from_node]) - 3.0)
+	var start: Vector2 = g.node_pos[node] - dir * back + Vector2(-dir.y, dir.x) * LaneDriver.LANE_OFFSET
 	var v: Vehicle = game.spawn_vehicle("kompakt", Vector3(start.x, 0, start.y), atan2(-dir.x, -dir.y))
 	var drv := TrafficDriver.new(5)
 	drv.setup(g, game.lights, [from_node, node] as Array[int])
@@ -87,9 +89,15 @@ func _red_for(node: int, e: int, seconds: float) -> bool:
 func test_keeps_distance_to_obstacle() -> void:
 	await start_city_game(false)
 	var g: CityGraph = city().graph
-	# Gerade Strecke auf der Kriegsstraße (ohne Ampel dazwischen): Hindernis auf der Spur
-	var a: int = g.nearest_node(Vector2(-330, 640), "drive")
-	var b: int = g.nearest_node(Vector2(-220.5, 640), "drive")
+	# Gerade Strecke auf der Kaiserallee (Hauptstraße ohne Nebenstraßen-Einmündungen): Hindernis auf der Spur
+	var a: int = g.nearest_node(Vector2(-1450, 308), "drive")
+	var b: int = -1
+	for e0: int in g.node_edges[a]:
+		var o: int = g.other_node(e0, a)
+		if g.edge_name(e0) == "Kaiserallee" and g.node_pos[o].x < g.node_pos[a].x:
+			b = o
+	assert_gt(float(b), -1.0, "Nachbarknoten auf der Kaiserallee")
+	load_at(g.pos3(a))
 	var dir: Vector2 = (g.node_pos[b] - g.node_pos[a]).normalized()
 	var right: Vector2 = Vector2(-dir.y, dir.x)
 	var obst2: Vector2 = g.node_pos[a] + dir * 80.0 + right * LaneDriver.LANE_OFFSET
@@ -112,12 +120,15 @@ func test_object_count_bounded_after_teleports() -> void:
 	await start_city_game(true)
 	game.police.patrol_enabled = false
 	await wait_seconds(10.0)
-	var spots: Array[Vector3] = [Vector3(-500, 0.2, 100), Vector3(400, 0.2, 600), Vector3(0, 0.2, 470), Vector3(-300, 0.2, 640)]
+	var spots: Array[Vector3] = [Vector3(-1900, 0.2, 300), Vector3(1900, 0.2, 200), Vector3(-18, 0.2, 505), Vector3(5190, 0.2, 1600),
+		Vector3(-180, 0.2, 2150), Vector3(-18, 0.2, 505)]
 	for s: Vector3 in spots:
-		game.player.global_position = s
+		teleport_player(s)
 		await wait_seconds(8.0)
 	var total: int = get_tree().get_nodes_in_group("vehicles").size()
-	var parked: int = city().graph.layout.get("parked_vehicles", []).size()
+	var parked: int = get_tree().get_nodes_in_group("parked_cars").size()
 	assert_lt(float(game.traffic.active_count()), float(game.traffic.max_vehicles) + 0.5, "Verkehr begrenzt")
-	assert_lt(float(total), float(parked + game.traffic.max_vehicles + 2), "Gesamtzahl Fahrzeuge begrenzt (%d)" % total)
+	assert_lt(float(parked), float(ParkedCarManager.MAX_TOTAL) + 0.5, "Geparkte Autos begrenzt (%d)" % parked)
+	assert_lt(float(total), float(ParkedCarManager.MAX_TOTAL + game.traffic.max_vehicles + 8), "Gesamtzahl Fahrzeuge begrenzt (%d)" % total)
+	assert_lt(float(city().streamer.loaded.size()), 26.0, "Geladene Sektoren begrenzt (%d)" % city().streamer.loaded.size())
 	assert_lt(float(game.peds.active_count()), float(game.peds.max_peds) + 0.5, "Passanten begrenzt")

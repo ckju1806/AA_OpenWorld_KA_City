@@ -207,8 +207,11 @@ func _visible(pos: Vector3) -> bool:
 ## Spawn auf einer Fahrspur 110–240 m vom Spieler entfernt, außerhalb der Sicht.
 func _try_spawn(ppos: Vector3) -> bool:
 	var dmin: float = 90.0 if wanted.level >= 3 else 110.0
+	var near: PackedInt32Array = graph.edges_near(Vector2(ppos.x, ppos.z), 240.0)
+	if near.is_empty():
+		return false
 	for attempt: int in 12:
-		var e: int = _rng.randi() % graph.edge_count()
+		var e: int = near[_rng.randi() % near.size()]
 		if not graph.is_drivable(e) or graph.edge_length(e) < 25.0:
 			continue
 		var a: int = graph.edge_a[e]
@@ -224,6 +227,9 @@ func _try_spawn(ppos: Vector3) -> bool:
 		var pos: Vector3 = Vector3(p2.x, 0.0, p2.y)
 		var d: float = pos.distance_to(ppos)
 		if d < dmin or d > 240.0 or _visible(pos):
+			continue
+		var city: CityWorld = game.call("get_city")
+		if city != null and not city.is_loaded_at(pos):
 			continue
 		var spec: VehicleSpec = VehicleSpec.get_spec("polizei")
 		var space: PhysicsDirectSpaceState3D = get_viewport().get_world_3d().direct_space_state

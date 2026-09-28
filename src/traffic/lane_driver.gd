@@ -166,7 +166,8 @@ func _desired_speed(v: Vehicle, pos: Vector3, _delta: float) -> float:
 	if lights != null and not ignore_lights and lights.is_signalized(n1) and e >= 0:
 		var l: TrafficLights.Light = lights.light_for(n1, e)
 		var must_stop: bool = l == TrafficLights.Light.RED or (l == TrafficLights.Light.YELLOW and dist_stop > 10.0)
-		if must_stop and dist_stop > -0.5:
+		# Leicht über die Haltelinie gerollt: trotzdem anhalten, solange die Kreuzungsfläche nicht erreicht ist
+		if must_stop and dist_stop > -2.0:
 			desired = minf(desired, sqrt(2.0 * STOP_DECEL * maxf(dist_stop - 0.5, 0.0)))
 	elif not ignore_lights and graph.degree(n1, "drive") >= 3 and dist_stop < 18.0 and dist_stop > -1.0:
 		# Ungeregelte Kreuzung: langsam heranfahren, Kreuzungsbereich frei? (vereinfacht "rechts vor links")
@@ -197,7 +198,7 @@ func _drive(v: Vehicle, desired: float, steer: float) -> void:
 	if spd < desired - 0.4:
 		throttle = clampf((desired - spd) * 0.35 + 0.2, 0.0, 1.0)
 	elif spd > desired + 0.8:
-		brake = clampf((spd - desired) * 0.25, 0.1, 1.0)
+		brake = clampf((spd - desired) * 0.25, 0.1 if desired > 0.3 else 0.5, 1.0)
 	v.set_controls(throttle, brake, steer, false)
 
 

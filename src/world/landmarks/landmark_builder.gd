@@ -13,48 +13,78 @@ const SANDSTONE_LIGHT: Color = Color(0.86, 0.74, 0.62)
 const COPPER: Color = Color(0.36, 0.55, 0.47)
 
 
-static func build(root: Node3D, g: CityGraph) -> void:
-	var slab_h: float = float(g.layout.get("slab_height", 0.12))
-	var container := Node3D.new()
-	container.name = "Landmarken"
-	root.add_child(container)
-	for lm: Variant in g.layout.get("landmarks", []):
-		var d: Dictionary = lm
-		var pos: Vector2 = Vector2(float(d.pos[0]), float(d.pos[1]))
-		var rot: float = deg_to_rad(float(d.get("rot", 0.0)))
-		var kit := MeshKit.new()
-		CityMaterials.apply(kit, ["facade", "roof", "stone", "flat", "water", "glass_dark", "lamp_glow"] as Array[String])
-		var body := StaticBody3D.new()
-		body.name = "LM_" + str(d.id)
-		body.collision_layer = Layers.WORLD
-		var node := Node3D.new()
-		node.name = str(d.id)
-		match str(d.type):
-			"schloss":
-				_schloss(kit, body, pos, slab_h)
-			"pyramide":
-				_pyramide(kit, body, pos, slab_h)
-			"rathaus":
-				_rathaus(kit, body, pos, slab_h)
-			"stadtkirche":
-				_stadtkirche(kit, body, pos, slab_h)
-			"saeule":
-				_saeule(kit, body, pos, slab_h)
-			"brunnen":
-				_brunnen(kit, body, pos, slab_h)
-			"ustrab":
-				_ustrab(kit, body, node, pos, rot, slab_h)
-			"torbogen":
-				_torbogen(kit, body, node, pos, rot, slab_h)
-			"pavillon":
-				_pavillon(kit, body, node, pos, slab_h)
-			"haltestelle":
-				_haltestelle(kit, body, node, pos, rot, slab_h)
-		var mi := MeshInstance3D.new()
-		mi.mesh = kit.commit()
-		node.add_child(mi)
-		container.add_child(node)
-		container.add_child(body)
+## Einzelne Landmarke bauen (Daten aus world.json: type, pos, rot, name). Liefert einen Knoten mit Mesh und Kollision.
+static func build_one(d: Dictionary, slab_h: float) -> Node3D:
+	var pos: Vector2 = Vector2(float(d.pos[0]), float(d.pos[1]))
+	var rot: float = deg_to_rad(float(d.get("rot", 0.0)))
+	var kit := MeshKit.new()
+	CityMaterials.apply(kit, ["facade", "roof", "stone", "flat", "water", "glass_dark", "lamp_glow"] as Array[String])
+	var node := Node3D.new()
+	node.name = "LM_" + str(d.get("type", "x"))
+	var body := StaticBody3D.new()
+	body.collision_layer = Layers.WORLD
+	body.collision_mask = 0
+	match str(d.type):
+		"schloss":
+			_schloss(kit, body, pos, slab_h)
+		"pyramide":
+			_pyramide(kit, body, pos, slab_h)
+		"rathaus":
+			_rathaus(kit, body, pos, slab_h)
+		"stadtkirche":
+			_stadtkirche(kit, body, pos, slab_h)
+		"saeule":
+			_saeule(kit, body, pos, slab_h)
+		"brunnen":
+			_brunnen(kit, body, pos, slab_h)
+		"ustrab":
+			_ustrab(kit, body, node, pos, rot, slab_h)
+		"torbogen":
+			_torbogen(kit, body, node, pos, rot, slab_h)
+		"pavillon":
+			_pavillon(kit, body, node, pos, slab_h)
+		"haltestelle":
+			_haltestelle(kit, body, node, pos, rot, slab_h)
+		_:
+			_placeholder(kit, body, node, d, pos, rot, slab_h)
+	var mi := MeshInstance3D.new()
+	mi.mesh = kit.commit()
+	node.add_child(mi)
+	node.add_child(body)
+	return node
+
+
+## Vorläufige Baukörper für Landmarken, deren Detailmodell noch folgt (Meilenstein W3).
+static func _placeholder(kit: MeshKit, body: StaticBody3D, node: Node3D, d: Dictionary, p: Vector2, rot: float, y0: float) -> void:
+	var size: Vector2 = Vector2(30, 30)
+	var h: float = 12.0
+	var col: Color = SANDSTONE_LIGHT
+	match str(d.type):
+		"hauptbahnhof":
+			size = Vector2(240, 36)
+			h = 18.0
+			col = Color(0.84, 0.72, 0.58)
+		"gewaechshaus":
+			size = Vector2(60, 22)
+			h = 10.0
+			col = Color(0.8, 0.86, 0.85)
+		"stadion":
+			size = Vector2(180, 130)
+			h = 16.0
+			col = Color(0.7, 0.7, 0.72)
+		"hafenkran":
+			size = Vector2(8, 8)
+			h = 30.0
+			col = Color(0.75, 0.45, 0.2)
+		"turmberg":
+			size = Vector2(9, 9)
+			h = 28.0
+			col = SANDSTONE
+		"zoo":
+			return
+	ArchKit.block(kit, p, size, rot, y0, y0 + h, col, 0.5, ArchKit.STYLE_PALACE, 4.0)
+	ArchKit.flat_roof(kit, ArchKit.rect_poly(p, size, rot), y0 + h, SLATE, col.darkened(0.2))
+	_box_col(body, Vector3(p.x, y0 + h * 0.5, p.y), Vector3(size.x, h, size.y), rot)
 
 
 static func _box_col(body: StaticBody3D, center: Vector3, size: Vector3, yaw: float = 0.0) -> void:

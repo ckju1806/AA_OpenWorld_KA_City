@@ -35,6 +35,17 @@ static func _create(key: String) -> Material:
 		"yard":
 			return MatLib.shader_material("yard", "res://assets/shaders/paving.gdshader",
 				{"base_color": Color(0.5, 0.49, 0.47), "grout_color": Color(0.38, 0.37, 0.36), "tile": Vector2(0.3, 0.3), "variation": 0.08, "grout": 0.03})
+		"forest_floor":
+			return MatLib.shader_material("forest_floor", "res://assets/shaders/grass.gdshader",
+				{"color_a": Color(0.16, 0.22, 0.11), "color_b": Color(0.24, 0.26, 0.14)})
+		"field":
+			return MatLib.shader_material("field", "res://assets/shaders/grass.gdshader",
+				{"color_a": Color(0.36, 0.4, 0.2), "color_b": Color(0.46, 0.44, 0.24)})
+		"turf":
+			return MatLib.shader_material("turf", "res://assets/shaders/grass.gdshader",
+				{"color_a": Color(0.2, 0.42, 0.16), "color_b": Color(0.26, 0.48, 0.2)})
+		"rail_steel":
+			return MatLib.vertex_color(0.35, 0.7)
 		"curb":
 			return MatLib.solid(Color(0.72, 0.71, 0.68), 0.8)
 		"vertex":

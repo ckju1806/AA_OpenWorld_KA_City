@@ -22,7 +22,7 @@ var _seed: int = 100
 func setup(p_game: Node, city: CityWorld) -> void:
 	game = p_game
 	net = SidewalkNetwork.new()
-	net.build(city.graph, city.blocks, city.slab_h)
+	net.build_from_world(city.world, city.graph, city.slab_h)
 	max_peds = Settings.max_pedestrians()
 	Settings.changed.connect(func() -> void: max_peds = Settings.max_pedestrians())
 	EventBus.horn.connect(_on_horn)
@@ -81,27 +81,21 @@ func _visible(pos: Vector3) -> bool:
 
 
 func _place(p: Pedestrian, focus: Vector3) -> bool:
+	var f2: Vector2 = Vector2(focus.x, focus.z)
+	var areas: Array[int] = net.wander_near(f2, SPAWN_MAX)
 	for attempt: int in 10:
-		if _rng.randf() < 0.35 and not net.wander_areas.is_empty():
-			var ai: int = _rng.randi() % net.wander_areas.size()
-			var c: Vector2 = net.wander_areas[ai].center
-			var d: float = Vector2(focus.x, focus.z).distance_to(c)
-			if d > SPAWN_MAX:
-				continue
-			p.place_in_area(ai)
+		if _rng.randf() < 0.35 and not areas.is_empty():
+			p.place_in_area(areas[_rng.randi() % areas.size()])
 		else:
-			if net.loops.is_empty():
-				return false
-			var li: int = _rng.randi() % net.loops.size()
-			var lp: PackedVector2Array = net.loops[li]
-			var vi: int = _rng.randi() % lp.size()
-			var pos: Vector2 = lp[vi]
-			var dist: float = Vector2(focus.x, focus.z).distance_to(pos)
-			if dist < SPAWN_MIN or dist > SPAWN_MAX:
+			var pick: Array = net.random_point_near(f2, SPAWN_MIN, SPAWN_MAX, _rng)
+			if pick.is_empty():
 				continue
-			p.place_on_loop(li, vi, _rng.randf())
+			p.place_on_loop(int(pick[0]), int(pick[1]), _rng.randf())
 		var gp: Vector3 = p.global_position
 		if gp.distance_to(focus) < SPAWN_MIN * 0.6 or (_visible(gp) and gp.distance_to(focus) < 55.0):
+			continue
+		var city: CityWorld = game.call("get_city")
+		if city != null and not city.is_loaded_at(gp):
 			continue
 		return true
 	return false

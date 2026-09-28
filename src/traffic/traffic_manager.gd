@@ -87,8 +87,11 @@ func _visible(pos: Vector3) -> bool:
 
 
 func _try_spawn(center: Vector3) -> bool:
+	var near: PackedInt32Array = _traffic_edges_near(center)
+	if near.is_empty():
+		return false
 	for attempt: int in 6:
-		var e: int = _pick_edge()
+		var e: int = near[_rng.randi() % near.size()]
 		var a: int = graph.edge_a[e]
 		var b: int = graph.edge_b[e]
 		if _rng.randf() < 0.5:
@@ -110,6 +113,9 @@ func _try_spawn(center: Vector3) -> bool:
 			continue
 		if _visible(pos) and d < 150.0:
 			continue
+		var city: CityWorld = game.call("get_city")
+		if city != null and not city.is_loaded_at(pos):
+			continue
 		var yaw: float = atan2(-dir.x, -dir.y)
 		var spec_id: String = SPECS[_rng.randi() % SPECS.size()]
 		var spec: VehicleSpec = VehicleSpec.get_spec(spec_id)
@@ -127,6 +133,15 @@ func _try_spawn(center: Vector3) -> bool:
 		spawned_total += 1
 		return true
 	return false
+
+
+## Verkehrskanten im Spawn-Ring (Rasterindex des Graphen).
+func _traffic_edges_near(center: Vector3) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for e: int in graph.edges_near(Vector2(center.x, center.z), SPAWN_MAX):
+		if graph.is_traffic(e) and graph.edge_length(e) >= 25.0:
+			out.append(e)
+	return out
 
 
 func _pick_edge() -> int:

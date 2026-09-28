@@ -9,19 +9,20 @@ const C_BLOCK: Color = Color(0.22, 0.21, 0.22)
 const C_PARK: Color = Color(0.2, 0.3, 0.19)
 const C_PLAZA: Color = Color(0.46, 0.42, 0.36)
 const STREET_COLORS: Dictionary = {
-	"ring": Color(0.93, 0.8, 0.55), "main": Color(0.82, 0.8, 0.76), "street": Color(0.66, 0.65, 0.63),
-	"narrow": Color(0.52, 0.51, 0.5), "pedestrian": Color(0.62, 0.55, 0.46),
+	"ring": Color(0.91, 0.67, 0.35), "main": Color(0.92, 0.87, 0.7), "pedestrian": Color(0.73, 0.64, 0.53),
 }
 
 var game: Node = null
 var graph: CityGraph = null
 var full: bool = false
 var mini_range: float = 190.0          ## Meter vom Mittelpunkt bis zum Rand (Minikarte)
+var zoom: float = 1.0                  ## Vollkarte: Zoomfaktor (1 = ganze Karte)
+var center_override: Vector2 = Vector2.INF
 
-var _faces: Array[Dictionary] = []     ## { poly: PackedVector2Array, color }
-var _edges: Array[Dictionary] = []     ## { a, b, width, color }
+var _tex: Texture2D
+var _bounds: Rect2
+var _m_per_px: float = 4.0
 var _labels: Array[Dictionary] = []
-var _plazas: Array[Dictionary] = []
 var _font: Font
 var _redraw_t: float = 0.0
 
@@ -33,20 +34,12 @@ func setup(p_game: Node, g: CityGraph, p_full: bool) -> void:
 	clip_contents = true
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_font = ThemeDB.fallback_font
-	for f: Dictionary in g.faces:
-		var poly: PackedVector2Array = f.get("poly", PackedVector2Array())
-		if poly.size() < 3:
-			continue
-		var kind: String = str(f.get("kind", "block"))
-		_faces.append({"poly": poly, "color": C_PARK if kind == "park" else C_BLOCK})
-	for e: int in g.edge_count():
-		var kind2: String = g.edge_kind(e)
-		_edges.append({"a": g.node_pos[g.edge_a[e]], "b": g.node_pos[g.edge_b[e]], "width": g.edge_width(e),
-			"color": STREET_COLORS.get(kind2, Color.GRAY), "kind": kind2})
-	for c: Dictionary in g.layout.get("clearings", []):
-		_plazas.append(c)
-	for l: Dictionary in g.layout.get("map_labels", []):
-		_labels.append({"text": str(l.text), "pos": Vector2(float(l.pos[0]), float(l.pos[1]))})
+	var city: CityWorld = game.call("get_city")
+	_bounds = city.world.bounds
+	_m_per_px = city.world.map_m_per_px
+	_tex = load(city.world.dir + "map.webp") as Texture2D
+	for l: Dictionary in g.layout.get("labels", []):
+		_labels.append({"text": str(l.text), "pos": Vector2(float(l.pos[0]), float(l.pos[1])), "size": int(l.get("size", 2))})
 
 
 func _process(delta: float) -> void:
@@ -78,14 +71,12 @@ func _player_heading() -> float:
 	return atan2(f.x, -f.z)     ## 0 = Norden, im Uhrzeigersinn
 
 
-## Weltmaßstab und Mittelpunkt der aktuellen Ansicht.
+## Weltmaßstab (Pixel je Meter) und Mittelpunkt der aktuellen Ansicht.
 func view() -> Dictionary:
 	if full:
-		var world_min: Vector2 = Vector2(-620, -620)
-		var world_max: Vector2 = Vector2(620, 700)
-		var ext: Vector2 = world_max - world_min
-		var s: float = minf((size.x - 80.0) / ext.x, (size.y - 120.0) / ext.y)
-		return {"scale": s, "center": (world_min + world_max) * 0.5}
+		var s: float = minf((size.x - 80.0) / _bounds.size.x, (size.y - 120.0) / _bounds.size.y) * zoom
+		var c: Vector2 = _bounds.get_center() if center_override == Vector2.INF else center_override
+		return {"scale": s, "center": c}
 	var pp: Vector3 = _player_pos()
 	return {"scale": minf(size.x, size.y) * 0.5 / mini_range, "center": Vector2(pp.x, pp.z)}
 
@@ -96,34 +87,26 @@ func world_to_screen(p: Vector2) -> Vector2:
 
 
 func _draw() -> void:
-	if graph == null:
+	if graph == null or _tex == null:
 		return
 	var v: Dictionary = view()
 	var s: float = v.scale
-	var off: Vector2 = size * 0.5 - (v.center as Vector2) * s
 	draw_rect(Rect2(Vector2.ZERO, size), Color(C_BG, 1.0) if full else C_BG)
-	# Geometrie in Weltkoordinaten zeichnen (Straßenbreiten in Metern)
-	draw_set_transform(off, 0.0, Vector2(s, s))
-	for f: Dictionary in _faces:
-		draw_colored_polygon(f.poly, f.color)
-	for c: Dictionary in _plazas:
-		if c.has("circle"):
-			var ci: Array = c.circle
-			draw_circle(Vector2(float(ci[0]), float(ci[1])), float(ci[2]), C_PLAZA)
-		elif c.has("rect"):
-			var r: Array = c.rect
-			draw_rect(Rect2(float(r[0]), float(r[1]), float(r[2]) - float(r[0]), float(r[3]) - float(r[1])), C_PLAZA)
-	var min_w: float = 2.0 / s
-	for e: Dictionary in _edges:
-		if e.kind == "pedestrian":
-			draw_line(e.a, e.b, e.color, maxf(float(e.width) * 0.7, min_w))
-	for e2: Dictionary in _edges:
-		if e2.kind != "pedestrian":
-			draw_line(e2.a, e2.b, e2.color, maxf(float(e2.width), min_w))
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	# Kartenbild: sichtbaren Weltausschnitt als Texturausschnitt zeichnen
+	var half_world: Vector2 = size * 0.5 / s
+	var wr: Rect2 = Rect2((v.center as Vector2) - half_world, half_world * 2.0).intersection(_bounds)
+	if wr.size.x > 0.0 and wr.size.y > 0.0:
+		var src: Rect2 = Rect2((wr.position - _bounds.position) / _m_per_px, wr.size / _m_per_px)
+		var dst: Rect2 = Rect2(world_to_screen(wr.position), wr.size * s)
+		draw_texture_rect_region(_tex, dst, src)
 	if full:
 		for l: Dictionary in _labels:
-			_text_centered(world_to_screen(l.pos), str(l.text), 20, Color(1, 0.97, 0.9))
+			var fs: int = [16, 16, 20, 26][clampi(int(l.size), 0, 3)]
+			if int(l.size) <= 1 and zoom < 2.5:
+				continue
+			var sp: Vector2 = world_to_screen(l.pos)
+			if Rect2(Vector2.ZERO, size).has_point(sp):
+				_text_centered(sp, str(l.text), fs, Color(1, 0.97, 0.9))
 	_draw_markers()
 	if full:
 		_draw_legend()
@@ -188,12 +171,12 @@ func _draw_legend() -> void:
 	var x: float = 40.0
 	var y: float = size.y - 40.0
 	var items: Array = [["◆", UiStyle.ACCENT, "Auftrag"], ["●", Color(1.0, 0.85, 0.3), "Missionsziel"],
-		["▲", Color.WHITE, "Du"], ["●", UiStyle.POLICE_BLUE, "Polizei"], ["━", STREET_COLORS.ring, "Ring"],
+		["▲", Color.WHITE, "Du"], ["●", UiStyle.POLICE_BLUE, "Polizei"], ["━", STREET_COLORS.ring, "Autobahn/Bundesstraße"],
 		["━", STREET_COLORS.pedestrian, "Fußgängerzone"], ["■", C_PARK, "Park"]]
 	for it: Array in items:
 		draw_string(_font, Vector2(x, y), str(it[0]), HORIZONTAL_ALIGNMENT_LEFT, -1, 22, it[1])
 		draw_string(_font, Vector2(x + 28, y), str(it[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20, UiStyle.TEXT)
 		x += 40.0 + _font.get_string_size(str(it[2]), HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x + 26.0
-	_text_centered(Vector2(size.x * 0.5, 34), "KARTE  ·  Fächer-City (künstlerisch verdichtet)", 28, UiStyle.ACCENT)
+	_text_centered(Vector2(size.x * 0.5, 34), "KARTE  ·  Karlsruhe (Fächerstadt)  ·  Mausrad/+/-: Zoom", 28, UiStyle.ACCENT)
 	var hint: String = "[M] oder [Esc] schließen"
 	draw_string(_font, Vector2(size.x - 40 - _font.get_string_size(hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 20).x, y), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 20, UiStyle.TEXT_DIM)

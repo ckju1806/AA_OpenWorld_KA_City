@@ -4,33 +4,96 @@
   "order": 2,
   "reward": 400,
   "repeatable": true,
-  "requires": ["m01_erste_schicht"],
+  "requires": [
+    "m01_erste_schicht"
+  ],
   "best_time_key": "faecher_runde",
   "giver": {
     "poi": "toni",
     "name": "Toni „Turbo“ Kessler",
     "role": "Hobby-Rennfahrer",
     "prompt": "Mit Toni sprechen (Zeitfahren)",
-    "look": {"skin": "#c99a78", "shirt": "#f2f2f2", "jacket": "#b3261e", "pants": "#26262b", "shoes": "#f0f0f0", "hair": "#1e1a18", "hair_style": 0},
+    "look": {
+      "skin": "#c99a78",
+      "shirt": "#f2f2f2",
+      "jacket": "#b3261e",
+      "pants": "#26262b",
+      "shoes": "#f0f0f0",
+      "hair": "#1e1a18",
+      "hair_style": 0
+    },
     "done_line": "Die Runde isch jederzeit offen. Schlag deine Bestzeit!"
   },
   "fail_vehicle": "gt",
   "steps": [
-    {"type": "talk", "lines": [
-      ["Toni", "Hoi! Du bisch der Kurier von der Hanne? Toni Kessler – alle sagen Turbo."],
-      ["Toni", "Ich hab da eine Runde ausgetüftelt: Ostring hoch, Schlossallee, Zirkel, Adlerstraße runter, Kanzleistraße, Herrenstraße, Kriegsstraße – und zurück zum Durlacher Tor."],
-      ["Toni", "Mein Fächer GT steht vorne an der Straße. Schaffst du die Runde in der Zeit, gehört die Prämie dir."],
-      ["Toni", "Nur eins: Kratzer zahlst du. Und Fußgänger haben immer Vorrang, klar?"]
-    ]},
-    {"type": "spawn_vehicle", "tag": "gt", "spec": "sport", "poi": "rennwagen", "color": "#d2451e", "livery": "Turbo 14"},
-    {"type": "enter_vehicle", "tag": "gt", "text": "Steig in Tonis Fächer GT."},
-    {"type": "countdown", "seconds": 3, "text": "Mach dich bereit …"},
-    {"type": "checkpoints", "vehicle": "gt", "radius": 11.0, "time_limit": 210.0,
-     "text": "Fahr die Fächer-Runde: alle Kontrollpunkte in Reihenfolge.",
-     "points": [[560, 165], [560, 0], [200, 0], [76.54, 184.78], [136.69, 330], [136.69, 460],
-                [-220.5, 460], [-220.5, 640], [200, 640], [560, 640], [560, 460], [560, 345]]},
-    {"type": "talk", "lines": [
-      ["Toni (Funk)", "Ha, nicht schlecht für einen Kurier! Die Zeit steht auf der Tafel. Komm wieder, wenn du schneller sein willst."]
-    ]}
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Toni",
+          "Hoi! Du bisch der Kurier von der Hanne? Toni Kessler – alle sagen Turbo."
+        ],
+        [
+          "Toni",
+          "Meine Runde: Durlacher Allee raus, Ostring hoch, über die Hagsfelder Allee auf den Adenauerring einmal um den Schlossgarten, dann Moltkestraße, Reinhold-Frank-Straße und die Kriegsstraße zurück Richtung Osten."
+        ],
+        [
+          "Toni",
+          "Mein Fächer GT steht hier an der Durlacher Allee. Schaffst du die Runde in acht Minuten, gehört die Prämie dir."
+        ],
+        [
+          "Toni",
+          "Nur eins: Kratzer zahlst du. Und Fußgänger haben immer Vorrang, klar?"
+        ]
+      ]
+    },
+    {
+      "type": "spawn_vehicle",
+      "tag": "gt",
+      "spec": "sport",
+      "poi": "rennwagen",
+      "color": "#d2451e",
+      "livery": "Turbo 14"
+    },
+    {
+      "type": "enter_vehicle",
+      "tag": "gt",
+      "text": "Steig in Tonis Fächer GT."
+    },
+    {
+      "type": "countdown",
+      "seconds": 3,
+      "text": "Mach dich bereit …"
+    },
+    {
+      "type": "checkpoints",
+      "vehicle": "gt",
+      "radius": 12.0,
+      "time_limit": 660.0,
+      "text": "Fahr die Fächer-Runde: alle Kontrollpunkte in Reihenfolge.",
+      "points": [
+        "m2_cp01",
+        "m2_cp02",
+        "m2_cp03",
+        "m2_cp04",
+        "m2_cp05",
+        "m2_cp06",
+        "m2_cp07",
+        "m2_cp08",
+        "m2_cp09",
+        "m2_cp10",
+        "m2_cp11",
+        "m2_cp12"
+      ]
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Toni (Funk)",
+          "Ha, nicht schlecht für einen Kurier! Die Zeit steht auf der Tafel. Komm wieder, wenn du schneller sein willst."
+        ]
+      ]
+    }
   ]
 }

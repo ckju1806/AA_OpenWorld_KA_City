@@ -17,7 +17,8 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 ## Dokumentation (`docs/`)
 | Datei | Inhalt |
 |---|---|
-| [docs/PLAN.md](docs/PLAN.md) | Freigegebener Umsetzungsplan |
+| [docs/PLAN.md](docs/PLAN.md) | Plan v0.1 (Prototyp, abgeschlossen) |
+| [docs/PLAN_V2.md](docs/PLAN_V2.md) | Plan v2: Großausbau Karlsruhe 1:1 (in Arbeit) |
 | [docs/ARBEITSLOG.md](docs/ARBEITSLOG.md) | Fortlaufender Arbeitsstand, Restore-Punkte |
 | [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md) | Module, Datenfluss, Physik-Layer |
 | [docs/KARTE_KARLSRUHE.md](docs/KARTE_KARLSRUHE.md) | Kartengrundlage, Quellen, künstlerische Interpretation |
@@ -29,7 +30,7 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 | `project.godot`, `export_presets.cfg` | Godot-Projekt- und Exportkonfiguration |
 | `src/` | GDScript-Quellcode, getrennt nach Systemen (autoload, core, game, player, vehicles, world, traffic, npc, police, missions, ui, save, debug) |
 | `scenes/` | Einstiegsszenen (Hauptmenü, Spiel); Inhalte entstehen zur Laufzeit aus Daten |
-| `data/` | Datengetriebene Inhalte: Karte (`world/`), Fahrzeuge (`vehicles/`), Missionen (`missions/`) |
+| `data/` | Datengetriebene Inhalte: Weltdaten Karlsruhe 1:1 (`world/ka/`: `world.json.gz` Straßengraph/POIs/Landmarken, `sectors/` 256-m-Sektoren, `lod/` Fernsicht-Kacheln, `map.webp` Übersichtskarte – erzeugt von `tools/worldgen/`), Fahrzeuge (`vehicles/`), Missionen (`missions/`) |
 | `assets/` | Shader, Audio, Icons (selbst erzeugt) |
 | `tests/` | Automatisierte Unit- und Integrationstests |
 
@@ -38,8 +39,10 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 |---|---|
 | `scripts/` | Start-, Build-, Test- und Setup-Skripte (Windows/Linux) |
 | `tools/` | Generatoren (Audio, Icon) – nicht Teil des Spiels |
+| `tools/worldgen/` | Welt-Pipeline (Python: shapely/numpy/pillow): Quelle `ka_authored.py` (1:1-Näherung, OSM folgt), `network.py`, `blocks.py`, `export.py`, `validate_world.py`, Aufruf `build_world.py` |
+| `tools/check_repo_budget.py` | Prüft das GitHub-Speicherbudget (Repo < 300 MB, Weltdaten ≤ 40 MB, Dateien ≤ 5 MB) vor Commits |
 | `config/` | Toolchain-Versionen, keine Secrets |
-| `artifacts/` | Screenshots je Meilenstein (`screenshots/A`–`G`, `H_export_pck` = aus dem exportierten Paket) und Test-/Exportlogs |
+| `artifacts/` | Screenshots je Meilenstein (`screenshots/A`–`G`, `H_export_pck` = aus dem exportierten Paket); Test-Logs entstehen lokal unter `artifacts/test-logs/` (seit Phase 2 nicht mehr versioniert) |
 | `backups/` | Dateisicherungen vor Änderungen |
 | `logs/`, `tmp/` | lokal, nicht versioniert |
 | `sensitive/` | leer – Projekt benötigt keine Zugangsdaten |

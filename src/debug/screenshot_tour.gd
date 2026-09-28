@@ -37,8 +37,9 @@ func _run() -> void:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		var img: Image = get_viewport().get_texture().get_image()
-		var path: String = "%s/%02d_%s.png" % [out_dir, idx, st.name]
-		var err: Error = img.save_png(path)
+		# JPEG statt PNG: Speicherbudget des Repositorys (Screenshots ≤ 200 KB)
+		var path: String = "%s/%02d_%s.jpg" % [out_dir, idx, st.name]
+		var err: Error = img.save_jpg(path, 0.8)
 		print("[screenshot] %s -> %s" % [path, error_string(err)])
 	print("[screenshot] Tour beendet (%d Bilder)." % _stations.size())
 	get_tree().quit(0)

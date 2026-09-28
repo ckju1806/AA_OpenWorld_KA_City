@@ -192,3 +192,59 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   `.gdignore`), `ANLEITUNG.md`, Verweise in README/Inhaltsverzeichnis/Testbericht, `.gitattributes`: `*.zip binary`.
 - **Prüfung:** Hash der versionierten ZIP = dokumentierter Hash; `.bat` ASCII/CRLF; Godot-Import ignoriert `release/`.
   Nicht geprüft: Ausführung der `.bat` unter Windows.
+
+---
+
+# Phase 2: Großausbau (Plan v2, `docs/PLAN_V2.md`)
+
+## 2026-09-28 – Planphase v2
+
+- **Auftrag:** massive Erweiterung auf Basis v0.1.0 (gesamter Kartenausschnitt Karlsruhe 1:1, Grafik, ÖPNV/U-Strab, Tiere,
+  Cheats, Missionen, Banden/Unruhen/Polizei, Optionen, Streaming). Nutzerentscheidungen: gesamte Karte 1:1 in voller Detailtiefe;
+  „erst Breite, dann Tiefe“.
+- **Befund:** OSM-Quellen (overpass-api.de, download.geofabrik.de, *.openstreetmap.org) und Karlsruher Geoportale werden von der
+  Egress-Richtlinie der Cloud-Umgebung abgewiesen (`connect_rejected`). Freischaltung durch den Nutzer in den Umgebungseinstellungen
+  angefragt; bis dahin datenunabhängige Meilensteine.
+- **Restore-Punkt:** `main` = `46db3d1` (PR #1 gemergt); Arbeitsbranch neu von `main` gestartet.
+- **Meilensteine:** W1 Streaming · W2 Karte 1:1 · W3 Landmarken · W4 Grafik · W5 ÖPNV · W6 Tiere · W7 Banden/Polizei ·
+  W8 Missionen · W9 Cheats · W10 Optionen · W11 KI · W12 Tests/Doku/Build.
+- **Addendum Speicherbudget (Nutzervorgabe):** Repo < 300 MB, keine Builds mehr im Repo (GitHub Releases), Weltdaten ≤ 40 MB,
+  Einzeldatei ≤ 5 MB, kein LFS, Screenshots als JPEG, Test-Logs unversioniert. Prüfung: `tools/check_repo_budget.py`.
+
+## 2026-09-28 – W1: Weltsystem, Sektor-Streaming, Karlsruhe 1:1 (Fallback-Karte)
+
+- **Ziel:** die ganze Stadt (≈ 17,5 × 10,4 km, Neureut bis Rheinstetten, Rhein bis Durlach) im Maßstab 1:1 spielbar machen,
+  unabhängig von der (noch gesperrten) OSM-Quelle.
+- **Änderungsklasse:** groß (Weltaufbau ersetzt, neue Datenpipeline, viele Module angepasst) → Restore-Punkt: `46db3d1` (`main`).
+- **Umgesetzt:**
+  - Offline-Pipeline `tools/worldgen/` (Python: shapely/numpy/pillow – nur Werkzeug, nicht im Spiel):
+    `ka_authored.py` (handgezeichnete 1:1-Quelle nach Karten-Screenshot und Ortskenntnis: Hauptstraßen, Fächerstrahlen, Ringe,
+    27 Stadtteile mit Rastern, Flächen, Gewässer, Gleise, Landmarken, POIs), `network.py` (Verknotung, Einrasten, Kantenteilung
+    ≤ 60 m, Sackgassen schließen/abstufen, Inseln entfernen, Berührungen/Kreuzungen ohne Knoten teilen), `blocks.py`
+    (Blöcke, Parzellen nach Stil: Blockrand, Zeilen, Häuser, Hallen), `export.py` (Props, Gehwegnetz, Sektoren 256 m,
+    LOD-Kacheln 1 km, Übersichtskarte WEBP), `validate_world.py` (kein Gebäude in einer Fahrspur), `build_world.py` (CLI).
+    Ausgabe `data/world/ka/` ≈ 3,4 MB (gzip-JSON, Koordinaten in dm).
+  - Spiel: `WorldData`, `WorldStreamer` (Aufbau im WorkerThreadPool, Einhängen mit Zeitbudget, Hysterese, LOD-Kacheln mit
+    ausgeblendeten Teilen geladener Sektoren, synchroner Modus für Tests/Screenshots), `SectorBuilder`, `CityWorld` neu,
+    `CityGraph` mit Rasterindex, `ParkedCarManager` (sektorweise, Obergrenze 60), Ampel-Visuals je Sektor,
+    räumliche Spawn-Abfragen für Verkehr/Polizei/Passanten, Missionen laden Zielsektoren vor, Karte mit Zoom/Verschieben.
+  - Missionen M1–M3 auf reale Straßen umgezogen (Südendstraße, Kronenstraße, Zähringerstraße, Durlacher Allee/Ostring/
+    Adenauerring/Kriegsstraße, Haid-und-Neu-Straße, Rheinhafen/Honsellstraße, Hertzstraße).
+- **Gefundene und behobene Befunde (Auszug):** Lamm-/Kreuzstraße liefen durch Rathaus/Stadtkirche; Kante endete ohne Knoten auf der
+  Kaiserstraße; Hallen/Zeilenbauten ragten per Umrechteck in Fahrbahnen (u. a. 2 km lange „Halle“ im Rheinhafen);
+  Abbiegebogen reichte bei kurzen Kanten hinter den Vorgängerknoten (Autopilot kreiste); Fahrzeug rollte bei Rot knapp über die
+  Haltelinie und fuhr dann weiter; Kollisionsprüfung erkannte Punkte in Gebäuden nicht mehr (Sektorkollision ist Hohlkörper →
+  Grundrissprüfung aus Daten); Autopilot bremste vor geglätteten Kurven nicht (Kurvenwinkel jetzt über 20 m aufsummiert);
+  geparkte Autos verfälschten Fahrzeugzählungen in Tests.
+- **Prüfung:** Gesamtsuite 92/92 grün, Exit-Code 0 (268,7 s). U. a.: Graph zusammenhängend, keine Kreuzung ohne Knoten,
+  Rasterindex = Brute-Force, 6 390 Fahrspurproben in 6 Stadtteilen ohne Hindernis, Mission 1 (208 s simuliert),
+  Fächer-Runde komplett per Autopilot über ≈ 9 km (619,9 s), Mission 3 quer durch die Stadt bis in den Rheinhafen,
+  Halt an roter Ampel (Karlstor), Speichern/Laden inkl. blockierter Position. Pipeline-Validierung: 0 Gebäude, 0 Landmarken-
+  Platzhalter und 0 parkende Autos in Fahrspuren. Speicherbudget: Weltdaten 3,4 MB, Repo-Objekte 72 MB.
+- **Spielwerte geändert:** Zeitlimit Fächer-Runde 8:00 → 11:00 (Runde ist im 1:1-Maßstab ≈ 9 km lang); Stadion am Wildpark an die
+  reale Lage außerhalb des Adenauerrings verschoben; Tertiärstraßen 12 m breit (Parkstreifen); parkende Autos nur noch dort
+  (Wohnstraßen mit 8,5 m sind zu schmal für Parkstreifen + Fahrspur → W2: Parkplätze/Höfe).
+- **Testvereinfachung (ehrlich):** Test-Hilfen drehen ein stehendes Fahrzeug zu Beginn in Fahrtrichtung, wenn die Route nach hinten
+  führt (keine Wendemanöver in engen Straßen); der Autopilot hat zusätzlich eine Dreipunktwende.
+- **Bekannte Einschränkungen:** Karte ist eine **Näherung** (OSM gesperrt); Stadtteile rechteckig mit Lücken; Hbf, Zoo, Stadion,
+  Gewächshäuser, Hafenkräne, Turmberg nur Platzhalter (W3); Pyramide im Marktplatz-Bild verdeckt.

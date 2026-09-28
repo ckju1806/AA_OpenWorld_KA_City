@@ -15,6 +15,12 @@ var lights: TrafficLights = null
 var traffic: TrafficManager = null
 var peds: PedestrianManager = null
 var police: PoliceManager = null
+var parked: ParkedCarManager = null
+## Tests: geparkte Autos auch ohne Umgebungsleben
+var parked_cars_in_tests: bool = false
+## Streaming: synchron bauen (Tests, Screenshot-Tour) und Radius-Überschreibung (-1 = Einstellung)
+var stream_sync: bool = false
+var stream_radius: int = -1
 ## Umgebungsleben (Verkehr/Passanten/Streife); Tests können es abschalten
 var ambient_life: bool = true
 var pause_menu: PauseMenu = null
@@ -82,6 +88,8 @@ func _build_world() -> void:
 	else:
 		var cw := CityWorld.new()
 		cw.name = "World"
+		cw.synchronous_streaming = stream_sync or App.has_arg("--screenshot-tour")
+		cw.stream_radius_override = stream_radius
 		add_child(cw)
 		cw.build()
 		world = cw
@@ -192,6 +200,8 @@ func _apply_pending_load() -> void:
 		var title: String = (missions.definitions[mission_id] as MissionDefinition).title
 		message = ("%s " % message if message != "" else "") + "Der Auftrag „%s“ lief beim Speichern – sprich erneut mit dem Auftraggeber." % title
 	player.set_health(float(data.get("health", player.MAX_HEALTH)))
+	if world is CityWorld:
+		(world as CityWorld).ensure_loaded(xf.origin)
 	_place_player(xf)
 	# Kollisionsformen sind erst nach einem Physikschritt abfragbar
 	await get_tree().physics_frame
@@ -215,6 +225,8 @@ func _place_player(xf: Transform3D) -> void:
 
 ## Boden vorhanden und kein Hindernis in Körperhöhe?
 func _position_is_free(pos: Vector3) -> bool:
+	if world is CityWorld and (world as CityWorld).is_inside_building(Vector2(pos.x, pos.z)):
+		return false
 	var space: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state
 	var ray := PhysicsRayQueryParameters3D.create(pos + Vector3.UP * 1.0, pos + Vector3.DOWN * 3.0, Layers.WORLD)
 	if space.intersect_ray(ray).is_empty():
@@ -248,6 +260,17 @@ func _setup_city_systems(city: CityWorld) -> void:
 	lights.name = "Ampeln"
 	city.add_child(lights)
 	lights.setup(city.graph, city.slab_h)
+	# Ampelmasten sektorweise mit dem Streaming ein-/aushängen
+	var st: WorldStreamer = city.streamer
+	for ij: Vector2i in st.loaded:
+		lights.attach_sector(ij, city.world.sector_rect(ij), st.loaded[ij].node)
+	st.sector_loaded.connect(func(ij: Vector2i, info: Dictionary) -> void: lights.attach_sector(ij, city.world.sector_rect(ij), info.node))
+	st.sector_unloaded.connect(func(ij: Vector2i) -> void: lights.detach_sector(ij))
+	parked = ParkedCarManager.new()
+	parked.name = "Parkende_Autos"
+	add_child(parked)
+	parked.enabled = ambient_life or parked_cars_in_tests
+	parked.setup(self, st)
 	traffic = TrafficManager.new()
 	traffic.name = "Verkehr"
 	add_child(traffic)
@@ -328,6 +351,8 @@ func _on_player_entered_vehicle(v: Node) -> void:
 
 func _physics_process(delta: float) -> void:
 	_update_safe_point(delta)
+	if world is CityWorld and player != null:
+		(world as CityWorld).update_focus(player.current_vehicle.global_position if player.is_in_vehicle() else player.global_position)
 	if _respawn_t > 0.0:
 		_respawn_t -= delta
 		if _respawn_t <= 0.0:
@@ -457,6 +482,8 @@ func register_screenshot_stations(tour: ScreenshotTour) -> void:
 
 func _cam_station(tour: ScreenshotTour, station_name: String, player_pos: Vector3, yaw_deg: float, pitch: float, frames: int = 40) -> void:
 	tour.add_station(station_name, func() -> void:
+		if world is CityWorld:
+			(world as CityWorld).ensure_loaded(player_pos)
 		if player.is_in_vehicle():
 			player.force_leave_vehicle(player_pos)
 		player.global_position = player_pos
@@ -470,16 +497,22 @@ func _cam_station(tour: ScreenshotTour, station_name: String, player_pos: Vector
 func _register_city_stations(tour: ScreenshotTour) -> void:
 	var cw: CityWorld = get_city()
 	var y: float = cw.slab_h + 0.05
+	var kz: Callable = func(x: float) -> float: return 318.0 + (x + 1290.0) * (150.0 / 2320.0)
 	_cam_station(tour, "start_marktplatz_blick_schloss", cw.get_spawn().origin, 0.0, -0.12)
-	_cam_station(tour, "marktplatz_pyramide", Vector3(0, y, 385), 0.0, -0.05)
-	_cam_station(tour, "rathaus", Vector3(-8, y, 416), 90.0, -0.08)
-	_cam_station(tour, "stadtkirche", Vector3(8, y, 416), 270.0, -0.08)
-	_cam_station(tour, "schlossplatz", Vector3(0, y, 150), 0.0, -0.08)
-	_cam_station(tour, "kaiserstrasse", Vector3(-150, y, 330), 90.0, -0.08)
-	_cam_station(tour, "faecherstrasse_zirkel", Vector3(-110, 0.05, 258), 146.0, -0.1)
-	_cam_station(tour, "europaplatz", Vector3(-430, y, 345), 270.0, -0.08)
-	_cam_station(tour, "durlacher_tor", Vector3(575, 0.05, 345), 70.0, -0.1)
-	_cam_station(tour, "kriegsstrasse", Vector3(60, 0.05, 646), 90.0, -0.06)
+	_cam_station(tour, "marktplatz_pyramide", Vector3(0, y, 520), 0.0, -0.05)
+	_cam_station(tour, "rathaus", Vector3(-20, y, 470), 90.0, -0.08)
+	_cam_station(tour, "stadtkirche", Vector3(20, y, 470), 270.0, -0.08)
+	_cam_station(tour, "schlossplatz", Vector3(0, y, 200), 0.0, -0.08)
+	_cam_station(tour, "kaiserstrasse", Vector3(-300, y, kz.call(-300.0)), 90.0, -0.08)
+	_cam_station(tour, "faecherstrasse_zirkel", Vector3(-150, y, 330), 150.0, -0.1)
+	_cam_station(tour, "europaplatz", Vector3(-660, y, kz.call(-660.0) + 4.0), 90.0, -0.08)
+	_cam_station(tour, "durlacher_tor", Vector3(980, y, kz.call(980.0) + 6.0), -80.0, -0.1)
+	_cam_station(tour, "kriegsstrasse", Vector3(-300, y, 912), -90.0, -0.06)
+	_cam_station(tour, "hauptbahnhof", Vector3(-180, y, 2150), 180.0, -0.06)
+	_cam_station(tour, "zoo_stadtgarten", Vector3(-180, y, 1700), 180.0, -0.1)
+	_cam_station(tour, "weststadt", Vector3(-1900, y, 300), 90.0, -0.08)
+	_cam_station(tour, "durlach", Vector3(5190, y, 1640), -80.0, -0.08)
+	_cam_station(tour, "rheinhafen", Vector3(-5600, y, 330), 90.0, -0.12)
 	tour.add_station("mission_dialog", func() -> void:
 		var giver: MissionGiver = missions.givers["m01_erste_schicht"]
 		player.global_position = giver.global_position + (-giver.global_basis.z) * 2.2 + Vector3.UP * 0.1
@@ -505,13 +538,14 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		var van: Vehicle = missions.mission_vehicle("van")
 		if van == null:
 			return
-		van.teleport_to(Vector3(-150, 0, 462.6), -PI * 0.5)
+		(world as CityWorld).ensure_loaded(Vector3(-400, 0, 608))
+		van.teleport_to(Vector3(-400, 0, 608), -PI * 0.5)
 		player.global_position = van.global_position + Vector3(0, 0, -3)
 		await get_tree().physics_frame
 		van.enter(player)
 		van.set_lights(true)
 		var ap := Autopilot.new()
-		ap.set_path(PackedVector3Array([Vector3(-40, 0, 462.6), Vector3(200, 0, 462.6)]), 13.0)
+		ap.set_path(PackedVector3Array([Vector3(-250, 0, 609), Vector3(-60, 0, 612)]), 13.0)
 		van.ai_controller = ap
 		van.driver = Vehicle.Driver.AI
 		camera_rig.yaw = -PI * 0.5
@@ -520,7 +554,8 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		if missions.active != null:
 			missions.fail("Tour")
 			missions.abort()
-		player.force_leave_vehicle(Vector3(-482, y, 452))
+		(world as CityWorld).ensure_loaded(Vector3(-535, y, 930))
+		player.force_leave_vehicle(Vector3(-535, y, 930))
 		camera_rig.yaw = deg_to_rad(-135.0)
 		camera_rig.pitch = -0.28
 		camera_rig._target_distance = 9.0
@@ -530,7 +565,8 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 	, 30)
 	tour.add_station("passanten_kaiserstrasse", func() -> void:
 		camera_rig._target_distance = 4.2
-		player.global_position = Vector3(-80, y, 333)
+		(world as CityWorld).ensure_loaded(Vector3(-300, y, kz.call(-300.0)))
+		player.global_position = Vector3(-300, y, kz.call(-300.0))
 		camera_rig.yaw = deg_to_rad(90.0)
 		camera_rig.pitch = -0.12
 		camera_rig.snap()
@@ -538,7 +574,8 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 			await get_tree().physics_frame
 	, 30)
 	tour.add_station("verfolgung_polizei", func() -> void:
-		var v: Vehicle = spawn_vehicle("sport", Vector3(-300, 0.1, 462.6), -PI * 0.5)
+		(world as CityWorld).ensure_loaded(Vector3(-800, 0.1, 897))
+		var v: Vehicle = spawn_vehicle("sport", Vector3(-800, 0.1, 897), -PI * 0.5)
 		await get_tree().physics_frame
 		player.global_position = v.global_position + Vector3(0, 0, -3)
 		v.enter(player)
@@ -575,13 +612,14 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		gt.enter(player)
 		for i2: int in 260:
 			await get_tree().physics_frame
-		gt.teleport_to(Vector3(563.5, 0.1, 205), 0.0)
+		(world as CityWorld).ensure_loaded(Vector3(1500, 0.1, 518))
+		gt.teleport_to(Vector3(1500, 0.1, 518), -PI * 0.5 + 0.05)
 		gt.set_lights(true)
 		var ap := Autopilot.new()
-		ap.set_path(PackedVector3Array([Vector3(563.5, 0, 150), Vector3(563.5, 0, 20)]), 18.0)
+		ap.set_path(PackedVector3Array([Vector3(1700, 0, 530), Vector3(2000, 0, 562)]), 18.0)
 		gt.ai_controller = ap
 		gt.driver = Vehicle.Driver.AI
-		camera_rig.yaw = 0.0
+		camera_rig.yaw = -PI * 0.5
 		camera_rig.pitch = -0.16
 		camera_rig.snap()
 	, 100)
@@ -605,7 +643,7 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		if missions.active != null:
 			missions.fail("Tour")
 			missions.abort()
-		player.force_leave_vehicle(Vector3(5, y, 447))
+		player.force_leave_vehicle(cw.get_spawn().origin)
 		missions.start_mission("m03_falsche_lieferung")
 		for i: int in 30:
 			await get_tree().physics_frame
@@ -625,9 +663,10 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 	, 40)
 	tour.add_station("luftbild_faecher", func() -> void:
 		dev_overlay.toggle()
-		player.global_position = Vector3(0, y, 250)
+		(world as CityWorld).ensure_loaded(Vector3(0, y, 350))
+		player.global_position = Vector3(0, y, 350)
 		camera_rig.yaw = 0.0
 		camera_rig.pitch = -1.2
-		camera_rig._target_distance = 60.0
+		camera_rig._target_distance = 140.0
 		camera_rig.snap()
 	, 40)

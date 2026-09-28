@@ -16,6 +16,7 @@ var vsync: bool = true
 var quality: int = 1                       ## 0 niedrig, 1 mittel, 2 hoch
 var show_fps: bool = false
 var traffic_density: float = 1.0           ## 0.25 .. 1.5
+var vegetation: float = 1.0                ## 0.0 .. 1.5 (Baumdichte in Parks/Wäldern)
 
 
 func _enter_tree() -> void:
@@ -41,6 +42,7 @@ func load_settings() -> void:
 	quality = clampi(int(cf.get_value("video", "quality", quality)), 0, 2)
 	show_fps = bool(cf.get_value("video", "show_fps", show_fps))
 	traffic_density = clampf(float(cf.get_value("game", "traffic_density", traffic_density)), 0.25, 1.5)
+	vegetation = clampf(float(cf.get_value("video", "vegetation", vegetation)), 0.0, 1.5)
 
 
 func save_settings() -> void:
@@ -55,6 +57,7 @@ func save_settings() -> void:
 	cf.set_value("video", "quality", quality)
 	cf.set_value("video", "show_fps", show_fps)
 	cf.set_value("game", "traffic_density", traffic_density)
+	cf.set_value("video", "vegetation", vegetation)
 	var err: Error = cf.save(PATH)
 	if err != OK:
 		push_warning("Einstellungen konnten nicht gespeichert werden: %s" % error_string(err))
@@ -100,3 +103,12 @@ func max_traffic() -> int:
 
 func max_pedestrians() -> int:
 	return int(round([14.0, 26.0, 34.0][quality] * traffic_density))
+
+
+func vegetation_density() -> float:
+	return vegetation
+
+
+## Streaming: Sektorradius (vollständig gebaut) je Qualitätsstufe.
+func sector_radius() -> int:
+	return [1, 2, 2][quality]
