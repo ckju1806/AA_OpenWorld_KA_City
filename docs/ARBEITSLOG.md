@@ -404,4 +404,6 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
 - **P2 Regler „Menü-Klänge“ ohne Wirkung:** Es gab keinen Bus „UI“. Neu: `AudioManager` legt „UI“ an, `play_2d` leitet
   `ui_*`-Klänge dorthin. Test `test_ui_volume_controls_menu_sounds`.
 - Version 0.2.1.
+- **Prüfung v0.2.1:** Gesamtlauf **142 Tests, 0 fehlgeschlagen**, Exit-Code 0, 0 Skriptfehler (2 097 s); m07 (231 s), m10, m15
+  mit NPC-Routen über `drive_dir` und alle 5 Ereignistests grün. Unit 56/56.
 

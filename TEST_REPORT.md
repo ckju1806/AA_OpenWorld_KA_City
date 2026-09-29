@@ -1,4 +1,4 @@
-# Testbericht – Fächer-City: Asphalt & Schatten v0.2.0
+# Testbericht – Fächer-City: Asphalt & Schatten v0.2.1
 
 Stand: 2026-09-29 · Umgebung: Linux-Container (Ubuntu 24.04, 4 CPU, keine GPU, keine Soundkarte),
 Godot 4.7.2.stable.official.ed1daf0bf, Weltdaten aus OpenStreetMap (Abruf 2026-09-29).
@@ -12,7 +12,7 @@ Status-Begriffe: **implementiert** (Code vorhanden), **getestet** (automatisiert
 
 | Bereich | Status |
 |---|---|
-| Automatisierte Tests (Unit + Integration, headless) | **getestet – 138 Tests, 0 fehlgeschlagen, Exit-Code 0** (Gesamtlauf auf der OSM-Welt, 2 072 s) |
+| Automatisierte Tests (Unit + Integration, headless) | **getestet – 142 Tests, 0 fehlgeschlagen, Exit-Code 0** (v0.2.1, Gesamtlauf auf der OSM-Welt, 2 097 s; v0.2.0: 138/138) |
 | Weltdaten-Validierung (Gebäude, Autos, Objekte, Landmarken gegen Fahrbahnen) | **getestet** – 5 Prüfungen, 0 Verstöße |
 | Visuelle Kontrolle (Screenshot-Tour, Software-Rendering) | **getestet** – 46 Bilder + Hauptmenü visuell geprüft, Auswahl in `artifacts/screenshots/v0.2/` |
 | Windows-Export + Starttest der PCK (`--boot-check`) | **getestet** (unter Linux): PCK-Inhalt geprüft, Starttest „OK“ |
@@ -40,6 +40,9 @@ Status-Begriffe: **implementiert** (Code vorhanden), **getestet** (automatisiert
 | W12 Tests, Doku, Build, Release | implementiert, getestet (Windows-Start ungetestet) | dieser Bericht |
 
 ## 2. Automatisierte Tests
+
+**v0.2.1:** Gesamtlauf 142/142 grün (neu: NPC-Routen halten Einbahnstraßen ein, Ereignisraten unabhängig von der
+Bildrate ×2, Regler „Menü-Klänge“ wirkt). Anlass: automatisches Review von PR #2, siehe Arbeitslog.
 
 Aufruf: `scripts/linux/run_tests.sh` (Import, dann `godot --headless --fixed-fps 60 res://tests/test_runner.tscn`).
 Ein Test gilt nur als bestanden, wenn alle Prüfungen erfüllt sind **und** kein Engine-/Skriptfehler protokolliert wurde.
