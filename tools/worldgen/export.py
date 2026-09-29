@@ -394,7 +394,7 @@ def export_world(out_dir, meta, nodes, edges, names, blocks, buildings, props, a
         if i < 0 or j < 0:
             continue
         data = json.dumps(s, separators=(",", ":")).encode()
-        gz = gzip.compress(data, 9)
+        gz = gzip.compress(data, 9, mtime=0)
         with open(os.path.join(out_dir, "sectors", "s_%d_%d.json.gz" % (i, j)), "wb") as fh:
             fh.write(gz)
         total += len(gz)
@@ -418,7 +418,7 @@ def export_world(out_dir, meta, nodes, edges, names, blocks, buildings, props, a
     os.makedirs(os.path.join(out_dir, "lod"), exist_ok=True)
     lod_tiles = []
     for (i, j), arr in sorted(lod.items()):
-        gz = gzip.compress(json.dumps(arr, separators=(",", ":")).encode(), 9)
+        gz = gzip.compress(json.dumps(arr, separators=(",", ":")).encode(), 9, mtime=0)
         with open(os.path.join(out_dir, "lod", "t_%d_%d.json.gz" % (i, j)), "wb") as fh:
             fh.write(gz)
         total += len(gz)
@@ -438,7 +438,7 @@ def export_world(out_dir, meta, nodes, edges, names, blocks, buildings, props, a
         "map": {"image": "map.webp", "m_per_px": MAP_M_PER_PX},
         **(extra or {}),
     }
-    wz = gzip.compress(json.dumps(world, separators=(",", ":"), ensure_ascii=False).encode(), 9)
+    wz = gzip.compress(json.dumps(world, separators=(",", ":"), ensure_ascii=False).encode(), 9, mtime=0)
     with open(os.path.join(out_dir, "world.json.gz"), "wb") as fh:
         fh.write(wz)
     total += len(wz)

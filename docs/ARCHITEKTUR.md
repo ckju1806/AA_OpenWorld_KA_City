@@ -58,11 +58,14 @@ main_menu.tscn (MainMenu) ──Neues Spiel / Fortsetzen──▶ game.tscn (Gam
 ```
 Quelle: OSM (fetch_osm.py → ~/osm_cache → source_osm.py; im Build)  oder  ka_authored.py (1:1-Näherung, Rückfall)
    → network.py (Graph: Vereinfachung, Teilung ≤ 60 m, Kontakte, Inseln)   → blocks.py (Blöcke, Flächen, Gebäude-Füllung)
-   → transit.py (Linien, Haltestellen, Tunnelbereiche)                      → export.py (Sektoren, LOD, Props, world.json.gz, map.webp)
-   → validate_world.py (Gebäude/Autos nicht in Fahrspuren, Landmarken frei)
-Aufruf: python3 tools/worldgen/build_world.py [--source osm|authored] [--cache ~/osm_cache] [--out data/world/ka]
+   → zoo_fit.py (OSM: Zoo-Gehege auf freie Zooflächen)                     → transit.py (Linien, Haltestellen, Tunnelbereiche)
+   → export.py (Sektoren, LOD, Props ohne Fahrbahn/Landmarken, world.json.gz deterministisch, map.webp)
+   → validate_world.py (Gebäude/Autos/Objekte nicht auf Fahrbahnen, Landmarken-Grundrisse frei, keine Objekte darin)
+Aufruf: python3 tools/worldgen/build_world.py [--source osm|authored] [--cache ~/osm_cache] [--out <Ordner>]
+Installation: python3 tools/worldgen/install_world.py <Ordner>   (nur inhaltlich geänderte Dateien → kleine Git-Historie)
 ```
-Koordinaten: Ursprung Schlossturm (49.013480 N, 8.404440 E), x = Ost, z = Süd, 1 Einheit = 1 m; in Dateien als
+Koordinaten: Ursprung 49.013480 N, 8.404440 E (≈ Schlossturm; der reale Turm liegt laut OSM 54 m nördlich, dort ist die
+Schloss-Landmarke verankert), x = Ost, z = Süd, 1 Einheit = 1 m; in Dateien als
 Ganzzahlen in Dezimetern (q = 10), gzip-JSON. Kanten-Flags: Bit 0 Tunnel, Bit 1 Brücke, Bit 2 Einbahn, Bits 8–15 Breite (0,5 m).
 Budget: Weltdaten ≤ 40 MB, Einzeldatei ≤ 5 MB (`tools/check_repo_budget.py`).
 

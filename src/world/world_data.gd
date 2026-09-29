@@ -42,6 +42,7 @@ static func load_world(p_dir: String = DIR) -> WorldData:
 	w.area_kinds = PackedStringArray(d.get("area_kinds", []))
 	w.prop_kinds = PackedStringArray(d.get("prop_kinds", []))
 	w.landmarks = d.get("landmarks", [])
+	LandmarksExtra.use_zoo_layout_from(w.landmarks)
 	w.map_m_per_px = float((d.get("map", {}) as Dictionary).get("m_per_px", 4.0))
 	return w
 

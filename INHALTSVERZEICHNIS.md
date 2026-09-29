@@ -39,7 +39,7 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 |---|---|
 | `scripts/` | Start-, Build-, Test- und Setup-Skripte (Windows/Linux) |
 | `tools/` | Generatoren (Audio, Icon) – nicht Teil des Spiels |
-| `tools/worldgen/` | Welt-Pipeline (Python: shapely/numpy/pillow): Quellen `ka_authored.py` (1:1-Näherung) und `source_osm.py` (OpenStreetMap, Abruf `fetch_osm.py`), `network.py`, `blocks.py`, `transit.py`, `export.py`, `validate_world.py`, Aufruf `build_world.py` |
+| `tools/worldgen/` | Welt-Pipeline (Python: shapely/numpy/pillow): Quellen `ka_authored.py` (1:1-Näherung) und `source_osm.py` (OpenStreetMap, Abruf `fetch_osm.py`), `network.py`, `blocks.py`, `zoo_fit.py`, `transit.py`, `export.py`, `validate_world.py`, Aufruf `build_world.py`, sparsame Installation `install_world.py` |
 | `tools/release/` | Vorlage des Installers (`installer_template.bat`, Name/Prüfsumme werden beim Paketieren eingesetzt) |
 | `.github/workflows/` | `windows-release.yml`: Windows-Build + GitHub-Release (manuell oder Commit mit `[release]`) |
 | `tools/check_repo_budget.py` | Prüft das GitHub-Speicherbudget (Repo < 300 MB, Weltdaten ≤ 40 MB, Dateien ≤ 5 MB) vor Commits |

@@ -18,8 +18,7 @@ from shapely.strtree import STRtree
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Grundfläche der Platzhalter-Landmarken in Metern – synchron halten mit LandmarkBuilder._placeholder (GDScript)
-PLACEHOLDER_SIZES = {"hauptbahnhof": (240, 36), "gewaechshaus": (60, 22), "stadion": (180, 130), "hafenkran": (8, 8),
-    "turmberg": (9, 9)}
+PLACEHOLDER_SIZES = {"stadion": (180, 130)}
 
 
 def _schloss_parts() -> list:
@@ -47,19 +46,34 @@ LM_PARTS = {
     "torbogen": (None, [(-3.6, 0, 1.6, 1.6, 0), (3.6, 0, 1.6, 1.6, 0)]),
     "staatstheater": (None, [(0, 10, 70, 50, 0), (-22, 18, 30, 34, 0), (20, 20, 26, 30, 0), (0, 42, 60, 14, 0),
                              (0, -21, 64, 8, 0)]),
+    "gewaechshaus": (None, [(0, 0, 32.4, 20.4, 0), (-30, 4, 24.4, 12.4, 0), (30, 4, 24.4, 12.4, 0)]),
+    "hafenkran": (None, [(lx, 0, 9, 9, 0) for lx in (-60, -20, 20, 60)]),
+    "turmberg": (None, [(0, 0, 12, 12, 0)]),
+    # Empfangshalle, Uhrturm, Flügel, Stützen der drei Bahnsteighallen (LandmarksExtra.hauptbahnhof)
+    "hauptbahnhof": (None, [(0, 0, 44, 30, 0), (28, -6, 10, 10, 0), (-67, 2, 90, 18, 0), (83, 2, 90, 18, 0)]
+                     + [(-52 + 52 * k + sx, zz, 0.8, 0.8, 0) for k in range(3) for sx in (-22.5, 22.5) for zz in range(30, 205, 18)]),
+}
+# Dächer über offenem Boden (nur für Objekte wie Bäume relevant, Fahrbahnen darunter erlaubt)
+LM_ROOFS = {
+    "hauptbahnhof": [(-52 + 52 * k, 117, 46, 186, 0) for k in range(3)],
 }
 
 
-def landmark_footprints(lm: dict) -> list:
-    """Grundriss-Polygone einer Landmarke in Weltkoordinaten (leer, wenn kein Grundriss bekannt)."""
+def landmark_footprints(lm: dict, roofs: bool = False) -> list:
+    """Grundriss-Polygone einer Landmarke in Weltkoordinaten (leer, wenn kein Grundriss bekannt).
+    roofs: zusätzlich Dachflächen über offenem Boden (für Objekte wie Bäume)."""
     x, z = lm["pos"]
     rot = float(lm.get("rot", 0.0))
     out = []
     if lm["type"] in PLACEHOLDER_SIZES:
         sx, sz = PLACEHOLDER_SIZES[lm["type"]]
         out.append(affinity.rotate(box(x - sx / 2, z - sz / 2, x + sx / 2, z + sz / 2), -rot, origin=(x, z)))
-    elif lm["type"] in LM_PARTS:
-        model_rot, parts = LM_PARTS[lm["type"]]
+    elif lm["type"] in LM_PARTS or lm["type"] == "zoo":
+        model_rot, parts = LM_PARTS.get(lm["type"], (None, []))
+        if lm["type"] == "zoo":   # Eingangsgebäude links/rechts des Tors
+            ex, ez = lm.get("entrance", [0, 250])
+            parts = [(ex - 14, ez, 12, 9, 0), (ex + 14, ez, 12, 9, 0)]
+        parts = parts + (LM_ROOFS.get(lm["type"], []) if roofs else [])
         eff = rot - model_rot if model_rot is not None else rot
         for cx, cz, sx, sz, yaw in parts:
             b = affinity.rotate(box(cx - sx / 2, cz - sz / 2, cx + sx / 2, cz + sz / 2), -yaw, origin=(cx, cz))
@@ -150,7 +164,18 @@ def validate(out_dir: str) -> int:
                 print(f"[prüfung] Landmarke {lm['type']} überdeckt eine Fahrbahn bei {foot.centroid.x:.0f}, {foot.centroid.y:.0f}")
                 break
     print(f"[prüfung] Landmarken auf Fahrbahnen: {lm_bad}")
-    return bad + lm_bad
+    # Keine Objekte (Bäume, Laternen, Bänke …) in Landmarken-Grundrissen
+    feet = [f for lm in w["landmarks"] for f in landmark_footprints(lm, roofs=True)]
+    ftree = STRtree(feet) if feet else None
+    in_lm = 0
+    for f in sorted(glob.glob(os.path.join(out_dir, "sectors", "*.json.gz"))) if ftree else []:
+        for arr in json.load(gzip.open(f)).get("p", {}).values():
+            for k in range(0, len(arr), 4):
+                pt = Point(arr[k] / q, arr[k + 1] / q)
+                if any(feet[j].contains(pt) for j in ftree.query(pt)):
+                    in_lm += 1
+    print(f"[prüfung] Objekte in Landmarken: {in_lm}")
+    return bad + lm_bad + in_lm
 
 
 if __name__ == "__main__":

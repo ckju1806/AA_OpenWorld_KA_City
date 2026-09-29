@@ -19,6 +19,9 @@ Status-Begriffe wie in [TEST_REPORT.md](TEST_REPORT.md): **implementiert**, **te
   Näherung (`ka_authored.py`) bleibt als Rückfall ohne Netzzugang erhalten.
 - OSM-Daten spiegeln den Datenstand, nicht zwingend die Wirklichkeit (fehlende Gebäudehöhen → typische Höhe je Nutzung).
 - Gebäude sind prozedural aus Grundrissen erzeugt (Fassaden-Shader); nur die Prioritäts-Landmarken sind einzeln modelliert.
+- Zoo: Die 9 Gehege sind eine eigene, vereinfachte Anordnung, die der Generator auf freie Stellen der realen Zoofläche setzt
+  (nicht die realen Gehegestandorte). Hafenkräne stehen an einer Näherungsposition (keine Kran-Objekte in den Kartendaten).
+- Zugänge zu U-Strab-Haltestellen sind einfache Baukörper; Verfassungssäule und Durlacher-Tor-Skulptur sind Näherungen.
 - Keine Innenräume; Brücken/Unterführungen vereinfacht; Straßentunnel sind ausgelassen.
 
 ## ÖPNV

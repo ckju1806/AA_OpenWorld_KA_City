@@ -552,7 +552,7 @@ func register_screenshot_stations(tour: ScreenshotTour) -> void:
 
 
 func _cam_station(tour: ScreenshotTour, station_name: String, player_pos: Vector3, yaw_deg: float, pitch: float, frames: int = 40,
-		pre: Callable = Callable()) -> void:
+		pre: Callable = Callable(), cam_dist: float = 4.2) -> void:
 	tour.add_station(station_name, func() -> void:
 		if pre.is_valid():
 			pre.call()
@@ -564,6 +564,7 @@ func _cam_station(tour: ScreenshotTour, station_name: String, player_pos: Vector
 		player.velocity = Vector3.ZERO
 		camera_rig.yaw = deg_to_rad(yaw_deg)
 		camera_rig.pitch = pitch
+		camera_rig._target_distance = cam_dist
 		camera_rig.snap()
 	, frames)
 
@@ -581,10 +582,10 @@ func _weather_station(tour: ScreenshotTour, station_name: String, player_pos: Ve
 
 ## Station relativ zu einer Landmarke aus den Weltdaten (lokaler Versatz vor Drehung), Blick auf die Landmarke.
 func _lm_station(tour: ScreenshotTour, station_name: String, lm_type: String, offset: Vector2, y: float, pitch: float,
-		look_at_local: Vector2 = Vector2.ZERO) -> void:
+		look_at_local: Vector2 = Vector2.ZERO, cam_dist: float = 4.2) -> void:
 	var v: Dictionary = _lm_view(lm_type, offset, look_at_local)
 	if not v.is_empty():
-		_cam_station(tour, station_name, Vector3(v.pos.x, y, v.pos.y), v.yaw, pitch)
+		_cam_station(tour, station_name, Vector3(v.pos.x, y, v.pos.y), v.yaw, pitch, 40, Callable(), cam_dist)
 
 
 ## Kamerastandpunkt relativ zu einer Landmarke: { pos: Vector2, yaw: Grad } oder leer.
@@ -745,26 +746,36 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 	var cw: CityWorld = get_city()
 	var y: float = cw.slab_h + 0.05
 	# Standpunkte aus den Weltdaten (Landmarken, Straßennamen) – gültig für OSM- und Näherungswelt
-	var v_pyr: Dictionary = _lm_view("pyramide", Vector2(6, 42))
+	var v_pyr: Dictionary = _lm_view("pyramide", Vector2(-10, 24))
 	var v_kaiser: Dictionary = _street_view("Kaiserstraße", Vector2(-300, 430), Vector2(1, 0))
 	var v_krieg: Dictionary = _street_view("Kriegsstraße", Vector2(-300, 890), Vector2(-1, 0))
 	var v_schloss: Dictionary = _lm_view("schloss", Vector2(0, 190))
-	_cam_station(tour, "start_marktplatz_blick_schloss", cw.get_spawn().origin, 0.0, -0.12)
+	# Ortsbilder bei Tageslicht (die Uhr läuft während der Tour weiter)
+	_cam_station(tour, "start_marktplatz_blick_schloss", cw.get_spawn().origin, 0.0, -0.12, 40, func() -> void:
+		WorldClock.set_time(10.5)
+		WorldClock.set_weather("klar", true))
 	_view_station(tour, "marktplatz_pyramide", v_pyr, y, -0.05)
-	_lm_station(tour, "rathaus", "rathaus", Vector2(8, 70), y, -0.08)
-	_lm_station(tour, "stadtkirche", "stadtkirche", Vector2(-8, 62), y, -0.08)
+	# Marktplatz real nur ≈ 38 m zwischen Rathaus und Kirche: Standpunkte schräg vom offenen Nordteil des Platzes
+	_lm_station(tour, "rathaus", "rathaus", Vector2(30, 34), y, -0.3, Vector2.ZERO, 14.0)
+	_lm_station(tour, "stadtkirche", "stadtkirche", Vector2(-32, 30), y, -0.3, Vector2.ZERO, 14.0)
 	_view_station(tour, "schlossplatz", v_schloss, y, -0.08)
 	_view_station(tour, "kaiserstrasse", v_kaiser, y, -0.08)
 	_view_station(tour, "faecherstrasse_zirkel", _street_view("Karl-Friedrich-Straße", Vector2(-30, 330), Vector2(0, -1)), y, -0.06)
 	_view_station(tour, "zirkel", _street_view("Zirkel", Vector2(-220, 190), Vector2(1, 0)), y, -0.08)
-	_lm_station(tour, "europaplatz", "brunnen", Vector2(36, 10), y, -0.08)
-	_lm_station(tour, "durlacher_tor", "torbogen", Vector2(-28, 30), y, -0.1)
+	_lm_station(tour, "europaplatz", "brunnen", Vector2(-16, 14), y, -0.3, Vector2.ZERO, 12.0)
+	_lm_station(tour, "durlacher_tor", "torbogen", Vector2(-4, 22), y, -0.04)
 	_view_station(tour, "kriegsstrasse", v_krieg, y, -0.06)
 	_lm_station(tour, "hauptbahnhof", "hauptbahnhof", Vector2(-40, -95), y, -0.02)
-	_lm_station(tour, "zoo_eingang", "zoo", Vector2(10, 300), y, -0.06)
-	_lm_station(tour, "zoo_gehege", "zoo", Vector2(-60, 40), y, -0.3, Vector2(-60, 140))
-	_lm_station(tour, "stadion", "stadion", Vector2(-120, 160), y, 0.02)
-	_lm_station(tour, "gewaechshaeuser", "gewaechshaus", Vector2(-10, -55), y, -0.02)
+	var ent: Array = LandmarksExtra._zoo_layout().get("entrance", [0, 250])
+	_lm_station(tour, "zoo_eingang", "zoo", Vector2(float(ent[0]) + 6.0, float(ent[1]) + 34.0), y, -0.12,
+		Vector2(float(ent[0]), float(ent[1])), 8.0)
+	# Blick von Norden auf das Elefantengehege (Lage aus den Weltdaten, bei OSM an die reale Zoofläche angepasst)
+	for encv: Variant in LandmarksExtra.zoo_enclosures():
+		if str(encv.id) == "elefanten":
+			var ec: Vector2 = Vector2(float(encv.center[0]), float(encv.center[1]))
+			_lm_station(tour, "zoo_gehege", "zoo", ec + Vector2(-8, -34), y, -0.4, ec, 16.0)
+	_lm_station(tour, "stadion", "stadion", Vector2(-50, 125), y, -0.2, Vector2.ZERO, 22.0)
+	_lm_station(tour, "gewaechshaeuser", "gewaechshaus", Vector2(-6, 28), y, -0.55, Vector2.ZERO, 42.0)
 	_lm_station(tour, "hafenkraene", "hafenkran", Vector2(-20, 70), y, 0.12)
 	_lm_station(tour, "turmberg", "turmberg", Vector2(-25, -40), y, 0.15)
 	_cam_station(tour, "weststadt", Vector3(-1900, y, 300), 90.0, -0.08)

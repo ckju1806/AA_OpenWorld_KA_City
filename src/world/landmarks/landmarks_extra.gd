@@ -147,6 +147,15 @@ static func _zoo_layout() -> Dictionary:
 	return _zoo
 
 
+## Gehege-Anordnung aus den Weltdaten übernehmen (vom Generator an die reale Zoofläche angepasst, OSM-Quelle);
+## ohne Angabe gilt wieder die Standarddatei.
+static func use_zoo_layout_from(landmarks: Array) -> void:
+	_zoo = {}
+	for lmv: Variant in landmarks:
+		if lmv is Dictionary and str((lmv as Dictionary).get("type", "")) == "zoo" and (lmv as Dictionary).has("enclosures"):
+			_zoo = {"entrance": (lmv as Dictionary).get("entrance", [0, 250]), "enclosures": (lmv as Dictionary).enclosures}
+
+
 ## Gehegedaten (lokale Koordinaten) für Tiere (W6).
 static func zoo_enclosures() -> Array:
 	return _zoo_layout().get("enclosures", [])
@@ -377,7 +386,7 @@ static func hafenkran(kit: MeshKit, body: StaticBody3D, p: Vector2, rot: float, 
 
 static func turmberg(kit: MeshKit, body: StaticBody3D, node: Node3D, p: Vector2, rot: float, y0: float) -> void:
 	# Terrasse mit Treppe, mittelalterlicher Bergfried (Aussichtsturm) mit Zinnen
-	var terrace: Vector2 = Vector2(28, 24)
+	var terrace: Vector2 = Vector2(12, 12)   # Straße (Reichardtstraße) führt real ≈ 10 m am Turm vorbei
 	kit.color = RED_SAND.darkened(0.15)
 	kit.add_box("stone", Vector3(p.x, y0 + 1.5, p.y), Vector3(terrace.x, 3.0, terrace.y), Basis(Vector3.UP, rot))
 	_box_col(body, Vector3(p.x, y0 + 1.5, p.y), Vector3(terrace.x, 3.0, terrace.y), rot)

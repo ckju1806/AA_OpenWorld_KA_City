@@ -64,7 +64,7 @@ Voraussetzung: **Godot 4.7.2-stable** (Standard, nicht .NET), für die Welt-Pipe
 | Windows-Build + ZIP | `scripts/linux/build_windows.sh` | `scripts\windows\build_windows.bat` |
 | Release-Dateien (ZIP, Installer mit Prüfsumme, SHA256SUMS) | `scripts/linux/package_release.sh` | – |
 | Screenshot-Tour | `scripts/linux/screenshot_tour.sh <Ordner> [city] [B] [H] [nur=teil1,teil2]` | – |
-| Weltdaten erzeugen | `python3 tools/worldgen/fetch_osm.py` → `python3 tools/worldgen/build_world.py --source osm` (≈ 7 min); Rückfall ohne Netz: `--source authored` | – |
+| Weltdaten erzeugen | `python3 tools/worldgen/fetch_osm.py` → `python3 tools/worldgen/build_world.py --source osm --out <Ordner>` (≈ 7 min) → `python3 tools/worldgen/install_world.py <Ordner>`; Rückfall ohne Netz: `--source authored` | – |
 | Speicherbudget prüfen | `python3 tools/check_repo_budget.py --staged` | – |
 
 **Releases:** Builds liegen nie im Repository (Speicherbudget), sondern als Anhang eines GitHub-Releases. Der Workflow

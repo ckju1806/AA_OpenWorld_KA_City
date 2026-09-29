@@ -32,11 +32,15 @@ LOD-Kacheln, Übersichtskarte und ÖPNV-Daten (OSM: ≈ 11,5 MB, ≈ 6 min). Wel
   (z. B. Ladezone Kanzlei → Adlerstraße).
 - **Objekte mit Kollision** (Laternen, Bäume, Poller, Bänke) und parkende Autos nie auf Fahrbahnen; Ampelmasten ≥ 1,2 m neben
   der Fahrbahnkante.
+- **Zoo:** Die Gehege (9, eigene Anordnung) werden auf freie Stellen der realen Zoofläche gesetzt – ohne Stadtgartensee,
+  Zoogebäude und Wege (`zoo_fit.py`, max. Versatz ≈ 83 m, Ergebnis im Landmarkeneintrag); Spiel und Tiere übernehmen es.
+- **Objekte in Landmarken:** Bäume/Laternen/Bänke innerhalb von Landmarken-Grundrissen werden entfernt (Zoo-Gehege ausgenommen).
 - **Validierung** (`validate_world.py`): Gebäude (Fläche und Eindringtiefe), parkende Autos, Objekte und die Grundrisse aller
-  Landmarken (Detail- und Platzhaltermodelle) gegen alle Fahrbahnen – der Build bricht bei Verstößen ab.
+  Landmarken (Detail- und Platzhaltermodelle) gegen alle Fahrbahnen, keine Objekte in Landmarken – der Build bricht bei
+  Verstößen ab. Installation mit `install_world.py` (nur inhaltlich geänderte Dateien; gzip ohne Zeitstempel).
 
 ## 2. Koordinaten
-Ursprung = Schlossturm (49,013480 N, 8,404440 E), x = Osten, z = Süden (Norden = −Z), 1 Einheit = 1 m, lokale
+Ursprung ≈ Schlossturm (49,013480 N, 8,404440 E; der reale Turm liegt laut OSM 54 m nördlich – dort ist die Schloss-Landmarke verankert), x = Osten, z = Süden (Norden = −Z), 1 Einheit = 1 m, lokale
 äquirektanguläre Projektion. Kartenausschnitt (x, z): −9 500 … 8 000 × −4 100 … 6 300.
 
 ## 3. Prioritätsorte (einzeln modelliert, Position real)

@@ -163,8 +163,22 @@ def main():
             buildings += bl.build_block(b, bi, reserves, tree, lines, edges, clear + poi_clear)
         print(f"[welt] Gebäude: {len(buildings)} ({time.time() - t0:.1f} s)")
     print(f"[welt] Blöcke: {len(blocks)} ({time.time() - t0:.1f} s)")
+    if args.source == "osm":
+        import zoo_fit
+        zoo_fit.fit(src.LANDMARKS, src.AREAS, buildings, nodes, edges)
     trees = getattr(src, "TREES", None) or None
     props = ex.make_props(nodes, edges, blocks, buildings, src.AREAS, trees=trees)
+    # Keine Objekte (Bäume, Laternen, Bänke …) in Landmarken-Grundrissen (Zoo-Gehege dürfen Bäume enthalten)
+    import validate_world as vw
+    feet = [f.buffer(1.0) for lm in src.LANDMARKS for f in vw.landmark_footprints(lm, roofs=True)]
+    if feet:
+        ftree = STRtree(feet)
+        dropped = 0
+        for kind in list(props):
+            keep = [p for p in props[kind] if not any(feet[j].contains(Point(p[0], p[1])) for j in ftree.query(Point(p[0], p[1])))]
+            dropped += len(props[kind]) - len(keep)
+            props[kind] = keep
+        print(f"[welt] {dropped} Objekte aus Landmarken-Grundrissen entfernt")
     print("[welt] Props: " + ", ".join(f"{k} {len(v)}" for k, v in props.items()))
     walk = ex.make_walk(blocks, nodes, edges)
     print(f"[welt] Gehwege: {len(walk[0])} Schleifen, {len(walk[1])} Querungen, {len(walk[2])} Flanierbereiche")

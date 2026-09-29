@@ -309,18 +309,11 @@ def _drop_building_stubs(graph, blds):
 
 def _clear_landmark_roads(graph, landmarks):
     """Landmarken-Grundrisse haben Vorrang vor Nebenstraßen: Wohn-/Erschließungskanten, deren Fahrspur den Kollisions-
-    quader einer Landmarke schneidet, werden entfernt (danach Inseln bereinigt). Hauptstraßen bleiben (Prüfung meldet sie)."""
+    grundriss einer Landmarke schneidet, werden entfernt (danach Inseln bereinigt). Hauptstraßen bleiben (Prüfung meldet sie)."""
     import network as net
-    from validate_world import PLACEHOLDER_SIZES
+    from validate_world import landmark_footprints   # dieselben Grundrisse wie die Validierung
     nodes, edges, names = graph
-    feet = []
-    for lm in landmarks:
-        size = PLACEHOLDER_SIZES.get(lm["type"])
-        if size is None:
-            continue
-        x, z = lm["pos"]
-        feet.append(affinity.rotate(Polygon([(x - size[0] / 2, z - size[1] / 2), (x + size[0] / 2, z - size[1] / 2),
-            (x + size[0] / 2, z + size[1] / 2), (x - size[0] / 2, z + size[1] / 2)]), -lm.get("rot", 0.0), origin=(x, z)))
+    feet = [f for lm in landmarks for f in landmark_footprints(lm)]
     if not feet:
         return graph
     minor = {net.CLASS_ORDER.index(c) for c in ("residential", "service")}

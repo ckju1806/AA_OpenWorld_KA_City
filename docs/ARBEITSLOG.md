@@ -356,4 +356,19 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
 - **Screenshot-Tour:** Standpunkte und Fahrwege aus Landmarken und Straßennamen statt fester Koordinaten der alten Näherung
   (feste Fahrlinien hätten in der OSM-Welt durch Gebäude geführt).
 - **Test m01:** scheiterte im Gesamtlauf am Fußweg Ladezone (Adlerstraße) → Kanzleitür. `walk_to` prüft jetzt die Sichtlinie
-  und geht sonst über das Wegenetz (wie ein Spieler um Häuser herum).
+  und geht sonst über das Wegenetz (wie ein Spieler um Häuser herum). Ursache der ersten Korrektur: `find_path` kennt den
+  Modus „all“ nicht (fällt auf das Autonetz zurück) → vollständiges Netz über „police“.
+- **Gesamtlauf auf der OSM-Welt (Stand Commit `7b4a15d`): 138 Tests, 0 fehlgeschlagen (1 746 s).**
+- **Screenshot-Tour (46 Bilder, visuell geprüft) → Befunde und Korrekturen:**
+  - Zoo: Die freie Gehege-Anordnung lag teils im Stadtgartensee (Giraffen 813 m² Wasser), in Zoogebäuden und außerhalb der
+    Zoofläche (Flamingos). Neu `zoo_fit.py`: Gehege auf freie Stellen der realen Zoofläche (ohne Wasser/Gebäude/Wege),
+    9/9 in voller Größe, max. 83 m versetzt; Anordnung steht im Landmarkeneintrag, Spiel und Tiere übernehmen sie
+    (`LandmarksExtra.use_zoo_layout_from`).
+  - Objekte in Landmarken: Bäume standen in Brunnen, Pyramide, Rathaus, Gewächshäusern und unter den Bahnsteighallen → werden im
+    Generator entfernt; Validierung prüft „Objekte in Landmarken“. Grundrisse in der Validierung an die echten Modelle angepasst
+    (Gewächshäuser 3 Hallen, 4 Hafenkräne, Hbf mit Flügeln und Hallenstützen).
+  - Turmberg: Terrasse (28 × 24 m, 3 m hoch) ragte in die Reichardtstraße → 12 × 12 m.
+  - Tour-Standpunkte: Marktplatz real nur ≈ 38 m breit → Rathaus/Stadtkirche/Europaplatz/Zoo/Gewächshäuser mit erhöhter Kamera;
+    Ortsbilder bei Tageslicht.
+- **Speicherbudget:** gzip ohne Zeitstempel (`mtime=0`) und `install_world.py` (übernimmt nur inhaltlich geänderte Dateien):
+  ein Zoo-Neubau änderte so 1 statt 3 194 Dateien in der Git-Historie.
