@@ -1,4 +1,4 @@
-# Bekannte Probleme und Einschränkungen (v0.2.1)
+# Bekannte Probleme und Einschränkungen (v0.2.2)
 
 Status-Begriffe wie in [TEST_REPORT.md](TEST_REPORT.md): **implementiert**, **teilweise**, **getestet**, **ungetestet**, **blockiert**.
 

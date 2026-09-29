@@ -4,7 +4,7 @@
 1:1**. Eigenständiges Projekt mit eigener Identität – keine Inhalte, Namen, Logos, Figuren, Musik, Menüs oder Cheat-Codes aus
 anderen Spielen. Alle Figuren, Firmen und Gruppen sind erfunden.
 
-> Stand: Version **0.2.2** (Vorabversion). Was getestet ist und was nicht, steht in [TEST_REPORT.md](TEST_REPORT.md);
+> Stand: Version **0.2.0** (Vorabversion). Was getestet ist und was nicht, steht in [TEST_REPORT.md](TEST_REPORT.md);
 > Einschränkungen in [KNOWN_ISSUES.md](KNOWN_ISSUES.md). **Der Windows-Build wurde nicht auf echtem Windows gestartet.**
 
 ## Inhalt
@@ -29,10 +29,10 @@ anderen Spielen. Alle Figuren, Firmen und Gruppen sind erfunden.
 
 ## Spielen (Windows 10/11, 64 Bit)
 
-**Download:** GitHub-Seite des Projekts → **Releases** → neueste Version: `Faecherstadt_Windows_x64_v0.2.2.zip` und
-`Faecherstadt_installieren_und_starten.bat`. Schritt-für-Schritt: [ANLEITUNG.md](ANLEITUNG.md).
+**Download:** GitHub-Seite des Projekts → **Releases** → neueste Version: `Faecherstadt_Windows_x64_v0.2.0.zip` und
+`GTA_KA_installieren_und_starten.bat`. Schritt-für-Schritt: [ANLEITUNG.md](ANLEITUNG.md).
 
-1. Beide Dateien in denselben Ordner laden, die `.bat` doppelklicken → Installation nach `C:\Faecherstadt` (mit Prüfsumme) und Start.
+1. Beide Dateien in denselben Ordner laden, die `.bat` doppelklicken → Installation nach `C:\GTA_KA` (mit Prüfsumme) und Start.
 2. Von Hand: ZIP entpacken, `Faecherstadt\Faecherstadt.exe` starten – **`Faecherstadt.pck` muss daneben liegen**.
 3. Windows SmartScreen kann warnen („Weitere Informationen“ → „Trotzdem ausführen“); das Programm ist nicht code-signiert.
 

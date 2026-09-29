@@ -407,3 +407,19 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
 - **Prüfung v0.2.1:** Gesamtlauf **142 Tests, 0 fehlgeschlagen**, Exit-Code 0, 0 Skriptfehler (2 097 s); m07 (231 s), m10, m15
   mit NPC-Routen über `drive_dir` und alle 5 Ereignistests grün. Unit 56/56.
 
+
+## 2026-09-29 – v0.2.2: Fremdmarken-Kürzel aus Dateinamen entfernt, Forenpost, offene Planpunkte
+
+- **Anlass:** Forenpost zur Tester-Suche (`docs/community/FORENPOST_TESTER_GESUCHT.md`); der Installer trug das Kürzel einer
+  bekannten Spielreihe im Namen (`GTA_KA_…bat`, Zielordner `C:\GTA_KA`) – Nutzervorgabe: muss raus.
+- **Änderungsklasse:** mittel (8 Dateien, Release-Paketierung betroffen, kein Spielcode). **Restore-Punkt:** Commit `6d92fa1`,
+  Dateisicherungen in `backups/2026-09-29_gta_umbenennung/`.
+- **Umsetzung:** Installer `Faecherstadt_installieren_und_starten.bat`, Zielordner `C:\Faecherstadt` (Vorlage, `package_release.sh`,
+  README, ANLEITUNG inkl. Umstiegshinweis, Release-Notizen, `release/README.md`, Inhaltsverzeichnis, Testbericht). Spielstände
+  (`%APPDATA%\Faecherstadt`) unverändert. Historische Angaben (Release v0.2.0 im Testbericht, dieses Log) bleiben wie sie waren.
+- **Prüfung:** `package_release.sh` mit Test-ZIP: Installer-Name, `DEST`, `NAME`, `HASH` korrekt eingesetzt, CRLF erhalten,
+  `SHA256SUMS.txt` mit neuem Namen; `bash -n` ok; `check_repo_budget.py` ohne Überschreitung. Kein Spielcode geändert →
+  keine neuen Spieltests nötig; die Unit-Tests laufen im Release-Workflow.
+- **Offen (manuell, nur mit Schreibrechten auf Releases):** In den Releases v0.2.0/v0.2.1 hängt weiterhin die alte
+  `GTA_KA_…bat` – bei Bedarf dort löschen oder die Releases als veraltet markieren.
+- Übersicht geplanter, noch nicht umgesetzter Punkte: `docs/OFFENE_PLANPUNKTE.md`.

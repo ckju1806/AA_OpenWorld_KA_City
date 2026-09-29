@@ -125,7 +125,7 @@ Rand die Legende; U-Strab-Zugänge sind schlichte Blöcke.
 | `Faecherstadt.pck` | Kennung `GDPC`, 18 956 800 Bytes; enthält Weltdaten, Sektoren, Missionen, Gruppen (Skriptprüfung) |
 | Starttest der PCK (Linux-Engine 4.7.2, `--headless --main-pack … -- --autostart --boot-check`) | `[boot] OK: Knoten 42238, Aufträge 15, ÖPNV-Linien 177, Quelle osm` |
 | ZIP `Faecherstadt_Windows_x64_v0.2.0.zip` | 56 485 101 Bytes; EXE, PCK, README, CONTROLS, ASSET_LICENSES, KNOWN_ISSUES, LICENSE |
-| Release-Paket (`package_release.sh`) | ZIP, Installer `Faecherstadt_installieren_und_starten.bat` (bis v0.2.1 anders benannt), `SHA256SUMS.txt` |
+| Release-Paket (`package_release.sh`) | ZIP, Installer `GTA_KA_installieren_und_starten.bat`, `SHA256SUMS.txt` |
 
 SHA256 des lokalen Builds (2026-09-29, 09:07 UTC):
 ```

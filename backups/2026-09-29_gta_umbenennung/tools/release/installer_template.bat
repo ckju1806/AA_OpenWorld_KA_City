@@ -1,11 +1,11 @@
 @echo off
-rem Faecher-City: Asphalt und Schatten - Installation nach C:\Faecherstadt und Start.
+rem Faecher-City: Asphalt und Schatten - Installation nach C:\GTA_KA und Start.
 rem Diese Datei in denselben Ordner legen wie @NAME@
 rem (oder die beiden Teile .zip.part00 und .zip.part01) und doppelklicken.
-rem Aendert nichts ausser dem Ordner C:\Faecherstadt. Hinweis: auf echtem Windows noch ungetestet.
+rem Aendert nichts ausser dem Ordner C:\GTA_KA. Hinweis: auf echtem Windows noch ungetestet.
 setlocal
 set "SRC=%~dp0"
-set "DEST=C:\Faecherstadt"
+set "DEST=C:\GTA_KA"
 set "NAME=@NAME@"
 set "HASH=@HASH@"
 

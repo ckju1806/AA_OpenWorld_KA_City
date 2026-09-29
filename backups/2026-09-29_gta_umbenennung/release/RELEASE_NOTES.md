@@ -1,7 +1,7 @@
 Fächer-City: Asphalt & Schatten – Windows x64 (Vorabversion)
 
-**Installation:** `Faecherstadt_Windows_x64_v<Version>.zip` und `Faecherstadt_installieren_und_starten.bat` in denselben Ordner
-herunterladen, die `.bat` doppelklicken → Installation nach `C:\Faecherstadt` mit Prüfsummenkontrolle, danach Start.
+**Installation:** `Faecherstadt_Windows_x64_v<Version>.zip` und `GTA_KA_installieren_und_starten.bat` in denselben Ordner
+herunterladen, die `.bat` doppelklicken → Installation nach `C:\GTA_KA` mit Prüfsummenkontrolle, danach Start.
 Von Hand: ZIP entpacken, `Faecherstadt\Faecherstadt.exe` starten (`Faecherstadt.pck` muss daneben liegen).
 Anleitung: `ANLEITUNG.md` im Repository.
 
@@ -14,9 +14,6 @@ umfangreiche Optionen mit Tastenbelegung.
 
 **Korrekturen in 0.2.1:** NPC-Fahrzeuge in Aufträgen halten Einbahnstraßen ein (Verfolgen/Begleiten),
 Zufallsereignisse unabhängig von der Bildrate (Kundgebungen eskalieren nicht mehr fast sicher), Regler „Menü-Klänge“ wirkt.
-
-**Änderungen in 0.2.2:** Installer heißt jetzt `Faecherstadt_installieren_und_starten.bat` und installiert nach
-`C:\Faecherstadt` (vorher `C:\GTA_KA` – alter Ordner kann gelöscht werden, Spielstände bleiben erhalten). Spiel unverändert.
 
 **Hinweise:** Nicht code-signiert (SmartScreen: „Weitere Informationen“ → „Trotzdem ausführen“). Gebaut und automatisiert
 getestet unter Linux; **auf echtem Windows nicht gestartet**. Bekannte Einschränkungen: `KNOWN_ISSUES.md`.

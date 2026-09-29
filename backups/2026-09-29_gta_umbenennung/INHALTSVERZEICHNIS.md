@@ -5,7 +5,7 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 ## Einstieg
 | Datei | Inhalt |
 |---|---|
-| [ANLEITUNG.md](ANLEITUNG.md) | Download (GitHub-Release), Installation nach `C:\Faecherstadt`, erste Schritte, Fehlerbehebung (für Spieler) |
+| [ANLEITUNG.md](ANLEITUNG.md) | Download (GitHub-Release), Installation nach `C:\GTA_KA`, erste Schritte, Fehlerbehebung (für Spieler) |
 | [release/](release/) | Release-Notizen (`RELEASE_NOTES.md`) und Verweise auf die GitHub-Releases (v0.2.0; v0.1.0 in der Git-Historie) |
 | [README.md](README.md) | Überblick, Voraussetzungen, Start, Build, Spielstände, Fehlerbehebung |
 | [CONTROLS.md](CONTROLS.md) | Steuerung |
@@ -23,7 +23,6 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 | [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md) | Module, Datenfluss, Welt-Pipeline, ÖPNV, Physik-Layer, Speicherformat, Tests |
 | [docs/KARTE_KARLSRUHE.md](docs/KARTE_KARLSRUHE.md) | Kartengrundlage 1:1: Näherung vs. OpenStreetMap, Koordinaten, Prioritätsorte, ÖPNV, Abweichungen |
 | [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md) | Entwicklungsübersicht und nächste Schritte |
-| [docs/OFFENE_PLANPUNKTE.md](docs/OFFENE_PLANPUNKTE.md) | Geplant, aber noch nicht umgesetzt (Abgleich Plan ↔ Testbericht), empfohlene Reihenfolge |
 | [docs/community/FORENPOST_TESTER_GESUCHT.md](docs/community/FORENPOST_TESTER_GESUCHT.md) | Vorlagen für Forenposts (Karlsruhe-/Gamer-Foren, Kurzfassung) zur Tester- und Ideensuche, Tester-Fragebogen |
 
 ## Spielprojekt
