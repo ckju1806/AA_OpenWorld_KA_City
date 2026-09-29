@@ -142,6 +142,8 @@ https://github.com/ckju1806/AA_OpenWorld_KA_City/releases/tag/v0.2.0 mit `Faeche
 `GTA_KA_installieren_und_starten.bat`, `SHA256SUMS.txt`. Die EXE des CI-Builds ist bitgleich zum lokalen Build (`d9cad95c…`);
 PCK und ZIP unterscheiden sich im Hash (Zeitstempel/Reihenfolge im Paket).
 
+**Release v0.2.2 (2026-09-29):** Workflow-Lauf 36626806813 (Commit `785d202`) erfolgreich – alle Schritte grün (Godot-Setup, Unit-Tests, Export und Paket, Release). https://github.com/ckju1806/AA_OpenWorld_KA_City/releases/tag/v0.2.2 mit `Faecherstadt_Windows_x64_v0.2.2.zip` (56 485 454 Bytes, SHA256 `50e0b34d…`), `Faecherstadt_installieren_und_starten.bat` (SHA256 `ce59c916…`), `SHA256SUMS.txt`. Spielcode gegenüber v0.2.1 unverändert.
+
 ## 6. Blockiert / nicht durchgeführt
 - **Start unter Windows 10/11 – ungetestet:** kein Windows verfügbar. Ein Wine-Rauchtest war schon in v0.1 blockiert
   (das unveränderte offizielle Godot-Template stürzt unter Wine 9.0 ab; keine Aussage über Windows ableitbar).

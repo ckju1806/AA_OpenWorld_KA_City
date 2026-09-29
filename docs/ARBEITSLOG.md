@@ -423,3 +423,5 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
 - **Offen (manuell, nur mit Schreibrechten auf Releases):** In den Releases v0.2.0/v0.2.1 hängt weiterhin die alte
   `GTA_KA_…bat` – bei Bedarf dort löschen oder die Releases als veraltet markieren.
 - Übersicht geplanter, noch nicht umgesetzter Punkte: `docs/OFFENE_PLANPUNKTE.md`.
+- **Release verifiziert:** Workflow-Lauf 36626806813 grün (alle Schritte inkl. Unit-Tests), Release `v0.2.2` (Vorabversion)
+  mit ZIP 56,5 MB (SHA256 `50e0b34d…`), Installer `Faecherstadt_installieren_und_starten.bat` und Prüfsummen; per GitHub-API geprüft.
