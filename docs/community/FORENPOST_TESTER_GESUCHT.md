@@ -1,12 +1,12 @@
 # Forenpost: Tester und Ideen gesucht
 
-Vorlagen zum Einladen von Testern in Karlsruhe- und Gamer-Foren. Stand: v0.2.1 (2026-09-29).
+Vorlagen zum Einladen von Testern in Karlsruhe- und Gamer-Foren. Stand: v0.2.2 (2026-09-29).
 Vor dem Posten die Platzhalter in `[eckigen Klammern]` ersetzen und die Regeln des jeweiligen Forums prüfen
 (Eigenwerbung ist oft nur in bestimmten Unterforen erlaubt).
 
 Hinweise:
-- Den Namen des Installers (`GTA_KA_…bat`) nicht in den Post schreiben – nur auf die Release-Seite verlinken. Ein Vergleich mit
-  bekannten Spielreihen im Titel kann als Markenbezug gelesen werden; der Post stellt das Projekt eigenständig vor.
+- Ab v0.2.2 heißt der Installer `Faecherstadt_installieren_und_starten.bat` (vorher mit Fremdmarken-Kürzel). Keine Vergleiche
+  mit bekannten Spielreihen im Titel – das kann als Markenbezug gelesen werden; der Post stellt das Projekt eigenständig vor.
 - Alle Aussagen unten stützen sich auf README.md, KNOWN_ISSUES.md und TEST_REPORT.md. Nicht behaupten, dass es flüssig läuft –
   die Leistung auf echter Hardware ist nicht gemessen, der Windows-Start ist nicht auf echtem Windows geprüft.
 
@@ -65,7 +65,7 @@ ich entwickle als Hobbyprojekt ein Third-Person-Open-World-Spiel in **Godot 4**,
 Karlsruhe im Maßstab 1:1, generiert aus OpenStreetMap (≈ 17,5 × 10,4 km, ≈ 94k Gebäude), gestreamt in 256-m-Sektoren mit
 Fernsicht-LOD.
 
-**Features (v0.2.1):**
+**Features (v0.2.2):**
 - Zu Fuß und im Auto, KI-Verkehr mit Ampeln, Einbahnstraßen und Ausweichen
 - ÖPNV-Simulation: Stadtbahnen und Busse nach Takt, U-Bahn-Tunnel, selbst mitfahren
 - Polizei mit Fahndungsstufen, Einsätzen und Straßensperren

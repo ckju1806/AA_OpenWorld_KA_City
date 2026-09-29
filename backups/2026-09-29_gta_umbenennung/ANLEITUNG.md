@@ -14,8 +14,8 @@ Die Spieldateien liegen **nicht** im Quellcode-Ordner, sondern als Anhang eines 
 
 | Datei | Zweck |
 |---|---|
-| `Faecherstadt_Windows_x64_v0.2.2.zip` | das Spiel |
-| `Faecherstadt_installieren_und_starten.bat` | Installation nach `C:\Faecherstadt` mit Prüfsummenkontrolle und Start |
+| `Faecherstadt_Windows_x64_v0.2.0.zip` | das Spiel |
+| `GTA_KA_installieren_und_starten.bat` | Installation nach `C:\GTA_KA` mit Prüfsummenkontrolle und Start |
 | `SHA256SUMS.txt` | Prüfsummen (optional) |
 
 Beide Hauptdateien müssen im **selben Ordner** liegen (typisch: **Downloads**).
@@ -24,22 +24,22 @@ Die ältere Version 0.1.0 (kleiner Innenstadt-Prototyp) liegt in der Git-Histori
 
 ## 2. Installieren und starten – Variante A (empfohlen, automatisch)
 
-1. `Faecherstadt_installieren_und_starten.bat` doppelklicken.
+1. `GTA_KA_installieren_und_starten.bat` doppelklicken.
 2. Falls Windows warnt („Der Computer wurde durch Windows geschützt“): **Weitere Informationen → Trotzdem ausführen**
    (nicht digital signiert – bei Hobbyprojekten üblich).
-3. Das Skript legt `C:\Faecherstadt` an, kopiert das ZIP dorthin, **prüft die SHA256-Prüfsumme**, entpackt nach
-   `C:\Faecherstadt\Faecherstadt\` und startet `Faecherstadt.exe`.
+3. Das Skript legt `C:\GTA_KA` an, kopiert das ZIP dorthin, **prüft die SHA256-Prüfsumme**, entpackt nach
+   `C:\GTA_KA\Faecherstadt\` und startet `Faecherstadt.exe`.
 
-Später direkt starten: `C:\Faecherstadt\Faecherstadt\Faecherstadt.exe` (Rechtsklick → „Senden an“ → „Desktop“).
+Später direkt starten: `C:\GTA_KA\Faecherstadt\Faecherstadt.exe` (Rechtsklick → „Senden an“ → „Desktop“).
 
 ## 3. Installieren – Variante B (von Hand)
 
-1. Ordner `C:\Faecherstadt` anlegen, das ZIP dorthin kopieren, Rechtsklick → **Alle extrahieren…** → `C:\Faecherstadt`.
-2. `C:\Faecherstadt\Faecherstadt\Faecherstadt.exe` starten. **`Faecherstadt.pck` muss im selben Ordner wie die `.exe` liegen.**
+1. Ordner `C:\GTA_KA` anlegen, das ZIP dorthin kopieren, Rechtsklick → **Alle extrahieren…** → `C:\GTA_KA`.
+2. `C:\GTA_KA\Faecherstadt\Faecherstadt.exe` starten. **`Faecherstadt.pck` muss im selben Ordner wie die `.exe` liegen.**
 
 Prüfsumme selbst kontrollieren (Eingabeaufforderung), Ergebnis mit `SHA256SUMS.txt` vergleichen:
 ```
-certutil -hashfile C:\Faecherstadt\Faecherstadt_Windows_x64_v0.2.2.zip SHA256
+certutil -hashfile C:\GTA_KA\Faecherstadt_Windows_x64_v0.2.0.zip SHA256
 ```
 
 ## 4. Systemvoraussetzungen (Annahme, nicht gemessen)
@@ -74,10 +74,8 @@ Wichtigste Tasten (vollständig in [CONTROLS.md](CONTROLS.md)):
 
 - Spielstände und Einstellungen: `%APPDATA%\Faecherstadt\` (in die Adresszeile des Explorers eingeben).
 - Gespeichert wird über das Pausenmenü und automatisch nach erledigten Aufträgen (abschaltbar).
-- **Deinstallieren:** Ordner `C:\Faecherstadt` löschen; für Spielstände zusätzlich `%APPDATA%\Faecherstadt`.
+- **Deinstallieren:** Ordner `C:\GTA_KA` löschen; für Spielstände zusätzlich `%APPDATA%\Faecherstadt`.
   Keine Registry-Einträge, kein Hintergrunddienst.
-- **Umstieg von v0.2.1 oder älter:** Diese Versionen installierten nach `C:\GTA_KA`. Der Ordner kann gelöscht werden;
-  Spielstände liegen unverändert in `%APPDATA%\Faecherstadt` und werden weiter verwendet.
 
 ## 7. Fehlerbehebung
 
@@ -85,7 +83,7 @@ Wichtigste Tasten (vollständig in [CONTROLS.md](CONTROLS.md)):
 |---|---|
 | Die `.bat` meldet „Prüfsumme stimmt NICHT“ | ZIP erneut herunterladen (Download unvollständig) |
 | Die `.bat` findet das ZIP nicht | ZIP und `.bat` in denselben Ordner legen |
-| Schwarzes Fenster / Absturz beim Start | Grafiktreiber aktualisieren; in `C:\Faecherstadt\Faecherstadt` `Faecherstadt.exe --rendering-driver opengl3` starten |
+| Schwarzes Fenster / Absturz beim Start | Grafiktreiber aktualisieren; in `C:\GTA_KA\Faecherstadt` `Faecherstadt.exe --rendering-driver opengl3` starten |
 | „PCK nicht gefunden“ | `Faecherstadt.pck` liegt nicht neben der `.exe` – ZIP vollständig entpacken |
 | Ruckeln | Esc → Einstellungen → Grafik „Niedrig“, Sichtweite, Verkehr, Passanten und Tiere verringern |
 | Tasten vertauscht | Einstellungen → Tastenbelegung → „Tastenbelegung zurücksetzen“ |

@@ -4,8 +4,7 @@ Spielversionen liegen **nicht mehr im Repository** (GitHub-Speicherbudget), sond
 
 | Version | Wo | Inhalt |
 |---|---|---|
-| **v0.2.2** (aktuell, Vorabversion) | [Releases → v0.2.2](https://github.com/ckju1806/AA_OpenWorld_KA_City/releases/tag/v0.2.2) | `Faecherstadt_Windows_x64_v0.2.2.zip`, `Faecherstadt_installieren_und_starten.bat`, `SHA256SUMS.txt` |
-| v0.2.1, v0.2.0 | [Releases](https://github.com/ckju1806/AA_OpenWorld_KA_City/releases) | wie oben, Installer noch unter altem Namen (Installation nach `C:\GTA_KA`) |
+| **v0.2.0** (aktuell, Vorabversion) | [Releases → v0.2.0](https://github.com/ckju1806/AA_OpenWorld_KA_City/releases/tag/v0.2.0) | `Faecherstadt_Windows_x64_v0.2.0.zip`, `GTA_KA_installieren_und_starten.bat`, `SHA256SUMS.txt` |
 | v0.1.0 (Innenstadt-Prototyp) | Git-Historie: `git checkout b648134 -- release/` | ZIP, Installer, Prüfsumme (bis Commit `f6a9595` in diesem Ordner) |
 
 Anleitung: [../ANLEITUNG.md](../ANLEITUNG.md) · Release-Notizen: [RELEASE_NOTES.md](RELEASE_NOTES.md) (werden vom Workflow
