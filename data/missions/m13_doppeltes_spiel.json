@@ -1,0 +1,94 @@
+{
+  "id": "m13_doppeltes_spiel",
+  "title": "Doppeltes Spiel",
+  "order": 13,
+  "reward": 900,
+  "requires": [
+    "m10_der_transporter"
+  ],
+  "chapter": "Fächerbote",
+  "summary": "Ewald will verhindern, dass Vesper die falschen Kisten verschwinden lässt.",
+  "giver": {
+    "poi": "ewald",
+    "name": "Ewald Riegel",
+    "role": "Antiquitätenhändler (fiktiv)",
+    "look": {
+      "skin": "#e3c1a6",
+      "shirt": "#d8d0bc",
+      "jacket": "#4a3b2c",
+      "pants": "#3a3530",
+      "shoes": "#3b2a1e",
+      "hair": "#c9c4bb",
+      "hair_style": 1
+    },
+    "prompt": "Mit Ewald sprechen (Auftrag)",
+    "done_line": "Die Kisten liegen im Dreck, wo sie hingehören."
+  },
+  "fail_vehicle": "limo",
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Ewald",
+          "Mira hat mir erzählt, was ihr herausgefunden habt. Vesper hat mich reingelegt."
+        ],
+        [
+          "Ewald",
+          "In seiner Halle stapelt er Kisten mit gefälschten Papieren – morgen sind die weg. Wirf den Stapel um, damit die Zollstreife ihn nicht übersehen kann."
+        ],
+        [
+          "Ewald",
+          "Und dann nichts wie weg. Sein Wachdienst ruft sofort die Polizei."
+        ]
+      ]
+    },
+    {
+      "type": "spawn_vehicle",
+      "tag": "limo",
+      "spec": "limousine",
+      "poi": "riegel_wagen",
+      "color": "#1e2024"
+    },
+    {
+      "type": "enter_vehicle",
+      "tag": "limo",
+      "text": "Steig in Ewalds Limousine."
+    },
+    {
+      "type": "destroy",
+      "poi": "vesper_halle",
+      "crates": 6,
+      "need": 5,
+      "text": "Fahr zur Halle an der Durmersheimer Straße und wirf den Kistenstapel um."
+    },
+    {
+      "type": "trigger_wanted",
+      "level": 2,
+      "reason": "Sachbeschädigung",
+      "message": "Alarm in der Halle!"
+    },
+    {
+      "type": "lose_wanted",
+      "text": "Schüttle die Polizei ab."
+    },
+    {
+      "type": "goto",
+      "poi": "ewald",
+      "radius": 12,
+      "vehicle": "limo",
+      "marker": "ziel",
+      "require_clean": true,
+      "text": "Zurück zu Ewald – ohne Verfolger."
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Ewald",
+          "Die Zollstreife ist schon dort. Morgen steht's im Fächerboten."
+        ]
+      ]
+    }
+  ]
+}

@@ -8,6 +8,9 @@ func before_each() -> void:
 	game = (load("res://scenes/game.tscn") as PackedScene).instantiate() as Game
 	game.world_mode = "city"
 	game.ambient_life = false
+	game.stream_sync = true
+	game.stream_radius = 1
+	game.parked_cars_in_tests = true
 	add_child(game)
 	await wait_physics(20)
 
@@ -47,6 +50,8 @@ func test_pois_on_free_walkable_ground() -> void:
 	for pv: Variant in cw.graph.layout.get("pois", []):
 		var p: Dictionary = pv
 		var kind: String = str(p.get("kind", ""))
+		cw.ensure_loaded(cw.graph.poi_pos3(str(p.id)))
+		await wait_physics(2)
 		var pos: Vector3 = cw.poi_position(str(p.id))
 		var g2: Vector2 = Vector2(pos.x, pos.z)
 		if kind == "fahrziel":
@@ -79,29 +84,37 @@ func test_drivable_roads_free_of_buildings() -> void:
 	box.size = Vector3(1.6, 1.4, 1.6)
 	var blocked: int = 0
 	var checked: int = 0
-	for e: int in g.edge_count():
-		if not g.is_drivable(e):
-			continue
-		var a: Vector2 = g.node_pos[g.edge_a[e]]
-		var b: Vector2 = g.node_pos[g.edge_b[e]]
-		var length: float = a.distance_to(b)
-		var dir: Vector2 = (b - a) / maxf(length, 0.01)
-		var perp: Vector2 = Vector2(-dir.y, dir.x)
-		var t: float = 3.0
-		while t < length - 3.0:
-			for lane: float in [-2.6, 2.6]:
-				var p: Vector2 = a + dir * t + perp * lane
-				var q := PhysicsShapeQueryParameters3D.new()
-				q.shape = box
-				q.transform = Transform3D(Basis.IDENTITY, Vector3(p.x, 1.0, p.y))
-				q.collision_mask = Layers.WORLD
-				checked += 1
-				if not _space().intersect_shape(q, 1).is_empty():
-					blocked += 1
-					if blocked <= 5:
-						fail("Fahrspur blockiert bei %s (%s)" % [str(p), str(g.street_of(e).name)])
-			t += 6.0
+	# Stichproben in mehreren Stadtteilen (jeweils geladen): Innenstadt, Hbf, Weststadt, Oststadt, Durlach, Rheinhafen
+	for spot: Vector2 in [Vector2(0, 500), Vector2(-180, 2150), Vector2(-1900, 300), Vector2(1900, 200), Vector2(5190, 1600), Vector2(-5600, 300)]:
+		cw.ensure_loaded(Vector3(spot.x, 0, spot.y))
+		await wait_physics(2)
+		for e: int in g.edges_near(spot, 240.0):
+			if not g.is_drivable(e):
+				continue
+			var a: Vector2 = g.node_pos[g.edge_a[e]]
+			var b: Vector2 = g.node_pos[g.edge_b[e]]
+			if not cw.is_loaded_at(Vector3(a.x, 0, a.y)) or not cw.is_loaded_at(Vector3(b.x, 0, b.y)):
+				continue
+			var length: float = a.distance_to(b)
+			var dir: Vector2 = (b - a) / maxf(length, 0.01)
+			var perp: Vector2 = Vector2(-dir.y, dir.x)
+			var lane_off: float = minf(2.6, g.edge_width(e) * 0.25)
+			var t: float = 8.0
+			while t < length - 8.0:
+				for lane: float in [-lane_off, lane_off]:
+					var p: Vector2 = a + dir * t + perp * lane
+					var q := PhysicsShapeQueryParameters3D.new()
+					q.shape = box
+					q.transform = Transform3D(Basis.IDENTITY, Vector3(p.x, 1.0, p.y))
+					q.collision_mask = Layers.WORLD
+					checked += 1
+					if not _space().intersect_shape(q, 1).is_empty():
+						blocked += 1
+						if blocked <= 5:
+							fail("Fahrspur blockiert bei %s (%s)" % [str(p), str(g.street_of(e).name)])
+				t += 6.0
 	print("        Fahrspurproben: %d, blockiert: %d" % [checked, blocked])
+	assert_gt(float(checked), 500.0, "Genügend Stichproben")
 	assert_eq(blocked, 0, "Blockierte Fahrspurproben")
 
 
@@ -118,12 +131,23 @@ func test_parked_vehicles_stable() -> void:
 
 
 func test_landmarks_present() -> void:
-	var lm: Node = game.get_city().get_node_or_null("Landmarken")
-	assert_true(lm != null, "Landmarken-Knoten")
+	var cw: CityWorld = game.get_city()
+	cw.ensure_loaded(Vector3(0, 0, 250))
+	await wait_physics(2)
+	var found: Dictionary = {}
+	for n: Node in cw.streamer.find_children("LM_*", "", true, false):
+		found[n.name.trim_prefix("LM_")] = true
 	for id: String in ["schloss", "pyramide", "rathaus", "stadtkirche", "saeule"]:
-		assert_true(lm.get_node_or_null(id) != null, "Landmarke vorhanden: " + id)
-	# Schlossturm ist hoch und kollidierbar
-	var q := PhysicsRayQueryParameters3D.create(Vector3(0, 80, -3), Vector3(0, 0, -3), Layers.WORLD)
+		assert_true(found.has(id), "Landmarke vorhanden: " + id)
+	# Schlossturm (lokal 3 m hinter dem Landmarkenpunkt) ist hoch und kollidierbar
+	var tower: Vector2 = Vector2(0, -3)
+	for lm: Variant in cw.graph.layout.landmarks:
+		if str(lm.type) == "schloss":
+			var r: float = deg_to_rad(float(lm.get("rot", 0.0)))
+			tower = Vector2(float(lm.pos[0]), float(lm.pos[1])) + Vector2(-3.0 * sin(r), -3.0 * cos(r))
+	cw.ensure_loaded(Vector3(tower.x, 0, tower.y))
+	await wait_physics(2)
+	var q := PhysicsRayQueryParameters3D.create(Vector3(tower.x, 80, tower.y), Vector3(tower.x, 0, tower.y), Layers.WORLD)
 	var hit: Dictionary = _space().intersect_ray(q)
 	assert_false(hit.is_empty(), "Schlossturm getroffen")
 	if not hit.is_empty():
@@ -133,7 +157,7 @@ func test_landmarks_present() -> void:
 func test_recovery_point_on_road() -> void:
 	var cw: CityWorld = game.get_city()
 	var spec: VehicleSpec = VehicleSpec.get_spec("kompakt")
-	var res: Dictionary = cw.find_recovery_point(Vector3(-300, 0, 470), spec)
+	var res: Dictionary = cw.find_recovery_point(Vector3(-300, 0, 912), spec)
 	assert_true(res.ok, "Bergungspunkt gefunden")
 	var p: Vector3 = res.position
 	var ne: Dictionary = cw.graph.nearest_edge_point(Vector2(p.x, p.z), "drive")

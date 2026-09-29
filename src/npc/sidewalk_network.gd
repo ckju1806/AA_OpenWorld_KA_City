@@ -1,71 +1,78 @@
 class_name SidewalkNetwork
 extends RefCounted
-## Gehwegnetz aus den Häuserblöcken: je Block eine Gehweg-Schleife (Mittellinie des Gehwegs),
-## Querungen an Kreuzungsecken zwischen benachbarten Blöcken, Flanierbereiche (Fußgängerzonen, Plätze).
+## Gehwegnetz aus den Weltdaten (tools/worldgen): je Block eine Gehweg-Schleife (Mittellinie des Gehwegs),
+## Querungen zwischen benachbarten Blöcken über Straßen hinweg, Flanierbereiche (Plätze, Parks, Fußgängerzonen).
+## Räumlicher Index (64-m-Raster) für schnelle Abfragen in der Nähe des Spielers.
 
-const PATH_INSET: float = 2.6
+const CELL: float = 64.0
 
 var loops: Array[PackedVector2Array] = []
 var crossings: Dictionary = {}         ## "loop:vertex" -> Array[[loop, vertex]]
-var wander_areas: Array[Dictionary] = []  ## { center: Vector2, half: Vector2, yaw: float } oder { center, radius }
+var wander_areas: Array[Dictionary] = []  ## { center: Vector2, radius } oder { center, half, dir }
 var slab_h: float = 0.12
+var _grid: Dictionary = {}             ## Vector2i -> PackedInt32Array (li * 4096 + vi)
 
 
-func build(g: CityGraph, blocks: Array[Dictionary], p_slab_h: float) -> void:
+func build_from_world(w: WorldData, g: CityGraph, p_slab_h: float) -> void:
 	slab_h = p_slab_h
-	for b: Dictionary in blocks:
-		if b.kind != "block":
-			continue
-		var curb: PackedVector2Array = b.curb
-		var inset: PackedVector2Array = PolyUtil.inset_per_edge(curb, _uniform(curb.size(), PATH_INSET))
-		if inset.size() >= 3 and PolyUtil.area(inset) > 200.0:
-			loops.append(PolyUtil.simplify(inset, 0.5))
-	# Querungen: Eckpunkte benachbarter Blöcke über eine Straße hinweg (8–30 m)
-	for li: int in loops.size():
-		for vi: int in loops[li].size():
-			var p: Vector2 = loops[li][vi]
-			var cand: Array = []
-			for lj: int in loops.size():
-				if lj == li:
-					continue
-				for vj: int in loops[lj].size():
-					var d: float = p.distance_to(loops[lj][vj])
-					if d > 8.0 and d < 30.0:
-						cand.append([lj, vj, d])
-			cand.sort_custom(func(x: Array, y: Array) -> bool: return float(x[2]) < float(y[2]))
-			var picks: Array = []
-			for c: Array in cand.slice(0, 2):
-				picks.append([int(c[0]), int(c[1])])
-			if not picks.is_empty():
-				crossings["%d:%d" % [li, vi]] = picks
-	# Flanierbereiche
+	var walk: Dictionary = w.meta.get("walk", {})
+	for lp: Variant in walk.get("loops", []):
+		loops.append(w.pts(lp))
+	var cr: Array = walk.get("cross", [])
+	for i: int in range(0, cr.size(), 4):
+		var key: String = "%d:%d" % [int(cr[i]), int(cr[i + 1])]
+		if not crossings.has(key):
+			crossings[key] = []
+		(crossings[key] as Array).append([int(cr[i + 2]), int(cr[i + 3])])
+	var wa: Array = walk.get("wander", [])
+	var inv: float = 1.0 / w.q
+	for i2: int in range(0, wa.size(), 4):
+		wander_areas.append({"center": Vector2(float(wa[i2]) * inv, float(wa[i2 + 1]) * inv), "radius": float(wa[i2 + 2]) * inv})
+	# Fußgängerzonen als Flanierbereiche
 	for e: int in g.edge_count():
 		if g.is_pedestrian(e):
 			var a: Vector2 = g.node_pos[g.edge_a[e]]
 			var b2: Vector2 = g.node_pos[g.edge_b[e]]
 			var dir: Vector2 = (b2 - a).normalized()
-			var ta: float = g.node_radius(g.edge_a[e], "drive") + 3.0
-			var tb: float = g.node_radius(g.edge_b[e], "drive") + 3.0
-			var pa: Vector2 = a + dir * ta
-			var pb: Vector2 = b2 - dir * tb
-			if (pb - pa).dot(dir) > 8.0:
-				wander_areas.append({"center": (pa + pb) * 0.5, "half": Vector2(pa.distance_to(pb) * 0.5, 4.5), "dir": dir})
-	for c2: Variant in g.layout.get("clearings", []):
-		var cd: Dictionary = c2
-		if cd.has("circle"):
-			var ci: Array = cd.circle
-			wander_areas.append({"center": Vector2(float(ci[0]), float(ci[1])), "radius": float(ci[2]) * 0.5})
-		elif cd.has("rect"):
-			var r: Array = cd.rect
-			var cen: Vector2 = Vector2((float(r[0]) + float(r[2])) * 0.5, (float(r[1]) + float(r[3])) * 0.5)
-			wander_areas.append({"center": cen, "half": Vector2((float(r[2]) - float(r[0])) * 0.35, (float(r[3]) - float(r[1])) * 0.35), "dir": Vector2(1, 0)})
+			if a.distance_to(b2) > 12.0:
+				wander_areas.append({"center": (a + b2) * 0.5, "half": Vector2(a.distance_to(b2) * 0.5, 4.5), "dir": dir})
+	for li: int in loops.size():
+		for vi: int in loops[li].size():
+			var c: Vector2i = _cell(loops[li][vi])
+			var arr: PackedInt32Array = _grid.get(c, PackedInt32Array())
+			arr.append(li * 4096 + vi)
+			_grid[c] = arr
 
 
-static func _uniform(n: int, d: float) -> PackedFloat32Array:
-	var a: PackedFloat32Array = PackedFloat32Array()
-	a.resize(n)
-	a.fill(d)
-	return a
+func _cell(p: Vector2) -> Vector2i:
+	return Vector2i(int(floor(p.x / CELL)), int(floor(p.y / CELL)))
+
+
+## Zufälliger Gehwegpunkt im Ring [rmin, rmax] um p. Rückgabe [li, vi] oder [].
+func random_point_near(p: Vector2, rmin: float, rmax: float, rng: RandomNumberGenerator) -> Array:
+	var c0: Vector2i = _cell(p - Vector2(rmax, rmax))
+	var c1: Vector2i = _cell(p + Vector2(rmax, rmax))
+	for attempt: int in 12:
+		var c: Vector2i = Vector2i(rng.randi_range(c0.x, c1.x), rng.randi_range(c0.y, c1.y))
+		var arr: PackedInt32Array = _grid.get(c, PackedInt32Array())
+		if arr.is_empty():
+			continue
+		var code: int = arr[rng.randi() % arr.size()]
+		var li: int = code / 4096
+		var vi: int = code % 4096
+		var d: float = loops[li][vi].distance_to(p)
+		if d >= rmin and d <= rmax:
+			return [li, vi]
+	return []
+
+
+## Flanierbereiche im Umkreis.
+func wander_near(p: Vector2, r: float) -> Array[int]:
+	var out: Array[int] = []
+	for i: int in wander_areas.size():
+		if (wander_areas[i].center as Vector2).distance_to(p) < r:
+			out.append(i)
+	return out
 
 
 func random_wander_point(area: Dictionary, rng: RandomNumberGenerator) -> Vector2:

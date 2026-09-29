@@ -74,6 +74,19 @@ static func _build(spec: VehicleSpec) -> Dictionary:
 		var bz: float = (cabin[1].x + cabin[2].x) * 0.5 + 0.05
 		for sx3: float in [-1.0, 1.0]:
 			kit.add_box("paint", Vector3(sx3 * (hw - cabin_inset + 0.005), (cabin[0].y + roof_y) * 0.5, bz), Vector3(0.03, roof_y - cabin[0].y, 0.12))
+		# v2: Türfugen, Griffe, Chromleiste an der Fensterlinie, Schweller
+		var belt_y: float = cabin[0].y - 0.02
+		var door_zs: Array = [cabin[0].x + 0.05, bz] if spec.body_style == "sport" else [cabin[0].x + 0.05, bz, cabin[3].x - 0.12]
+		for sx10: float in [-1.0, 1.0]:
+			var xs: float = sx10 * (hw + 0.006)
+			for dz: float in door_zs:
+				kit.add_box("trim", Vector3(xs, (bumper_y_of(spec) + 0.2 + belt_y) * 0.5, dz), Vector3(0.012, belt_y - bumper_y_of(spec) - 0.2, 0.025))
+			for gi: int in door_zs.size() - 1:
+				var gz: float = (float(door_zs[gi]) + float(door_zs[gi + 1])) * 0.5 + 0.18
+				kit.add_box("chrome", Vector3(sx10 * (hw + 0.02), belt_y - 0.16, gz), Vector3(0.03, 0.04, 0.2))
+			kit.add_box("chrome", Vector3(sx10 * (hw - cabin_inset + 0.012), cabin[0].y + 0.015, (cabin[0].x + cabin[3].x) * 0.5),
+				Vector3(0.015, 0.03, absf(cabin[3].x - cabin[0].x) * 0.92))
+			kit.add_box("trim", Vector3(sx10 * (hw + 0.004), lower[0].y + 0.08, 0.0), Vector3(0.02, 0.14, spec.wheelbase * 0.62))
 		if spec.body_style == "sport":
 			# Heckspoiler
 			kit.add_box("trim", Vector3(0, 0.98, hl - 0.18), Vector3(W * 0.9, 0.05, 0.3))
@@ -144,6 +157,10 @@ static func _build(spec: VehicleSpec) -> Dictionary:
 	return model
 
 
+static func bumper_y_of(spec: VehicleSpec) -> float:
+	return 0.42 if spec.body_style != "sport" else 0.34
+
+
 ## Rad (Reifen + Felge), Achse = X, Mittelpunkt im Ursprung.
 static func get_wheel_mesh(radius: float) -> ArrayMesh:
 	var key: String = "wheel_%.3f" % radius
@@ -155,11 +172,18 @@ static func get_wheel_mesh(radius: float) -> ArrayMesh:
 	var w: float = 0.24
 	var basis := Basis(Vector3(0, 0, 1), -PI * 0.5)
 	kit.add_cylinder("tire", Vector3(-w * 0.5, 0, 0), radius, radius, w, 16, basis)
-	kit.add_cylinder("rim", Vector3(-w * 0.5 - 0.005, 0, 0), radius * 0.6, radius * 0.6, w + 0.01, 10, basis)
-	# Speichen (sichtbare Drehung)
-	for i: int in 3:
-		var b := Basis(Vector3(1, 0, 0), PI * float(i) / 3.0)
-		kit.add_box("tire", Vector3(0, 0, 0), Vector3(w + 0.03, radius * 1.05, 0.05), b)
+	kit.add_cylinder("tire", Vector3(-w * 0.5 - 0.004, 0, 0), radius * 0.62, radius * 0.62, w + 0.008, 12, basis)
+	# v2: Felge mit fünf Speichen und Nabe (sichtbare Drehung), beidseitig
+	for side: float in [-1.0, 1.0]:
+		var xo: float = side * (w * 0.5 + 0.004)
+		kit.add_cylinder("rim", Vector3(xo - 0.01, 0, 0), radius * 0.6, radius * 0.6, 0.02, 12, basis)
+		kit.add_cylinder("tire", Vector3(xo - 0.012 + side * 0.012, 0, 0), radius * 0.5, radius * 0.5, 0.012, 12, basis)
+		for i: int in 5:
+			var ang: float = TAU * float(i) / 5.0
+			var b := Basis(Vector3(1, 0, 0), ang)
+			kit.add_box("rim", Vector3(xo + side * 0.008, 0, 0) + b * Vector3(0, radius * 0.27, 0), Vector3(0.025, radius * 0.5, 0.07), b)
+		var hub_x: float = xo + 0.002 if side > 0.0 else xo - 0.032
+		kit.add_cylinder("rim", Vector3(hub_x, 0, 0), radius * 0.14, radius * 0.14, 0.03, 8, basis)
 	var m: ArrayMesh = kit.commit()
 	_cache[key] = m
 	return m

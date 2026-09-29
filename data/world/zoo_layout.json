@@ -1,0 +1,15 @@
+{
+  "_hinweis": "Gehege des Zoologischen Stadtgartens (eigene, vereinfachte Anordnung). Koordinaten lokal zur Zoo-Landmarke (x Osten, z Süden, Meter, vor Drehung). Genutzt von LandmarkBuilder (Zäune/Häuser) und AnimalManager (W6).",
+  "entrance": [0, 250],
+  "enclosures": [
+    {"id": "elefanten", "name": "Elefanten", "species": "elefant", "center": [-110, 150], "size": [52, 40], "house": [18, 12, 9], "water": [10, 6], "count": 3},
+    {"id": "giraffen", "name": "Giraffen", "species": "giraffe", "center": [-40, 160], "size": [44, 36], "house": [12, 10, 11], "count": 3},
+    {"id": "zebras", "name": "Zebras", "species": "zebra", "center": [30, 170], "size": [46, 34], "count": 4},
+    {"id": "loewen", "name": "Löwen", "species": "loewe", "center": [100, 150], "size": [38, 32], "house": [10, 8, 5], "rocks": 4, "count": 2},
+    {"id": "baeren", "name": "Bären", "species": "baer", "center": [110, 90], "size": [34, 30], "rocks": 6, "water": [8, 5], "count": 2},
+    {"id": "affen", "name": "Affen", "species": "affe", "center": [45, 90], "size": [30, 26], "house": [14, 10, 7], "climb": 3, "count": 6},
+    {"id": "pinguine", "name": "Pinguine", "species": "pinguin", "center": [-20, 95], "size": [26, 20], "water": [14, 10], "rocks": 3, "count": 8},
+    {"id": "robben", "name": "Robben", "species": "robbe", "center": [-80, 85], "size": [30, 22], "water": [22, 14], "count": 4},
+    {"id": "flamingos", "name": "Flamingos", "species": "flamingo", "center": [-140, 90], "size": [30, 24], "water": [18, 12], "count": 12}
+  ]
+}

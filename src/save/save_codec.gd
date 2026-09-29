@@ -3,18 +3,18 @@ extends RefCounted
 ## Versioniertes Speicherformat (JSON). Reine Logik, ohne Dateizugriff -> gut testbar.
 ##
 ## Format v1:
-## { "format": "faecherstadt-save", "version": 1, "game_version": "0.1.0", "saved_at": "...",
+## { "format": "faecherstadt-save", "version": 1, "game_version": "0.2.0", "saved_at": "...",
 ##   "state": { money, completed_missions[], best_times{}, mission_attempts{}, play_time },
 ##   "player": { "position": [x, y, z], "yaw": float, "health": float, "mission": String } }
 
 const FORMAT_ID: String = "faecherstadt-save"
 const CURRENT_VERSION: int = 1
-const WORLD_LIMIT_XZ: float = 1500.0
+const WORLD_LIMIT_XZ: float = 12000.0   ## Karte 1:1 reicht ≈ −9,5 … +8 km (x) bzw. −4 … +6,3 km (z)
 const WORLD_MIN_Y: float = -20.0
 const WORLD_MAX_Y: float = 200.0
 
 
-static func encode(state: Dictionary, player: Dictionary, game_version: String = "0.1.0") -> String:
+static func encode(state: Dictionary, player: Dictionary, game_version: String = "0.2.0") -> String:
 	var doc: Dictionary = {
 		"format": FORMAT_ID,
 		"version": CURRENT_VERSION,

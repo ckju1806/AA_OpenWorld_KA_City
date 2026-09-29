@@ -1,0 +1,88 @@
+{
+  "id": "m12_ring_frei",
+  "title": "Ring frei",
+  "order": 12,
+  "reward": 500,
+  "requires": [
+    "m03_falsche_lieferung"
+  ],
+  "chapter": "Die zwei Gruppen",
+  "summary": "Die Ringbande will ihren Wagen aus einer Polizeikontrolle heraus haben.",
+  "reputation": {
+    "ringbande": 15,
+    "hafenkolonne": -5
+  },
+  "giver": {
+    "poi": "lia",
+    "name": "Lia Voss",
+    "role": "Ringbande (fiktive Gruppe)",
+    "look": {
+      "skin": "#f0d0b8",
+      "shirt": "#1e1e24",
+      "jacket": "#8c40c0",
+      "pants": "#18181c",
+      "shoes": "#e8e8e8",
+      "hair": "#c07030",
+      "hair_style": 2
+    },
+    "prompt": "Mit Lia sprechen (Überführung)",
+    "done_line": "Der Wagen steht sicher. Die Ringbande schuldet dir was."
+  },
+  "fail_vehicle": "lia",
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Lia",
+          "Mein Wagen steht hier um die Ecke, aber die Streife schaut schon komisch."
+        ],
+        [
+          "Lia",
+          "Fahr ihn zum Garagenhof an der Wolfartsweierer Straße. Wenn sie dir folgen – abschütteln!"
+        ]
+      ]
+    },
+    {
+      "type": "spawn_vehicle",
+      "tag": "lia",
+      "spec": "kompakt",
+      "poi": "lia_wagen",
+      "color": "#6a2a8a",
+      "livery": ""
+    },
+    {
+      "type": "enter_vehicle",
+      "tag": "lia",
+      "text": "Steig in Lias Wagen."
+    },
+    {
+      "type": "trigger_wanted",
+      "level": 1,
+      "reason": "Verdächtiges Fahrzeug",
+      "message": "Die Streife hat dich bemerkt!"
+    },
+    {
+      "type": "lose_wanted",
+      "text": "Schüttle die Polizei ab."
+    },
+    {
+      "type": "goto",
+      "poi": "lia_garage",
+      "radius": 10,
+      "vehicle": "lia",
+      "marker": "ziel",
+      "require_clean": true,
+      "text": "Bring den Wagen zum Garagenhof."
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Lia (Telefon)",
+          "Schon da? Nicht schlecht. Die Ringbande merkt sich Leute wie dich."
+        ]
+      ]
+    }
+  ]
+}

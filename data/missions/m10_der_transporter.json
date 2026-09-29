@@ -1,0 +1,87 @@
+{
+  "id": "m10_der_transporter",
+  "title": "Der Transporter",
+  "order": 10,
+  "reward": 600,
+  "requires": [
+    "m09_spurensuche"
+  ],
+  "chapter": "Fächerbote",
+  "summary": "Dem grauen Transporter vom Hafen bis zu seinem Versteck folgen.",
+  "giver": {
+    "poi": "mira",
+    "name": "Mira Kessel",
+    "role": "Freie Journalistin („Fächerbote“, fiktiv)",
+    "look": {
+      "skin": "#b98a6a",
+      "shirt": "#e8e2d4",
+      "jacket": "#3d5a4a",
+      "pants": "#22262e",
+      "shoes": "#5a3a2a",
+      "hair": "#2a1a14",
+      "hair_style": 2
+    },
+    "prompt": "Mit Mira sprechen (Beschattung)",
+    "done_line": "Jetzt kennen wir die Halle. Vorsicht ab jetzt."
+  },
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Mira",
+          "Der graue Transporter steht gerade im Rheinhafen. Nimm meinen Kombi und folg ihm."
+        ],
+        [
+          "Mira",
+          "Wenn der Fahrer dich bemerkt, ist alles umsonst. Mindestens 20 Meter Abstand!"
+        ]
+      ]
+    },
+    {
+      "type": "spawn_vehicle",
+      "tag": "kombi",
+      "spec": "limousine",
+      "poi": "mira_wagen",
+      "color": "#5a6b5a"
+    },
+    {
+      "type": "enter_vehicle",
+      "tag": "kombi",
+      "text": "Steig in Miras Kombi."
+    },
+    {
+      "type": "spawn_npc_vehicle",
+      "tag": "grau",
+      "spec": "transporter",
+      "poi": "vesper_transporter",
+      "color": "#8a8e92"
+    },
+    {
+      "type": "goto",
+      "poi": "lager_beobachtung",
+      "radius": 120,
+      "vehicle": "kombi",
+      "marker": "ziel",
+      "text": "Fahr in den Rheinhafen zum Lagerhof."
+    },
+    {
+      "type": "follow",
+      "tag": "grau",
+      "dest": "vesper_halle",
+      "speed": 10.0,
+      "min": 20,
+      "max": 150,
+      "text": "Folge dem grauen Transporter unauffällig (20–150 m)."
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Mira (Telefon)",
+          "Eine Halle an der Durmersheimer Straße. Vesper-Logistik. Hab ich's doch gewusst."
+        ]
+      ]
+    }
+  ]
+}

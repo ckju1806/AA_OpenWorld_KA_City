@@ -1,21 +1,99 @@
 class_name CityGraph
 extends RefCounted
-## Gemeinsame Datenbasis der Stadt: planarer Straßengraph (Knoten/Kanten), Häuserblöcke (Faces),
-## Plätze, POIs. Wird von Weltaufbau, Verkehr, Polizei, Missionen und Karte gemeinsam genutzt.
+## Gemeinsame Datenbasis der Stadt: Straßengraph (Knoten/Kanten mit Straßenklasse und Name), POIs,
+## Beschriftungen. Wird von Weltaufbau, Verkehr, Polizei, Missionen und Karte gemeinsam genutzt.
+## Erzeugt aus den Weltdaten (WorldData) über from_world(); räumlicher Rasterindex für schnelle Suchen.
 
-var layout: Dictionary = {}
-var streets: Array[Dictionary] = []          ## id, name, kind, width, speed, drivable, traffic, parking
+const GRID_CELL: float = 64.0
+
+var layout: Dictionary = {}                  ## pois, labels, landmarks, districts (aus den Weltdaten)
+var streets: Array[Dictionary] = []          ## je (Klasse, Name): id, name, kind, width, speed, drivable, traffic, major, lights
 var node_pos: PackedVector2Array = PackedVector2Array()
 var node_edges: Array[PackedInt32Array] = []
 var edge_a: PackedInt32Array = PackedInt32Array()
 var edge_b: PackedInt32Array = PackedInt32Array()
 var edge_street: PackedInt32Array = PackedInt32Array()
-var faces: Array[Dictionary] = []            ## poly, nodes, edges, area, kind (block/park), id
-var outer_boundary: PackedVector2Array = PackedVector2Array()
+var edge_flags: PackedInt32Array = PackedInt32Array()
 
 var _astar_drive: AStar2D
 var _astar_traffic: AStar2D
 var _astar_police: AStar2D
+var _edge_grid: Dictionary = {}     ## Vector2i -> PackedInt32Array
+var _node_grid: Dictionary = {}     ## Vector2i -> PackedInt32Array
+
+
+## Graph aus den Weltdaten aufbauen.
+static func from_world(w: WorldData) -> CityGraph:
+	var g := CityGraph.new()
+	var d: Dictionary = w.meta
+	g.layout = {"pois": d.get("pois", []), "labels": d.get("labels", []), "landmarks": d.get("landmarks", []),
+		"districts": d.get("districts", []), "rail": d.get("rail", []), "signals": d.get("signals", []),
+		"transit": d.get("transit", {})}
+	var inv: float = 1.0 / w.q
+	var flat_nodes: Array = d.nodes
+	g.node_pos.resize(flat_nodes.size() / 2)
+	for i: int in g.node_pos.size():
+		g.node_pos[i] = Vector2(float(flat_nodes[i * 2]) * inv, float(flat_nodes[i * 2 + 1]) * inv)
+	g.node_edges.resize(g.node_pos.size())
+	for i2: int in g.node_edges.size():
+		g.node_edges[i2] = PackedInt32Array()
+	var classes: Dictionary = d.classes
+	var order: Array = d.class_order
+	var names: Array = d.names
+	var street_idx: Dictionary = {}
+	var flat_edges: Array = d.edges
+	var ne: int = flat_edges.size() / 5
+	g.edge_a.resize(ne)
+	g.edge_b.resize(ne)
+	g.edge_street.resize(ne)
+	g.edge_flags.resize(ne)
+	for e: int in ne:
+		var a: int = int(flat_edges[e * 5])
+		var b: int = int(flat_edges[e * 5 + 1])
+		var ci: int = int(flat_edges[e * 5 + 2])
+		var ni: int = int(flat_edges[e * 5 + 3])
+		var key: int = ci * 100000 + ni
+		if not street_idx.has(key):
+			var cls: String = str(order[ci])
+			var cd: Dictionary = classes[cls]
+			var nm: String = str(names[ni])
+			g.streets.append({"id": nm.to_lower().replace(" ", "_"), "name": nm, "kind": cls, "width": float(cd.width),
+				"speed": float(cd.speed), "drivable": bool(cd.drivable), "traffic": bool(cd.traffic), "major": bool(cd.major),
+				"lights": bool(cd.lights), "sidewalk": bool(cd.sidewalk)})
+			street_idx[key] = g.streets.size() - 1
+		g.edge_a[e] = a
+		g.edge_b[e] = b
+		g.edge_street[e] = int(street_idx[key])
+		g.edge_flags[e] = int(flat_edges[e * 5 + 4])
+		g.node_edges[a].append(e)
+		g.node_edges[b].append(e)
+	g._build_index()
+	return g
+
+
+func _cell(p: Vector2) -> Vector2i:
+	return Vector2i(int(floor(p.x / GRID_CELL)), int(floor(p.y / GRID_CELL)))
+
+
+func _build_index() -> void:
+	_edge_grid.clear()
+	_node_grid.clear()
+	for n: int in node_count():
+		var c: Vector2i = _cell(node_pos[n])
+		var arr_n: PackedInt32Array = _node_grid.get(c, PackedInt32Array())
+		arr_n.append(n)
+		_node_grid[c] = arr_n
+	for e: int in edge_count():
+		var a: Vector2 = node_pos[edge_a[e]]
+		var b: Vector2 = node_pos[edge_b[e]]
+		var c0: Vector2i = _cell(Vector2(minf(a.x, b.x), minf(a.y, b.y)))
+		var c1: Vector2i = _cell(Vector2(maxf(a.x, b.x), maxf(a.y, b.y)))
+		for cx: int in range(c0.x, c1.x + 1):
+			for cz: int in range(c0.y, c1.y + 1):
+				var c2: Vector2i = Vector2i(cx, cz)
+				var arr: PackedInt32Array = _edge_grid.get(c2, PackedInt32Array())
+				arr.append(e)
+				_edge_grid[c2] = arr
 
 
 # ------------------------------------------------------------ Knoten / Kanten
@@ -32,12 +110,39 @@ func street_of(e: int) -> Dictionary:
 	return streets[edge_street[e]]
 
 
+## Fahrbahnbreite: je Kante aus den Daten (Flags ab Bit 8, 0,5-m-Schritte; OSM) oder Breite der Straßenklasse.
 func edge_width(e: int) -> float:
-	return float(streets[edge_street[e]].width)
+	var w: int = (edge_flags[e] >> 8) & 0xFF
+	return float(w) * 0.5 if w > 0 else float(streets[edge_street[e]].width)
+
+
+## Einbahnstraße (nur Richtung edge_a -> edge_b).
+func is_oneway(e: int) -> bool:
+	return (edge_flags[e] & 4) != 0
+
+
+func is_bridge(e: int) -> bool:
+	return (edge_flags[e] & 2) != 0
+
+
+## Darf die Kante von Knoten n aus befahren werden (Einbahnrichtung)?
+func can_leave(e: int, n: int) -> bool:
+	return not is_oneway(e) or edge_a[e] == n
+
+
+## Spurversatz (Mitte der rechten Spur) auf einer Kante, höchstens max_offset.
+func lane_offset(e: int, max_offset: float = 2.6) -> float:
+	if e < 0:
+		return max_offset
+	return minf(max_offset, edge_width(e) * 0.25)
 
 
 func edge_kind(e: int) -> String:
 	return str(streets[edge_street[e]].kind)
+
+
+func edge_name(e: int) -> String:
+	return str(streets[edge_street[e]].name)
 
 
 func is_drivable(e: int) -> bool:
@@ -48,8 +153,20 @@ func is_traffic(e: int) -> bool:
 	return bool(streets[edge_street[e]].traffic)
 
 
+func is_major(e: int) -> bool:
+	return bool(streets[edge_street[e]].major)
+
+
+func has_lights(e: int) -> bool:
+	return bool(streets[edge_street[e]].lights)
+
+
 func is_pedestrian(e: int) -> bool:
 	return edge_kind(e) == "pedestrian"
+
+
+func is_tunnel(e: int) -> bool:
+	return (edge_flags[e] & 1) != 0
 
 
 func edge_speed(e: int) -> float:
@@ -76,7 +193,7 @@ func find_edge(a: int, b: int) -> int:
 	return -1
 
 
-## Kanten eines Knotens nach Modus: "drive" (befahrbar), "traffic" (Verkehrs-KI), "walk" (alle)
+## Kanten eines Knotens nach Modus: "drive" (befahrbar), "traffic" (Verkehrs-KI), "police", "all"
 func node_edges_mode(n: int, mode: String) -> PackedInt32Array:
 	var out: PackedInt32Array = PackedInt32Array()
 	for e: int in node_edges[n]:
@@ -117,35 +234,82 @@ func pos3(n: int, y: float = 0.0) -> Vector3:
 # ------------------------------------------------------------ Suche
 
 ## Nächster Punkt auf einer Kante (Modus-Filter). Rückgabe: { edge, point: Vector2, dist, t }
-func nearest_edge_point(p: Vector2, mode: String = "drive") -> Dictionary:
+## Sucht ringweise im Rasterindex (bis max_dist), sonst ohne Treffer (edge = -1).
+func nearest_edge_point(p: Vector2, mode: String = "drive", max_dist: float = 600.0) -> Dictionary:
 	var best: Dictionary = {"edge": -1, "point": p, "dist": INF, "t": 0.0}
-	for e: int in edge_count():
-		if not _edge_ok(e, mode):
-			continue
-		var a: Vector2 = node_pos[edge_a[e]]
-		var b: Vector2 = node_pos[edge_b[e]]
-		var q: Vector2 = PolyUtil.closest_on_segment(p, a, b)
-		var d: float = q.distance_to(p)
-		if d < best.dist:
-			var ab: float = a.distance_to(b)
-			best = {"edge": e, "point": q, "dist": d, "t": (q.distance_to(a) / ab) if ab > 0.0 else 0.0}
+	var c: Vector2i = _cell(p)
+	var rings: int = int(ceil(max_dist / GRID_CELL))
+	var seen: Dictionary = {}
+	for r: int in rings + 1:
+		for cx: int in range(c.x - r, c.x + r + 1):
+			for cz: int in range(c.y - r, c.y + r + 1):
+				if maxi(absi(cx - c.x), absi(cz - c.y)) != r:
+					continue
+				for e: int in _edge_grid.get(Vector2i(cx, cz), PackedInt32Array()):
+					if seen.has(e) or not _edge_ok(e, mode):
+						continue
+					seen[e] = true
+					var a: Vector2 = node_pos[edge_a[e]]
+					var b: Vector2 = node_pos[edge_b[e]]
+					var q: Vector2 = PolyUtil.closest_on_segment(p, a, b)
+					var d: float = q.distance_to(p)
+					if d < best.dist:
+						var ab: float = a.distance_to(b)
+						best = {"edge": e, "point": q, "dist": d, "t": (q.distance_to(a) / ab) if ab > 0.0 else 0.0}
+		# Treffer innerhalb des bereits vollständig abgesuchten Radius -> fertig
+		if int(best.edge) >= 0 and float(best.dist) <= float(r) * GRID_CELL:
+			break
 	return best
 
 
-func nearest_node(p: Vector2, mode: String = "drive") -> int:
+func nearest_node(p: Vector2, mode: String = "drive", max_dist: float = 2000.0) -> int:
 	var best: int = -1
 	var best_d: float = INF
-	for n: int in node_count():
-		if mode != "all" and degree(n, mode) == 0:
-			continue
-		var d: float = node_pos[n].distance_squared_to(p)
-		if d < best_d:
-			best_d = d
-			best = n
+	var c: Vector2i = _cell(p)
+	var rings: int = int(ceil(max_dist / GRID_CELL))
+	for r: int in rings + 1:
+		for cx: int in range(c.x - r, c.x + r + 1):
+			for cz: int in range(c.y - r, c.y + r + 1):
+				if maxi(absi(cx - c.x), absi(cz - c.y)) != r:
+					continue
+				for n: int in _node_grid.get(Vector2i(cx, cz), PackedInt32Array()):
+					if mode != "all" and degree(n, mode) == 0:
+						continue
+					var d: float = node_pos[n].distance_squared_to(p)
+					if d < best_d:
+						best_d = d
+						best = n
+		if best >= 0 and sqrt(best_d) <= float(r) * GRID_CELL:
+			break
 	return best
+
+
+## Kanten im Umkreis (Rasterindex, grob).
+func edges_near(p: Vector2, radius: float) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	var c0: Vector2i = _cell(p - Vector2(radius, radius))
+	var c1: Vector2i = _cell(p + Vector2(radius, radius))
+	var seen: Dictionary = {}
+	for cx: int in range(c0.x, c1.x + 1):
+		for cz: int in range(c0.y, c1.y + 1):
+			for e: int in _edge_grid.get(Vector2i(cx, cz), PackedInt32Array()):
+				if not seen.has(e):
+					seen[e] = true
+					out.append(e)
+	return out
 
 
 ## Kürzester Weg (Knotenfolge) über A*. mode: drive | traffic | police
+## Kanten im Umkreis mit Mindestanforderungen (befahrbar/Verkehr, Länge, Breite) – für Zufallsauswahl ohne
+## Fehlversuche an Fuß- und Radwegen (in OSM-Daten die Mehrheit der Kanten in der Innenstadt).
+func edges_near_where(p: Vector2, radius: float, traffic_only: bool, min_len: float = 0.0, min_width: float = 0.0) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for e: int in edges_near(p, radius):
+		if (is_traffic(e) if traffic_only else is_drivable(e)) and edge_length(e) >= min_len and edge_width(e) >= min_width:
+			out.append(e)
+	return out
+
+
 func find_path(from_node: int, to_node: int, mode: String = "drive") -> PackedInt32Array:
 	var astar: AStar2D = _get_astar(mode)
 	if astar == null or not astar.has_point(from_node) or not astar.has_point(to_node):
@@ -165,6 +329,11 @@ func lane_path(path: PackedInt32Array, offset: float = 2.6, y: float = 0.0, samp
 	var n: int = path.size()
 	if n < 2:
 		return out
+	# Spurversatz je Wegabschnitt (schmale Straßen/Einbahnfahrbahnen -> kleiner)
+	var offs: PackedFloat32Array = PackedFloat32Array()
+	offs.resize(n - 1)
+	for i0: int in n - 1:
+		offs[i0] = lane_offset(find_edge(path[i0], path[i0 + 1]), offset)
 	var zones: Array[float] = []   # Länge der Abbiegezone je Knoten
 	var turn_pts: Array[PackedVector2Array] = []
 	for i: int in n:
@@ -173,8 +342,10 @@ func lane_path(path: PackedInt32Array, offset: float = 2.6, y: float = 0.0, samp
 		var zone: float = 0.0
 		if i == 0 or i == n - 1:
 			var d: Vector2 = (node_pos[path[1]] - p).normalized() if i == 0 else (p - node_pos[path[i - 1]]).normalized()
-			pts.append(p + Vector2(-d.y, d.x) * offset)
+			pts.append(p + Vector2(-d.y, d.x) * offs[0 if i == 0 else n - 2])
 		else:
+			var o_in: float = offs[i - 1]
+			var o_out: float = offs[i]
 			var d_in: Vector2 = (p - node_pos[path[i - 1]]).normalized()
 			var d_out: Vector2 = (node_pos[path[i + 1]] - p).normalized()
 			var r_in: Vector2 = Vector2(-d_in.y, d_in.x)
@@ -183,19 +354,23 @@ func lane_path(path: PackedInt32Array, offset: float = 2.6, y: float = 0.0, samp
 			if absf(cr) < 0.17:
 				if d_in.dot(d_out) > 0.0:
 					# nahezu geradeaus
-					pts.append(p + ((r_in + r_out) * 0.5).normalized() * offset)
+					pts.append(p + ((r_in + r_out) * 0.5).normalized() * (o_in + o_out) * 0.5)
 				else:
 					# Wende (nur in Sonderfällen)
-					pts.append(p + r_in * offset + d_in * 3.0)
+					pts.append(p + r_in * o_in + d_in * 3.0)
 					pts.append(p + d_in * 5.0)
-					pts.append(p - r_in * offset + d_in * 3.0)
+					pts.append(p - r_in * o_out + d_in * 3.0)
 					zone = 5.0
 			else:
-				var a: Vector2 = p + r_in * offset
-				var b: Vector2 = p + r_out * offset
+				var a: Vector2 = p + r_in * o_in
+				var b: Vector2 = p + r_out * o_out
 				var t: float = (b - a).cross(d_out) / cr
 				var corner: Vector2 = a + d_in * t
 				var k: float = clampf(node_radius(path[i], "all") + 1.5, 4.0, 11.0)
+				# Bei kurzen Nachbarkanten darf der Bogen nicht hinter den vorigen/nächsten Knoten reichen (sonst Rücksprung)
+				var l_in: float = p.distance_to(node_pos[path[i - 1]])
+				var l_out: float = p.distance_to(node_pos[path[i + 1]])
+				k = minf(k, maxf(1.5, minf(l_in, l_out) * 0.5 - absf(t)))
 				var s0: Vector2 = corner - d_in * k
 				var s1: Vector2 = corner + d_out * k
 				for j: int in 5:
@@ -212,7 +387,7 @@ func lane_path(path: PackedInt32Array, offset: float = 2.6, y: float = 0.0, samp
 			var b2: Vector2 = node_pos[path[i2 + 1]]
 			var seg: float = a2.distance_to(b2)
 			var dd: Vector2 = (b2 - a2) / maxf(seg, 0.001)
-			var rr: Vector2 = Vector2(-dd.y, dd.x) * offset
+			var rr: Vector2 = Vector2(-dd.y, dd.x) * offs[i2]
 			var t0: float = zones[i2] + 2.0
 			var t1: float = seg - zones[i2 + 1] - 2.0
 			var tt: float = t0 + sample
@@ -261,28 +436,38 @@ func _build_astar(mode: String, ped_weight: float) -> AStar2D:
 		if not _edge_ok(e, mode):
 			continue
 		if a.has_point(edge_a[e]) and a.has_point(edge_b[e]):
-			a.connect_points(edge_a[e], edge_b[e], true)
+			# Verkehrs-KI hält Einbahnstraßen ein; Spieler-/Polizeirouten dürfen sie ignorieren
+			a.connect_points(edge_a[e], edge_b[e], not (mode == "traffic" and is_oneway(e)))
 	return a
 
 
 ## Anzahl zusammenhängender Komponenten im Modus (für Tests: befahrbares Netz = 1).
 func component_count(mode: String) -> int:
+	return component_sizes(mode).size()
+
+
+## Knotenzahl je zusammenhängender Komponente (absteigend sortiert).
+func component_sizes(mode: String) -> Array[int]:
 	var seen: Dictionary = {}
-	var comps: int = 0
+	var sizes: Array[int] = []
 	for n: int in node_count():
 		if seen.has(n) or degree(n, mode) == 0:
 			continue
-		comps += 1
+		var size: int = 0
 		var stack: Array[int] = [n]
 		seen[n] = true
 		while not stack.is_empty():
 			var cur: int = stack.pop_back()
+			size += 1
 			for e: int in node_edges_mode(cur, mode):
 				var o: int = other_node(e, cur)
 				if not seen.has(o):
 					seen[o] = true
 					stack.append(o)
-	return comps
+		sizes.append(size)
+	sizes.sort()
+	sizes.reverse()
+	return sizes
 
 
 # ------------------------------------------------------------ Layout-Zugriff
@@ -305,10 +490,3 @@ func poi_pos3(poi_id: String, y: float = 0.0) -> Vector3:
 func poi_yaw(poi_id: String) -> float:
 	var p: Dictionary = get_poi(poi_id)
 	return deg_to_rad(float(p.get("yaw", 0.0)))
-
-
-func face_at(p: Vector2) -> int:
-	for i: int in faces.size():
-		if Geometry2D.is_point_in_polygon(p, faces[i].poly):
-			return i
-	return -1

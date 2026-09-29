@@ -23,3 +23,6 @@ sensitive/*
 Thumbs.db
 *.swp
 __pycache__/
+
+# Test-/Exportlogs lokal halten (Speicherbudget)
+artifacts/test-logs/

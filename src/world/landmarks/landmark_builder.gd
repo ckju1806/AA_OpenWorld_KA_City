@@ -11,50 +11,103 @@ const SLATE: Color = Color(0.3, 0.33, 0.38)
 const SANDSTONE: Color = Color(0.64, 0.36, 0.29)
 const SANDSTONE_LIGHT: Color = Color(0.86, 0.74, 0.62)
 const COPPER: Color = Color(0.36, 0.55, 0.47)
+## Ausrichtung (Grad), für die die achsgebundenen Modelle gebaut sind – synchron mit tools/worldgen/validate_world.py
+const MODEL_ROT: Dictionary = {"schloss": 0.0, "pyramide": 0.0, "rathaus": 90.0, "stadtkirche": -90.0}
 
 
-static func build(root: Node3D, g: CityGraph) -> void:
-	var slab_h: float = float(g.layout.get("slab_height", 0.12))
-	var container := Node3D.new()
-	container.name = "Landmarken"
-	root.add_child(container)
-	for lm: Variant in g.layout.get("landmarks", []):
-		var d: Dictionary = lm
-		var pos: Vector2 = Vector2(float(d.pos[0]), float(d.pos[1]))
-		var rot: float = deg_to_rad(float(d.get("rot", 0.0)))
-		var kit := MeshKit.new()
-		CityMaterials.apply(kit, ["facade", "roof", "stone", "flat", "water", "glass_dark", "lamp_glow"] as Array[String])
-		var body := StaticBody3D.new()
-		body.name = "LM_" + str(d.id)
-		body.collision_layer = Layers.WORLD
-		var node := Node3D.new()
-		node.name = str(d.id)
-		match str(d.type):
-			"schloss":
-				_schloss(kit, body, pos, slab_h)
-			"pyramide":
-				_pyramide(kit, body, pos, slab_h)
-			"rathaus":
-				_rathaus(kit, body, pos, slab_h)
-			"stadtkirche":
-				_stadtkirche(kit, body, pos, slab_h)
-			"saeule":
-				_saeule(kit, body, pos, slab_h)
-			"brunnen":
-				_brunnen(kit, body, pos, slab_h)
-			"ustrab":
-				_ustrab(kit, body, node, pos, rot, slab_h)
-			"torbogen":
-				_torbogen(kit, body, node, pos, rot, slab_h)
-			"pavillon":
-				_pavillon(kit, body, node, pos, slab_h)
-			"haltestelle":
-				_haltestelle(kit, body, node, pos, rot, slab_h)
-		var mi := MeshInstance3D.new()
-		mi.mesh = kit.commit()
-		node.add_child(mi)
-		container.add_child(node)
-		container.add_child(body)
+## Einzelne Landmarke bauen (Daten aus world.json: type, pos, rot, name). Liefert einen Knoten mit Mesh und Kollision.
+static func build_one(d: Dictionary, slab_h: float) -> Node3D:
+	var pos: Vector2 = Vector2(float(d.pos[0]), float(d.pos[1]))
+	var rot: float = deg_to_rad(float(d.get("rot", 0.0)))
+	var kit := MeshKit.new()
+	CityMaterials.apply(kit, ["facade", "roof", "stone", "flat", "water", "glass_dark", "lamp_glow", "glass", "turf", "vertex_metal"]
+		as Array[String])
+	var node := Node3D.new()
+	node.name = "LM_" + str(d.get("type", "x"))
+	var body := StaticBody3D.new()
+	body.collision_layer = Layers.WORLD
+	body.collision_mask = 0
+	match str(d.type):
+		"schloss", "pyramide", "rathaus", "stadtkirche":
+			# Achsgebundene Modelle: im lokalen Ursprung gebaut, der Knoten wird verschoben und um die Abweichung von der
+			# Modellausrichtung gedreht (reale Stadtachse bei OSM-Quelle ≈ −4°).
+			var t: String = str(d.type)
+			match t:
+				"schloss":
+					_schloss(kit, body, Vector2.ZERO, slab_h)
+				"pyramide":
+					_pyramide(kit, body, Vector2.ZERO, slab_h)
+				"rathaus":
+					_rathaus(kit, body, Vector2.ZERO, slab_h)
+				_:
+					_stadtkirche(kit, body, Vector2.ZERO, slab_h)
+			node.transform = Transform3D(Basis(Vector3.UP, rot - deg_to_rad(float(MODEL_ROT[t]))), Vector3(pos.x, 0.0, pos.y))
+		"saeule":
+			_saeule(kit, body, pos, slab_h)
+		"brunnen":
+			_brunnen(kit, body, pos, slab_h)
+		"ustrab":
+			_ustrab(kit, body, node, pos, rot, slab_h)
+		"torbogen":
+			_torbogen(kit, body, node, pos, rot, slab_h)
+		"pavillon":
+			_pavillon(kit, body, node, pos, slab_h)
+		"haltestelle":
+			_haltestelle(kit, body, node, pos, rot, slab_h)
+		"hauptbahnhof":
+			LandmarksExtra.hauptbahnhof(kit, body, pos, rot, 0.0)
+		"zoo":
+			LandmarksExtra.zoo(kit, body, pos, rot, slab_h)
+		"stadion":
+			LandmarksExtra.stadion(kit, body, pos, rot, 0.0)
+		"gewaechshaus":
+			LandmarksExtra.gewaechshaus(kit, body, pos, rot, slab_h)
+		"hafenkran":
+			LandmarksExtra.hafenkran(kit, body, pos, rot, 0.0)
+		"turmberg":
+			LandmarksExtra.turmberg(kit, body, node, pos, rot, slab_h)
+		"staatstheater":
+			LandmarksExtra.staatstheater(kit, body, pos, rot, slab_h)
+		_:
+			_placeholder(kit, body, node, d, pos, rot, slab_h)
+	var mi := MeshInstance3D.new()
+	mi.mesh = kit.commit()
+	node.add_child(mi)
+	node.add_child(body)
+	return node
+
+
+## Vorläufige Baukörper für Landmarken, deren Detailmodell noch folgt (Meilenstein W3).
+static func _placeholder(kit: MeshKit, body: StaticBody3D, node: Node3D, d: Dictionary, p: Vector2, rot: float, y0: float) -> void:
+	var size: Vector2 = Vector2(30, 30)
+	var h: float = 12.0
+	var col: Color = SANDSTONE_LIGHT
+	match str(d.type):
+		"hauptbahnhof":
+			size = Vector2(240, 36)
+			h = 18.0
+			col = Color(0.84, 0.72, 0.58)
+		"gewaechshaus":
+			size = Vector2(60, 22)
+			h = 10.0
+			col = Color(0.8, 0.86, 0.85)
+		"stadion":
+			size = Vector2(180, 130)
+			h = 16.0
+			col = Color(0.7, 0.7, 0.72)
+		"hafenkran":
+			size = Vector2(8, 8)
+			h = 30.0
+			col = Color(0.75, 0.45, 0.2)
+		"turmberg":
+			size = Vector2(9, 9)
+			h = 28.0
+			col = SANDSTONE
+		"zoo":
+			return
+	ArchKit.block(kit, p, size, rot, y0, y0 + h, col, 0.5, ArchKit.STYLE_PALACE, 4.0)
+	ArchKit.flat_roof(kit, ArchKit.rect_poly(p, size, rot), y0 + h, SLATE, col.darkened(0.2))
+	_box_col(body, Vector3(p.x, y0 + h * 0.5, p.y), Vector3(size.x, h, size.y), rot)
 
 
 static func _box_col(body: StaticBody3D, center: Vector3, size: Vector3, yaw: float = 0.0) -> void:
@@ -156,13 +209,16 @@ static func _pyramide(kit: MeshKit, body: StaticBody3D, p: Vector2, y0: float) -
 
 
 static func _rathaus(kit: MeshKit, body: StaticBody3D, p: Vector2, y0: float) -> void:
-	# Klassizistischer Baukörper, Front nach Osten (zum Marktplatz)
-	var c: Vector2 = p + Vector2(-2, 0)
-	var size: Vector2 = Vector2(30, 60)
-	ArchKit.block(kit, c, size, 0.0, y0, y0 + 15.5, SANDSTONE_LIGHT, 0.45, ArchKit.STYLE_PALACE, 5.0)
-	ArchKit.mansard_roof(kit, c, size, 0.0, y0 + 15.5, 2.6, 1.0, 1.2, SLATE)
-	_box_col(body, Vector3(c.x, y0 + 9, c.y), Vector3(size.x, 18, size.y))
-	var front_x: float = c.x + size.x * 0.5
+	# Klassizistischer Baukörper (Grundriss wie OSM ≈ 64 × 77 m mit Innenhöfen), Front nach Osten (zum Marktplatz)
+	# Hauptflügel + Südostflügel (die Südwestecke ist real schräg entlang der Hebelstraße abgeschnitten)
+	for part: Array in [[Vector2(-2, -6), Vector2(64, 60)], [Vector2(19, 32), Vector2(22, 16)]]:
+		var pc: Vector2 = p + (part[0] as Vector2)
+		var ps: Vector2 = part[1]
+		ArchKit.block(kit, pc, ps, 0.0, y0, y0 + 15.5, SANDSTONE_LIGHT, 0.45, ArchKit.STYLE_PALACE, 5.0)
+		ArchKit.mansard_roof(kit, pc, ps, 0.0, y0 + 15.5, 2.6, 1.0, 1.2, SLATE)
+		_box_col(body, Vector3(pc.x, y0 + 9, pc.y), Vector3(ps.x, 18, ps.y))
+	var c: Vector2 = p + Vector2(-2, -6)
+	var front_x: float = p.x + 30.0
 	for i: int in 4:
 		var z: float = p.y - 7.5 + float(i) * 5.0
 		ArchKit.column(kit, Vector3(front_x + 3.0, y0, z), 0.55, 11.0, WHITE_STONE)
@@ -172,7 +228,7 @@ static func _rathaus(kit: MeshKit, body: StaticBody3D, p: Vector2, y0: float) ->
 	kit.color = Color.WHITE
 	ArchKit.pediment(kit, Vector3(front_x + 2.0, y0 + 12.2, p.y - 10.0), Vector3(front_x + 2.0, y0 + 12.2, p.y + 10.0), 3.2, 2.1, WHITE_STONE)
 	# Rathausturm
-	var tc: Vector2 = c + Vector2(-8, 0)
+	var tc: Vector2 = c + Vector2(-6, 0)
 	ArchKit.block(kit, tc, Vector2(7, 7), 0.0, y0 + 15.5, y0 + 31.0, SANDSTONE_LIGHT, 0.7, ArchKit.STYLE_PALACE, 5.0)
 	kit.color = COPPER
 	kit.add_sphere("stone", Vector3(tc.x, y0 + 31.0, tc.y), Vector3(3.6, 3.0, 3.6), 4, 8)
@@ -189,21 +245,27 @@ static func _rathaus(kit: MeshKit, body: StaticBody3D, p: Vector2, y0: float) ->
 
 
 static func _stadtkirche(kit: MeshKit, body: StaticBody3D, p: Vector2, y0: float) -> void:
-	# Kirchenschiff, Portikus mit sechs Säulen nach Westen (zum Marktplatz), Turm darüber
-	var c: Vector2 = p + Vector2(2, 0)
-	var size: Vector2 = Vector2(30, 52)
+	# Langhaus in Ost-West-Richtung (Grundriss wie OSM ≈ 61 × 31 m inkl. Vorhalle), tiefer Portikus mit sechs Säulen
+	# nach Westen (zum Marktplatz), Turm über dem Westteil
+	var c: Vector2 = p + Vector2(4.5, 0)
+	var size: Vector2 = Vector2(48, 31)
 	ArchKit.block(kit, c, size, 0.0, y0, y0 + 16.0, SANDSTONE_LIGHT, 0.55, ArchKit.STYLE_PALACE, 7.0)
 	ArchKit.mansard_roof(kit, c, size, 0.0, y0 + 16.0, 4.5, 0.8, 1.0, SLATE)
 	_box_col(body, Vector3(c.x, y0 + 10, c.y), Vector3(size.x, 20, size.y))
 	var front_x: float = c.x - size.x * 0.5
 	for i: int in 6:
-		var z: float = p.y - 12.5 + float(i) * 5.0
-		ArchKit.column(kit, Vector3(front_x - 3.5, y0, z), 0.7, 14.0, WHITE_STONE)
-		_cyl_col(body, Vector3(front_x - 3.5, y0, z), 0.7, 14.0)
+		var z: float = p.y - 10.5 + float(i) * 4.2
+		ArchKit.column(kit, Vector3(front_x - 8.5, y0, z), 0.7, 14.0, WHITE_STONE)
+		_cyl_col(body, Vector3(front_x - 8.5, y0, z), 0.7, 14.0)
+	# Vorhalle: Seitenwände, Gebälk, Giebel
+	kit.color = SANDSTONE_LIGHT
+	for sz: float in [-11.6, 11.6]:
+		kit.add_box("stone", Vector3(front_x - 4.0, y0 + 7.0, p.y + sz), Vector3(8.0, 14.0, 1.2))
+		_box_col(body, Vector3(front_x - 4.0, y0 + 7.0, p.y + sz), Vector3(8.0, 14.0, 1.2))
 	kit.color = WHITE_STONE
-	kit.add_box("stone", Vector3(front_x - 2.4, y0 + 14.7, p.y), Vector3(5.0, 1.4, 29.0))
+	kit.add_box("stone", Vector3(front_x - 4.6, y0 + 14.7, p.y), Vector3(10.0, 1.4, 25.0))
 	kit.color = Color.WHITE
-	ArchKit.pediment(kit, Vector3(front_x - 2.4, y0 + 15.4, p.y - 14.5), Vector3(front_x - 2.4, y0 + 15.4, p.y + 14.5), 4.6, 2.4, WHITE_STONE)
+	ArchKit.pediment(kit, Vector3(front_x - 4.6, y0 + 15.4, p.y - 12.5), Vector3(front_x - 4.6, y0 + 15.4, p.y + 12.5), 4.6, 5.0, WHITE_STONE)
 	# Turm: quadratischer Schaft, Glockengeschoss, Spitzhelm
 	var tc: Vector2 = Vector2(front_x + 6.0, p.y)
 	ArchKit.block(kit, tc, Vector2(9, 9), 0.0, y0 + 16.0, y0 + 36.0, SANDSTONE_LIGHT, 0.65, ArchKit.STYLE_PALACE, 6.0)

@@ -1,0 +1,52 @@
+# Windows-Build als GitHub-Release (Speicherbudget: Builds nie im Repo, nur als Release-Anhang).
+# Auslöser: manuell (workflow_dispatch, sobald die Datei auf dem Standardbranch liegt) oder ein Push,
+# dessen Commit-Nachricht "[release]" enthält. Tag = v<config/version> aus project.godot (bzw. Eingabe).
+name: Windows-Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release-Tag (leer = v<Version aus project.godot>)"
+        required: false
+  push:
+    branches: ["main", "claude/**"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Godot 4.7.2 und Export-Templates (SHA512 geprüft)
+        run: |
+          bash scripts/linux/setup_godot.sh
+          sudo ln -sf "$HOME/godot/Godot_v4.7.2-stable_linux.x86_64" /usr/local/bin/godot
+
+      - name: Unit-Tests (headless)
+        run: bash scripts/linux/run_tests.sh unit
+
+      - name: Windows-Export und Paket
+        run: |
+          bash scripts/linux/build_windows.sh
+          bash scripts/linux/package_release.sh
+
+      - name: GitHub-Release anlegen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="$(grep -E '^config/version=' project.godot | cut -d'"' -f2)"
+          TAG="${{ github.event.inputs.tag }}"
+          [ -n "$TAG" ] || TAG="v$VERSION"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG existiert bereits – Dateien werden ersetzt."
+            gh release upload "$TAG" build/release/* --clobber
+          else
+            gh release create "$TAG" build/release/* --target "$GITHUB_SHA" --prerelease \
+              --title "Fächer-City: Asphalt & Schatten v$VERSION (Windows x64)" --notes-file release/RELEASE_NOTES.md
+          fi

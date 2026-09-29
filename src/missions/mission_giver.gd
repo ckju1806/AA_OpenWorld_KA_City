@@ -78,7 +78,7 @@ func is_offering() -> bool:
 
 
 func can_interact(p: Player) -> bool:
-	if p == null or p.is_in_vehicle() or system == null:
+	if p == null or p.is_in_vehicle() or system == null or not visible:
 		return false
 	if bool(system.call("has_active")):
 		return false

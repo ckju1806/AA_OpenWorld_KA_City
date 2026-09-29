@@ -7,8 +7,8 @@ config_version=5
 [application]
 
 config/name="Fächer-City: Asphalt & Schatten"
-config/description="Stilisiertes Open-World-Actionspiel in einer verdichteten Karlsruher Innenstadt."
-config/version="0.1.0"
+config/description="Open-World-Spiel in Karlsruhe im Maßstab 1:1 (fiktive Handlung)."
+config/version="0.2.0"
 run/main_scene="res://scenes/main_menu.tscn"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="Faecherstadt"
@@ -22,6 +22,8 @@ config/windows_native_icon="res://assets/icons/faecherstadt.ico"
 EventBus="*res://src/autoload/event_bus.gd"
 Settings="*res://src/autoload/settings.gd"
 GameState="*res://src/autoload/game_state.gd"
+WorldClock="*res://src/autoload/world_clock.gd"
+CheatManager="*res://src/autoload/cheat_manager.gd"
 SaveManager="*res://src/autoload/save_manager.gd"
 AudioManager="*res://src/autoload/audio_manager.gd"
 App="*res://src/autoload/app.gd"
@@ -46,6 +48,7 @@ theme/default_font_multichannel_signed_distance_field=true
 3d_physics/layer_3="fahrzeuge"
 3d_physics/layer_4="npc"
 3d_physics/layer_5="trigger"
+3d_physics/layer_6="kamera"
 
 [physics]
 

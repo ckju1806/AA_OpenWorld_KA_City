@@ -3,6 +3,7 @@ shader_type spatial;
 render_mode cull_back;
 
 uniform vec3 base_color : source_color = vec3(0.2, 0.2, 0.215);
+uniform float wetness = 0.0;   // 0 trocken .. 1 nass (WorldClock)
 
 varying vec3 wpos;
 
@@ -28,6 +29,12 @@ float vnoise(vec2 p) {
 void fragment() {
 	float fine = hash(floor(wpos.xz * 9.0)) * 0.06;
 	float patch = vnoise(wpos.xz * 0.045) * 0.1 + vnoise(wpos.xz * 0.21) * 0.05;
-	ALBEDO = base_color * (0.9 + fine + patch);
-	ROUGHNESS = 0.9 - patch;
+	vec3 col = base_color * (0.9 + fine + patch);
+	float rough = 0.9 - patch;
+	// Nässe: dunkler, glänzend; Pfützen in Senken (großflächiges Rauschen)
+	float puddle = smoothstep(0.62, 0.72, vnoise(wpos.xz * 0.11 + 3.1)) * wetness;
+	float w = clamp(wetness * 0.8 + puddle, 0.0, 1.0);
+	ALBEDO = col * mix(1.0, 0.55, w);
+	ROUGHNESS = mix(rough, 0.08, w);
+	SPECULAR = mix(0.5, 0.9, w);
 }

@@ -15,6 +15,8 @@ var _timer_label: Label
 var _hint_panel: PanelContainer
 var _hint: Label
 var _dialog_panel: PanelContainer
+var _bark: Label
+var _bark_t: float = 0.0
 var _dialog_speaker: Label
 var _dialog_text: Label
 var _dialog_hide_t: float = 0.0
@@ -24,6 +26,8 @@ var _big_t: float = 0.0
 var _notes: VBoxContainer
 var _health_bar: ProgressBar
 var _money: Label
+var _speed_unit: Label
+var _clock: Label
 var _vehicle_panel: PanelContainer
 var _speed: Label
 var _vehicle_name: Label
@@ -60,6 +64,7 @@ func setup(p_game: Node) -> void:
 	EventBus.notify.connect(_on_notify)
 	EventBus.big_message.connect(_on_big)
 	EventBus.dialog_line.connect(_on_dialog)
+	EventBus.bark.connect(_on_bark)
 	EventBus.dialog_closed.connect(func() -> void: _dialog_hide_t = 0.4)
 	EventBus.mission_failed.connect(func(_id: String, _r: String) -> void: _refresh_result())
 	GameState.money_changed.connect(_on_money)
@@ -100,6 +105,16 @@ func _build_hint_and_dialog() -> void:
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint_panel.add_child(_hint)
 	_hint_panel.visible = false
+	_bark = UiStyle.label("", 20, UiStyle.TEXT, 6)
+	_bark.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_bark.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_bark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_bark.offset_top = -300
+	_bark.offset_bottom = -272
+	_bark.offset_left = -500
+	_bark.offset_right = 500
+	_bark.visible = false
+	root.add_child(_bark)
 	_dialog_panel = UiStyle.panel()
 	_dialog_panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_dialog_panel.grow_horizontal = Control.GROW_DIRECTION_BOTH
@@ -174,6 +189,8 @@ func _build_status() -> void:
 	row.add_child(_health_bar)
 	_money = UiStyle.label("0 €", 30, UiStyle.GOOD)
 	v.add_child(_money)
+	_clock = UiStyle.label("", 17, UiStyle.TEXT_DIM)
+	v.add_child(_clock)
 
 
 func _build_vehicle() -> void:
@@ -195,6 +212,8 @@ func _build_vehicle() -> void:
 	_speed = UiStyle.label("0", 56, UiStyle.TEXT)
 	row.add_child(_speed)
 	var unit := UiStyle.label(" km/h", 22, UiStyle.TEXT_DIM)
+	unit.name = "Einheit"
+	_speed_unit = unit
 	unit.size_flags_vertical = Control.SIZE_SHRINK_END
 	row.add_child(unit)
 	_damage_bar = UiStyle.bar(UiStyle.GOOD, 10)
@@ -350,9 +369,28 @@ func _refresh_result() -> void:
 	_result_reason.text = ms.fail_reason
 
 
+## Zuruf einer Figur in der Nähe als Untertitel (abschaltbar).
+func _on_bark(speaker: String, text: String, pos: Vector3) -> void:
+	var p: Player = game.get("player") as Player if game != null else null
+	if not Settings.subtitles or p == null or p.global_position.distance_to(pos) > 40.0:
+		return
+	_bark.text = "%s: „%s“" % [speaker, text] if speaker != "" else "„%s“" % text
+	_bark.visible = true
+	_bark_t = 3.2
+
+
 func _process(delta: float) -> void:
 	if game == null:
 		return
+	if _bark_t > 0.0:
+		_bark_t -= delta
+		if _bark_t <= 0.0:
+			_bark.visible = false
+	root.modulate.a = Settings.hud_opacity
+	_clock.text = "%s  ·  %s  ·  Tag %d" % [WorldClock.time_text(), WorldClock.LABELS.get(GameState.weather, ""), GameState.day]
+	var mm: Control = game.get("minimap") as Control
+	if mm != null:
+		mm.visible = Settings.minimap
 	var ms: MissionSystem = game.get("missions") as MissionSystem
 	var p: Player = game.get("player") as Player
 	# Missionsziel
@@ -393,10 +431,21 @@ func _process(delta: float) -> void:
 	if p != null:
 		_health_bar.value = p.health
 		var v: Vehicle = p.current_vehicle as Vehicle
-		_vehicle_panel.visible = v != null
-		if v != null:
+		_vehicle_panel.visible = v != null or p.is_riding()
+		if p.is_riding():
+			# Mitfahrt im ÖPNV: Linie, nächster Halt, Geschwindigkeit
+			var tr: TransitSystem = game.get("transit") as TransitSystem
+			_vehicle_name.text = str(game.get("ride_info"))
+			var rmps: float = tr.ride_speed() if tr != null else 0.0
+			_speed.text = str(int(round(rmps * (2.23694 if Settings.speed_mph else 3.6))))
+			_speed_unit.text = " mph" if Settings.speed_mph else " km/h"
+			_damage_bar.value = 1.0
+			_veh_status.text = "E/F: am nächsten Halt aussteigen"
+		elif v != null:
 			_vehicle_name.text = v.spec.display_name
-			_speed.text = str(int(round(absf(v.get_forward_speed()) * 3.6)))
+			var mps: float = absf(v.get_forward_speed())
+			_speed.text = str(int(round(mps * (2.23694 if Settings.speed_mph else 3.6))))
+			_speed_unit.text = " mph" if Settings.speed_mph else " km/h"
 			var h: float = v.health / v.max_health
 			_damage_bar.value = h
 			var fill: StyleBoxFlat = _damage_bar.get_theme_stylebox("fill") as StyleBoxFlat

@@ -35,18 +35,15 @@ func test_m01_full_playthrough() -> void:
 	assert_true(await enter(van), "In Lieferwagen eingestiegen")
 	await wait_physics(5)
 	assert_eq(str(ms._step.get("type", "")), "goto", "Schritt: zur Bäckerei fahren")
-	# Aus dem Hof auf die Waldstraße, dann über das Straßennetz zur Bäckerei
-	var gate: PackedVector3Array = PackedVector3Array([Vector3(-306, 0, 500), Vector3(-326.5, 0, 497)])
-	var bakery: Vector3 = city().poi_position("baeckerei_parken")
-	assert_true(await drive_to(van, Vector3(218.0, 0, 500), gate, 13.0, 7.0), "Bäckerei erreicht")
+	# Über das Straßennetz zur Bäckerei (Kronenstraße), dann zur Kanzlei (Zähringerstraße)
+	assert_true(await drive_to_poi(van, "baeckerei_parken", 13.0, 7.0, 240.0), "Bäckerei erreicht")
 	assert_true(await wait_until(func() -> bool: return str(ms._step.get("type", "")) == "goto" and ms.step_index >= 6, 12.0), "Sendung eingeladen (Haltezone)")
-	# Zur Kanzlei
-	assert_true(await drive_to(van, Vector3(20.0, 0, 462.6), PackedVector3Array(), 12.0, 7.0), "Kanzlei erreicht")
+	assert_true(await drive_to_poi(van, "kanzlei_parken", 12.0, 7.0, 200.0), "Kanzlei erreicht")
 	assert_true(await wait_until(func() -> bool: return str(ms._step.get("type", "")) == "exit_vehicle", 8.0), "Schritt: aussteigen")
 	assert_true(game.player.toggle_vehicle(), "Ausgestiegen")
 	await wait_physics(20)
 	assert_true(await wait_until(func() -> bool: return str(ms._step.get("type", "")) == "interact", 5.0), "Schritt: abgeben")
-	var door: Vector3 = city().poi_position("kanzlei")
+	var door: Vector3 = poi("kanzlei")
 	assert_true(await walk_to(door, 1.5, 40.0), "Zur Kanzleitür gegangen")
 	await wait_physics(8)
 	assert_true(interact_nearest(), "Sendung abgegeben (E)")
@@ -64,7 +61,7 @@ func test_m01_full_playthrough() -> void:
 
 func test_m01_fail_and_retry_without_growth() -> void:
 	var ms: MissionSystem = game.missions
-	var vehicles0: int = get_tree().get_nodes_in_group("vehicles").size()
+	var vehicles0: int = own_vehicle_count()
 	assert_true(await _talk_to_giver(), "Auftrag angenommen")
 	for round_i: int in 3:
 		assert_true(await wait_until(func() -> bool: return ms.mission_vehicle("van") != null and ms.step_index >= 2, 20.0), "Lieferwagen da (Runde %d)" % round_i)
@@ -80,13 +77,13 @@ func test_m01_fail_and_retry_without_growth() -> void:
 		await wait_physics(5)
 		assert_true(ms.active != null, "Mission neu gestartet (Runde %d)" % round_i)
 	await wait_physics(10)
-	var vehicles1: int = get_tree().get_nodes_in_group("vehicles").size()
+	var vehicles1: int = own_vehicle_count()
 	assert_eq(vehicles1, vehicles0 + 1, "Genau ein Missionsfahrzeug nach 3 Wiederholungen")
 	assert_eq(GameState.money, GameState.START_MONEY, "Keine Belohnung bei Fehlschlägen")
 	ms.fail("Test-Ende")
 	ms.abort()
 	await wait_physics(5)
-	assert_eq(get_tree().get_nodes_in_group("vehicles").size(), vehicles0, "Nach Abbruch keine Missionsfahrzeuge übrig")
+	assert_eq(own_vehicle_count(), vehicles0, "Nach Abbruch keine Missionsfahrzeuge übrig")
 
 
 func test_mission_data_valid() -> void:

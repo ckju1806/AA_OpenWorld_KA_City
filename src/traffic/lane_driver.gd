@@ -24,6 +24,11 @@ var _reverse_t: float = 0.0
 var _yield_t: float = 0.0
 var _check_t: float = 0.0
 var _frame_offset: int = 0
+## Vorbeifahren an stehenden Hindernissen (geparkt/verlassen, Wrack, Bus an der Haltestelle) über die Gegenspur
+var bypass_t: float = 0.0
+var _bypass_node: Node3D = null
+var _block_t: float = 0.0
+var _nearest_obst: Node3D = null
 var _seg_cursor: int = 0
 
 
@@ -100,6 +105,17 @@ func _advance_plan(pos: Vector3) -> void:
 
 
 func _lookahead(v: Vehicle, pos: Vector3) -> Vector3:
+	var t: Vector3 = _lookahead_lane(v, pos)
+	if bypass_t > 0.0:
+		var e: int = current_edge()
+		var d: Vector2 = (graph.node_pos[plan[1]] - graph.node_pos[plan[0]]).normalized()
+		var left: Vector2 = Vector2(d.y, -d.x)
+		var shift: float = 2.0 * graph.lane_offset(e)
+		t += Vector3(left.x, 0.0, left.y) * shift
+	return t
+
+
+func _lookahead_lane(v: Vehicle, pos: Vector3) -> Vector3:
 	var la: float = 4.5 + absf(v.get_forward_speed()) * 0.35
 	var p2: Vector2 = Vector2(pos.x, pos.z)
 	# Segment-Cursor läuft nur vorwärts (verhindert Zielpunkte hinter dem Fahrzeug)
@@ -141,7 +157,7 @@ func _steer_to(v: Vehicle, target: Vector3) -> float:
 	return clampf(ang / deg_to_rad(maxf(v.spec.steer_max_deg * 0.75, 12.0)), -1.0, 1.0)
 
 
-func _desired_speed(v: Vehicle, pos: Vector3, _delta: float) -> float:
+func _desired_speed(v: Vehicle, pos: Vector3, delta: float) -> float:
 	var e: int = current_edge()
 	var base: float = (graph.edge_speed(e) if e >= 0 else 10.0) * personality
 	if base < 3.0:
@@ -166,7 +182,8 @@ func _desired_speed(v: Vehicle, pos: Vector3, _delta: float) -> float:
 	if lights != null and not ignore_lights and lights.is_signalized(n1) and e >= 0:
 		var l: TrafficLights.Light = lights.light_for(n1, e)
 		var must_stop: bool = l == TrafficLights.Light.RED or (l == TrafficLights.Light.YELLOW and dist_stop > 10.0)
-		if must_stop and dist_stop > -0.5:
+		# Leicht über die Haltelinie gerollt: trotzdem anhalten, solange die Kreuzungsfläche nicht erreicht ist
+		if must_stop and dist_stop > -2.0:
 			desired = minf(desired, sqrt(2.0 * STOP_DECEL * maxf(dist_stop - 0.5, 0.0)))
 	elif not ignore_lights and graph.degree(n1, "drive") >= 3 and dist_stop < 18.0 and dist_stop > -1.0:
 		# Ungeregelte Kreuzung: langsam heranfahren, Kreuzungsbereich frei? (vereinfacht "rechts vor links")
@@ -184,7 +201,64 @@ func _desired_speed(v: Vehicle, pos: Vector3, _delta: float) -> float:
 		obstacle_dist = _scan_obstacles(v)
 	if obstacle_dist < INF:
 		desired = minf(desired, maxf(0.0, (obstacle_dist - 3.5) * 0.8))
+	_update_bypass(v, pos, dist_node, delta)
+	if bypass_t > 0.0:
+		desired = minf(desired, 6.0)
 	return desired
+
+
+## Stehendes, nicht verkehrsbedingtes Hindernis länger als 5 s vor dem Fahrzeug (nicht an Kreuzungen):
+## bei freier Gegenspur links vorbeifahren, danach zurück auf die eigene Spur.
+func _update_bypass(v: Vehicle, pos: Vector3, dist_node: float, delta: float) -> void:
+	var fwd: Vector3 = -v.global_basis.z
+	if bypass_t > 0.0:
+		bypass_t -= delta
+		var done: bool = _bypass_node == null or not is_instance_valid(_bypass_node) \
+			or (_bypass_node.global_position - pos).dot(fwd) < -(v.spec.length + 3.0)
+		var at_junction: bool = graph.degree(plan[1], "drive") > 2 and dist_node < 10.0
+		if done or at_junction:
+			bypass_t = 0.0
+			_bypass_node = null
+		return
+	var junction_near: bool = graph.degree(plan[1], "drive") > 2 and dist_node < 25.0
+	if obstacle_dist < 9.0 and _nearest_obst != null and is_instance_valid(_nearest_obst) and not junction_near \
+			and _may_bypass(_nearest_obst):
+		_block_t += delta
+		if _block_t > 5.0 and _opposite_lane_clear(v):
+			bypass_t = 12.0
+			_bypass_node = _nearest_obst
+			_block_t = 0.0
+	else:
+		_block_t = 0.0
+
+
+static func _may_bypass(o: Node3D) -> bool:
+	if o is Vehicle:
+		var ov: Vehicle = o
+		return ov.is_destroyed or (ov.driver == Vehicle.Driver.NONE and ov.get_forward_speed() < 0.3)
+	return o.is_in_group("transit")
+
+
+func _opposite_lane_clear(v: Vehicle) -> bool:
+	var e: int = current_edge()
+	if e < 0 or graph.is_oneway(e):
+		return false
+	var fwd: Vector3 = -v.global_basis.z
+	fwd.y = 0.0
+	fwd = fwd.normalized()
+	var left: Vector3 = Vector3(fwd.z, 0.0, -fwd.x)
+	var box := BoxShape3D.new()
+	box.size = Vector3(2.2, 1.6, 55.0)   # Fahrzeugbreite + Rand; parkende Autos am Gegen-Fahrbahnrand liegen außerhalb
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = box
+	q.transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), v.global_position + fwd * 24.0 + left * (2.0 * graph.lane_offset(e)) + Vector3.UP)
+	q.collision_mask = Layers.VEHICLE | Layers.PLAYER | Layers.NPC
+	q.collide_with_areas = true
+	q.exclude = [v.get_rid()]
+	for h: Dictionary in v.get_world_3d().direct_space_state.intersect_shape(q, 4):
+		if h.collider != _nearest_obst:
+			return false
+	return true
 
 
 func _drive(v: Vehicle, desired: float, steer: float) -> void:
@@ -197,7 +271,7 @@ func _drive(v: Vehicle, desired: float, steer: float) -> void:
 	if spd < desired - 0.4:
 		throttle = clampf((desired - spd) * 0.35 + 0.2, 0.0, 1.0)
 	elif spd > desired + 0.8:
-		brake = clampf((spd - desired) * 0.25, 0.1, 1.0)
+		brake = clampf((spd - desired) * 0.25, 0.1 if desired > 0.3 else 0.5, 1.0)
 	v.set_controls(throttle, brake, steer, false)
 
 
@@ -236,15 +310,20 @@ func _scan_obstacles(v: Vehicle) -> float:
 	q.exclude = [v.get_rid()]
 	var hits: Array[Dictionary] = space.intersect_shape(q, 8)
 	var best: float = INF
+	_nearest_obst = null
 	for h: Dictionary in hits:
 		var c: Object = h.collider
+		if bypass_t > 0.0 and c == _bypass_node:
+			continue
 		if c is Node3D:
 			var other_half: float = 0.4
 			if c is Vehicle:
 				other_half = (c as Vehicle).spec.length * 0.5
 			# Abstand eigene Front -> Heck/Rand des Hindernisses
 			var d: float = ((c as Node3D).global_position - v.global_position).dot(fwd) - v.spec.length * 0.5 - other_half
-			best = minf(best, maxf(d, 0.0))
+			if maxf(d, 0.0) < best:
+				best = maxf(d, 0.0)
+				_nearest_obst = c as Node3D
 	return best
 
 

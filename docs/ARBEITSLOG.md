@@ -7,6 +7,8 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
 | Datum | Commit | Stand |
 |---|---|---|
 | 2026-09-23 | `75fe4ae` | Ausgangsstand (nur LICENSE + README) |
+| 2026-09-28 | `46db3d1` | v0.1.0 (`main`, PR #1) – Ausgangspunkt Phase 2 |
+| 2026-09-28 | `e4f83c3` | W1 Weltsystem/Streaming, Karlsruhe 1:1 (Näherung) |
 
 ## 2026-09-23 – Meilenstein 0: Absicherung, Struktur, Toolchain
 
@@ -192,3 +194,198 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   `.gdignore`), `ANLEITUNG.md`, Verweise in README/Inhaltsverzeichnis/Testbericht, `.gitattributes`: `*.zip binary`.
 - **Prüfung:** Hash der versionierten ZIP = dokumentierter Hash; `.bat` ASCII/CRLF; Godot-Import ignoriert `release/`.
   Nicht geprüft: Ausführung der `.bat` unter Windows.
+
+---
+
+# Phase 2: Großausbau (Plan v2, `docs/PLAN_V2.md`)
+
+## 2026-09-28 – Planphase v2
+
+- **Auftrag:** massive Erweiterung auf Basis v0.1.0 (gesamter Kartenausschnitt Karlsruhe 1:1, Grafik, ÖPNV/U-Strab, Tiere,
+  Cheats, Missionen, Banden/Unruhen/Polizei, Optionen, Streaming). Nutzerentscheidungen: gesamte Karte 1:1 in voller Detailtiefe;
+  „erst Breite, dann Tiefe“.
+- **Befund:** OSM-Quellen (overpass-api.de, download.geofabrik.de, *.openstreetmap.org) und Karlsruher Geoportale werden von der
+  Egress-Richtlinie der Cloud-Umgebung abgewiesen (`connect_rejected`). Freischaltung durch den Nutzer in den Umgebungseinstellungen
+  angefragt; bis dahin datenunabhängige Meilensteine.
+- **Restore-Punkt:** `main` = `46db3d1` (PR #1 gemergt); Arbeitsbranch neu von `main` gestartet.
+- **Meilensteine:** W1 Streaming · W2 Karte 1:1 · W3 Landmarken · W4 Grafik · W5 ÖPNV · W6 Tiere · W7 Banden/Polizei ·
+  W8 Missionen · W9 Cheats · W10 Optionen · W11 KI · W12 Tests/Doku/Build.
+- **Addendum Speicherbudget (Nutzervorgabe):** Repo < 300 MB, keine Builds mehr im Repo (GitHub Releases), Weltdaten ≤ 40 MB,
+  Einzeldatei ≤ 5 MB, kein LFS, Screenshots als JPEG, Test-Logs unversioniert. Prüfung: `tools/check_repo_budget.py`.
+
+## 2026-09-28 – W1: Weltsystem, Sektor-Streaming, Karlsruhe 1:1 (Fallback-Karte)
+
+- **Ziel:** die ganze Stadt (≈ 17,5 × 10,4 km, Neureut bis Rheinstetten, Rhein bis Durlach) im Maßstab 1:1 spielbar machen,
+  unabhängig von der (noch gesperrten) OSM-Quelle.
+- **Änderungsklasse:** groß (Weltaufbau ersetzt, neue Datenpipeline, viele Module angepasst) → Restore-Punkt: `46db3d1` (`main`).
+- **Umgesetzt:**
+  - Offline-Pipeline `tools/worldgen/` (Python: shapely/numpy/pillow – nur Werkzeug, nicht im Spiel):
+    `ka_authored.py` (handgezeichnete 1:1-Quelle nach Karten-Screenshot und Ortskenntnis: Hauptstraßen, Fächerstrahlen, Ringe,
+    27 Stadtteile mit Rastern, Flächen, Gewässer, Gleise, Landmarken, POIs), `network.py` (Verknotung, Einrasten, Kantenteilung
+    ≤ 60 m, Sackgassen schließen/abstufen, Inseln entfernen, Berührungen/Kreuzungen ohne Knoten teilen), `blocks.py`
+    (Blöcke, Parzellen nach Stil: Blockrand, Zeilen, Häuser, Hallen), `export.py` (Props, Gehwegnetz, Sektoren 256 m,
+    LOD-Kacheln 1 km, Übersichtskarte WEBP), `validate_world.py` (kein Gebäude in einer Fahrspur), `build_world.py` (CLI).
+    Ausgabe `data/world/ka/` ≈ 3,4 MB (gzip-JSON, Koordinaten in dm).
+  - Spiel: `WorldData`, `WorldStreamer` (Aufbau im WorkerThreadPool, Einhängen mit Zeitbudget, Hysterese, LOD-Kacheln mit
+    ausgeblendeten Teilen geladener Sektoren, synchroner Modus für Tests/Screenshots), `SectorBuilder`, `CityWorld` neu,
+    `CityGraph` mit Rasterindex, `ParkedCarManager` (sektorweise, Obergrenze 60), Ampel-Visuals je Sektor,
+    räumliche Spawn-Abfragen für Verkehr/Polizei/Passanten, Missionen laden Zielsektoren vor, Karte mit Zoom/Verschieben.
+  - Missionen M1–M3 auf reale Straßen umgezogen (Südendstraße, Kronenstraße, Zähringerstraße, Durlacher Allee/Ostring/
+    Adenauerring/Kriegsstraße, Haid-und-Neu-Straße, Rheinhafen/Honsellstraße, Hertzstraße).
+- **Gefundene und behobene Befunde (Auszug):** Lamm-/Kreuzstraße liefen durch Rathaus/Stadtkirche; Kante endete ohne Knoten auf der
+  Kaiserstraße; Hallen/Zeilenbauten ragten per Umrechteck in Fahrbahnen (u. a. 2 km lange „Halle“ im Rheinhafen);
+  Abbiegebogen reichte bei kurzen Kanten hinter den Vorgängerknoten (Autopilot kreiste); Fahrzeug rollte bei Rot knapp über die
+  Haltelinie und fuhr dann weiter; Kollisionsprüfung erkannte Punkte in Gebäuden nicht mehr (Sektorkollision ist Hohlkörper →
+  Grundrissprüfung aus Daten); Autopilot bremste vor geglätteten Kurven nicht (Kurvenwinkel jetzt über 20 m aufsummiert);
+  geparkte Autos verfälschten Fahrzeugzählungen in Tests.
+- **Prüfung:** Gesamtsuite 92/92 grün, Exit-Code 0 (268,7 s). U. a.: Graph zusammenhängend, keine Kreuzung ohne Knoten,
+  Rasterindex = Brute-Force, 6 390 Fahrspurproben in 6 Stadtteilen ohne Hindernis, Mission 1 (208 s simuliert),
+  Fächer-Runde komplett per Autopilot über ≈ 9 km (619,9 s), Mission 3 quer durch die Stadt bis in den Rheinhafen,
+  Halt an roter Ampel (Karlstor), Speichern/Laden inkl. blockierter Position. Pipeline-Validierung: 0 Gebäude, 0 Landmarken-
+  Platzhalter und 0 parkende Autos in Fahrspuren. Speicherbudget: Weltdaten 3,4 MB, Repo-Objekte 72 MB.
+- **Spielwerte geändert:** Zeitlimit Fächer-Runde 8:00 → 11:00 (Runde ist im 1:1-Maßstab ≈ 9 km lang); Stadion am Wildpark an die
+  reale Lage außerhalb des Adenauerrings verschoben; Tertiärstraßen 12 m breit (Parkstreifen); parkende Autos nur noch dort
+  (Wohnstraßen mit 8,5 m sind zu schmal für Parkstreifen + Fahrspur → W2: Parkplätze/Höfe).
+- **Testvereinfachung (ehrlich):** Test-Hilfen drehen ein stehendes Fahrzeug zu Beginn in Fahrtrichtung, wenn die Route nach hinten
+  führt (keine Wendemanöver in engen Straßen); der Autopilot hat zusätzlich eine Dreipunktwende.
+- **Bekannte Einschränkungen:** Karte ist eine **Näherung** (OSM gesperrt); Stadtteile rechteckig mit Lücken; Hbf, Zoo, Stadion,
+  Gewächshäuser, Hafenkräne, Turmberg nur Platzhalter (W3); Pyramide im Marktplatz-Bild verdeckt.
+
+## 2026-09-29 – Zwischenstand W2–W4, W9 (Netzfreigabe, Landmarken, Tageszeit/Wetter, Einstellungen v2, Cheats)
+
+- **Netzwerk:** Nutzer hat `download.geofabrik.de` und `overpass-api.de` freigegeben. Geofabrik bleibt über das Egress-Gateway
+  unerreichbar (Tunnel bricht nach dem TLS-Handshake ab); Overpass antwortet, ist aber stark ausgelastet („server too busy“,
+  HTTP 504) → kachelweiser Abruf mit Wiederholungen (`tools/worldgen/fetch_osm.py`, 2 parallele Slots). Rohdaten nur lokal
+  (`~/osm_cache`, nicht versioniert).
+- **W2 (in Arbeit):** `source_osm.py` (Graph aus OSM-Topologie, Brücken ohne falsche Kreuzungen, Straßentunnel ausgelassen,
+  Breite je Kante in den Flags, Einbahnstraßen, echte Gebäudegrundrisse mit Höhen/Stockwerken/Dachform, Flächen inkl. Parkplätzen,
+  Gewässer, Gleise, Ampeln, Einzelbäume, Haltestellen/Linien), `transit.py` (ÖPNV-Linien), `fetch_geofabrik.sh` (Alternative).
+  Spielseite vorbereitet: `CityGraph.edge_width` je Kante, `is_oneway`/`can_leave`, Spurversatz je Kante, Verkehrs-A* mit
+  Einbahnrichtung, Ampeln aus Daten mit gemeinsamer Phase je Kreuzung, Parkplätze als Flächenart, Straßenbahngleise bündig.
+- **W3:** `LandmarksExtra`: Hauptbahnhof (Halle mit Bogenfenster, Uhrturm, Flügel, drei Bahnsteighallen), Zoo (Eingang, 9 Gehege
+  aus `data/world/zoo_layout.json` mit Zäunen, Häusern, Becken, Felsen, Schildern), Stadion (Tribünen, Dach, Flutlicht, offene Ecken),
+  Gewächshäuser (Glas, Sprossen, Tonnendächer), Hafenkräne, Turmberg (Bergfried + Fernsilhouette), Staatstheater.
+- **W4:** `WorldClock` (Autoload: Tageszeit, Tageswechsel, Wetter klar/bewölkt/Regen/Nebel mit Übergängen, Nässe), neue
+  `EnvironmentSetup` (Sonne/Mond nach Uhrzeit, Himmelsfarben, Nebel, Regenpartikel, Laternen/Fenster nachts), Asphalt/Pflaster
+  mit Nässe und Pfützen, Wasser-Shader, Verkehr mit Licht bei Nacht/Nebel/Regen, vier Qualitätsstufen + benutzerdefiniert.
+- **W10 (Grundlage):** `Settings` v2 (Kategorien A–E, Migration v1→v2, Tastenbelegung mit Konfliktprüfung, Renderskala, AA,
+  FPS-Limit, FOV, Dichten, Ereignis-Schalter, Barrierefreiheit), `InputSetup` mit Standardbelegung/Labels.
+- **W9:** `CheatManager` (Autoload, erweiterbare Registry, 40 eigene deutsche Codes, Tippen im Spiel oder Konsole `^`,
+  Schalt-Cheats, ALLESZURUECK, Sperre über Optionen, Nutzung im Spielstand vermerkt), `CheatConsole`.
+- **Prüfung:** 109/109 Tests grün (neu: WorldClock, Settings v2, Cheats). Screenshot-Tour mit Mittag/Nacht/Regen/Nebel visuell geprüft.
+
+## 2026-09-29 – Zwischenstand W5–W8, W10 (ÖPNV, Tiere, Ereignisse, Kampagne, Optionsmenü)
+
+- **Restore-Punkt:** vorheriger Commit `520bd3c` (Branch `claude/confident-volta-6a71kc`); dieser Commit ist der nächste.
+- **W5 ÖPNV:** `TransitSystem` (virtuelle Fahrzeuge auf der ganzen Karte, sichtbare Knoten nur in Spielernähe),
+  Stadtbahn (3 Wagenteile folgen der Gleislinie) und Bus, Pendelbetrieb (Gegenrichtung an der Endhaltestelle), Haltezeiten,
+  Bremsen vor Hindernissen (Erkennung 42 m, Bremskurve, Klingel), U-Strab: Tunnelröhre (Kaiserstraße + Südabzweig),
+  U-Haltestellen mit Bahnsteigen/Stationsschildern/Leuchten, Rampenbauwerke mit Portal, Tunnelbeleuchtung, Außenlicht
+  gedämpft unter Gelände; Haltestellen mit Wartehäuschen bzw. Abgang (U); Passanten steigen ein; Spieler steigt an
+  Haltestellen ein (3 € Fahrschein, E), Haltewunsch (E/F), Ausstieg am nächsten Halt, HUD mit Linie/nächstem Halt/Tempo.
+  Weltgenerator: Tunnelbereiche jetzt als Bogenlängen (robust bei wenigen Stützpunkten), Kamera-Kollisions-Layer „kamera“.
+- **W6 Tiere, W7 Ereignisse/Banden/Polizei, W8 Kampagne (M4–M15, 5 fiktive Auftraggeber, Jobs, Auftragsliste J),
+  W10 Optionsmenü mit Tabs und Tastenbelegung:** siehe Commit; Details im TEST_REPORT (folgt in W12).
+- **Testrunner:** Filter `datei::test_praefix` für einzelne Testmethoden. Screenshot-Tour: Filter `--tour-only=`.
+- **Prüfung:** test_transit 4/4, test_campaign M4–M9 6/6, test_player 6/6 grün; ÖPNV-Screenshots visuell geprüft
+  (Haltestelle, Rampe/Portal, U-Station, Tunnel, Bus). Budget: Git-Objekte 83,8 MB, Weltdaten 3,2 MB.
+- **Bekannte Einschränkungen:** Fahrzeuge fern vom Spieler fahren ohne Physik (keine Kollisionen); Bahnen beachten keine
+  Ampeln (Vorrang, bremsen aber vor Hindernissen); an Endhaltestellen im Tunnel (Linie 2, Marktplatz) können sich Wagen
+  kurz überlappen; Straßenbelag über Rampen wird vom Rampenbauwerk verdeckt statt ausgespart.
+
+## 2026-09-29 – W11/W12-Zwischenstand (KI, Release-Weg, Doku v0.2, Version 0.2.0)
+
+- **Restore-Punkt:** Commit `08c055f` (vorheriger Stand).
+- **W11 KI:** Verkehr umfährt stehende Hindernisse (abgestellte/zerstörte Fahrzeuge, haltende Busse/Bahnen) über die freie
+  Gegenspur, nicht vor Kreuzungen, danach zurück auf die eigene Spur; Autopilot optional mit Hindernisbremsung (NPC-Fahrzeuge
+  in Aufträgen); wartende Fahrgäste an Haltestellen steigen ein. ÖPNV fährt nur mit „Umgebungsleben“ (Tests reproduzierbar).
+- **W4:** Wind in Baumkronen (Shader `foliage.gdshader`, Stärke nach Wetter). Rückblick-Kamera (C) umgesetzt (war nur belegt).
+- **Fehler behoben:** Spielstand verwarf Positionen jenseits ±1 500 m (Altlast der kleinen Karte) → Grenze ±12 km + Test;
+  Steuerungsübersicht im Pausenmenü jetzt aus der aktuellen Tastenbelegung; Auftragsliste: „Wiederholen“ für abgeschlossene,
+  wiederholbare Aufträge (der Auftraggeber zeigt zuerst offene Kampagnenaufträge).
+- **Welt-Pipeline (OSM):** Probebau mit Teildaten (Linien + Gebäude) erfolgreich: 84 237 Gebäude, 2 049 Sektoren, 7,3 MB;
+  ungültige OSM-Polygone werden bereinigt, Validierung nutzt Kantenbreiten aus den Flags → 0 Gebäude in Fahrspuren.
+  Overpass setzt Verbindungen häufig zurück (Proxy-Status „tunnel closed“); Abruf läuft weiter (111/240 Kacheln).
+- **Release-Weg:** Kein Werkzeug zum direkten Anlegen von GitHub-Releases verfügbar → Workflow
+  `.github/workflows/windows-release.yml` (Godot-Setup mit SHA512-Prüfung, Unit-Tests, Windows-Export, Paket mit Installer
+  und Prüfsummen, `gh release create`); Auslöser manuell oder Commit mit `[release]`. `scripts/linux/package_release.sh`,
+  `tools/release/installer_template.bat`, `release/RELEASE_NOTES.md`.
+- **Doku v0.2:** README, ANLEITUNG, CONTROLS, KNOWN_ISSUES, ASSET_LICENSES (inkl. ODbL-Hinweis), docs/ARCHITEKTUR,
+  docs/KARTE_KARLSRUHE, INHALTSVERZEICHNIS; Hauptmenü zeigt die Quelle der Kartendaten. Version 0.2.0.
+- **Prüfung:** Gesamtsuite **137 Tests, 0 fehlgeschlagen** (587,7 s, vor den letzten kleinen Änderungen); danach Unit 52/52,
+  Speichern/Laden 6/6, Verkehr inkl. Umfahren, Fächer-Runde 3/3, Ereignisse 5/5, ÖPNV 4/4 grün; Hauptmenü per Screenshot geprüft.
+- **Build-Fehler gefunden und behoben (release-kritisch):** Der Export-Filter enthielt nur `data/*.json`; die gzip-Weltdaten
+  (`world.json.gz`, Sektoren, LOD) fehlten im PCK → das exportierte Spiel startete ohne Welt. Filter um `data/*.gz` ergänzt.
+  `build_windows.sh` prüft jetzt den PCK-Inhalt und startet das Paket headless mit `--boot-check` (Exit-Code ≠ 0 bricht den
+  Build ab). Ergebnis: `[boot] OK: Knoten 14981, Aufträge 15, ÖPNV-Linien 6, Quelle authored`; Screenshot-Tour aus der PCK geprüft.
+- **W3/W4 Ergänzungen:** Staatstheater als Landmarke platziert (Modell existierte, war nicht gesetzt); Fahrzeugmodelle v2
+  (Türfugen, Griffe, Chromleiste, Schweller, Felgen mit fünf Speichen und Nabe); Tour-Station „fahrzeuge_modelle“.
+- **OSM-Vorbereitung:** Landmarken werden bei OSM-Quelle an realen Objekten verankert (Name/Tags, Suchradius, Cluster,
+  Ausrichtung aus dem Grundriss; Reserve-/Freihaltezonen wandern mit). Probe mit Teildaten: Pyramide 58 m, Rathaus 72 m,
+  Stadtkirche 111 m, Hauptbahnhof 137 m (Drehung 21,2°), Gewächshäuser 145 m, Staatstheater 1 m verschoben; Stadion, Zoo,
+  Turmberg, Hafenkräne warten auf Flächen-/Punktdaten. Parkplatz-Autos halten ≥ 4,5 m Abstand zu Fahrbahnachsen.
+  POIs rasten auf die echte Straße ein (bis 2,7 km Versatz bei grob geschätzten Näherungsorten).
+
+## 2026-09-29 – W2 abgeschlossen: Welt aus OpenStreetMap (vollständiger Abruf)
+
+- **Restore-Punkt:** Commit `cab652f` (Welt aus der 1:1-Näherung). Rückweg: `git checkout cab652f -- data/world/ka` bzw.
+  `build_world.py --source authored`. Der saubere Näherungs-Build bleibt reproduzierbar (Generator unverändert nutzbar).
+- **Datenabruf:** Overpass in 240 Kacheln (Linien, Flächen, Gebäude, Punkte) + ÖPNV-Relationen getrennt nach Bahn/Bus
+  (`fetch_osm.py --routes-only`), Rohdaten ≈ 460 MB im Cache außerhalb des Repos. Geofabrik blieb gesperrt; die alte
+  Wiederholschleife (`fetch_geofabrik.sh`, ≈ 1 300 erfolglose Versuche) wurde beendet.
+- **Aufbereitung für Befahrbarkeit** (Regeln in `docs/KARTE_KARLSRUHE.md`): Mindestbreiten je Straßenklasse, Gebäudeschnitt
+  mit runden Kappen + morphologischer Öffnung, 278 Sackgassen-Stummel an Gebäuden entfernt, Landmarken an OSM-Objekten
+  verankert, Nebenstraßen unter Landmarken entfernt, POI-Regel für Fußgängerzonen, Objekte/Ampelmasten neben der Fahrbahn.
+- **Leistung Generator:** Riesige Außenflächen (bis 92 km²) machten die Blockbildung langsam (26 min) → Flächen > 1 km² werden
+  gekachelt; GEOS-Topologiefehler abgefangen (buffer(0), sichere Schnittmenge). Vollbau jetzt ≈ 6,5 min.
+- **Ergebnis:** 42 236 Knoten, 45 609 Kanten, 94 052 Gebäude im Ausschnitt (96 522 aufbereitet), 2 988 Sektoren, ≈ 11,5 MB Weltdaten (Budget ≤ 40 MB);
+  Validierung 0 Gebäude/0 Autos/0 Objekte auf Fahrbahnen.
+- **Spiel-/Testanpassungen:** Rennstart/Polizei-Spawn wählen Straßen mit `edges_near_where` (keine Fußwege), Verkehr
+  umfährt auch bei OSM-Kreuzungsdichte korrekt, Ampelmasten mit Abstand, Stadtbahn-Bremskurve; Tests auf echte Geometrie
+  umgestellt (Fächerstraßen per Straßennamen, Zusammenhang > 97 %, Verkehrsketten nur auf Hauptstraßen ≥ 8 m); die
+  Fächer-Runde ist real 13,9 km lang → Zeitlimit 18 min.
+- **Doku:** README, KNOWN_ISSUES, ASSET_LICENSES (ODbL gilt jetzt für `data/world/ka/`), ARCHITEKTUR, KARTE_KARLSRUHE.
+- **W3 Landmarken an der realen Stadt (Befund aus den OSM-Rohdaten):** Der Schlossturm liegt real 54 m nördlich des bisherigen
+  Ursprungs, die Hauptachse Schlossturm → Pyramide ist um −4,1° gegen Nord gedreht, Rathaus (≈ 64 × 77 m, Südwestecke schräg
+  an der Hebelstraße) und Stadtkirche (≈ 61 × 31 m, Langhaus Ost-West) wichen deutlich von den Modellen ab. Änderungen:
+  Schloss am Schlossturm verankert, Brunnen am Europaplatz, Verfassungssäule am Rondellplatz; achsgebundene Modelle werden
+  als Knoten gedreht (`LandmarkBuilder.MODEL_ROT`); Rathaus/Stadtkirche mit OSM-Maßen. `validate_world.py` prüft jetzt die
+  Grundrisse **aller** Landmarken gegen Fahrbahnen (vorher nur Platzhalter) – fand 3 Überschneidungen (Schlossflügel/
+  Schlossbezirk, Rathaus/Hebelstraße, Kirche/Pfarrer-Löw-Straße), nach den Korrekturen 0. Hafenkräne: keine Kran-Objekte
+  in den abgerufenen Daten → Näherung bleibt.
+- **Screenshot-Tour:** Standpunkte und Fahrwege aus Landmarken und Straßennamen statt fester Koordinaten der alten Näherung
+  (feste Fahrlinien hätten in der OSM-Welt durch Gebäude geführt).
+- **Test m01:** scheiterte im Gesamtlauf am Fußweg Ladezone (Adlerstraße) → Kanzleitür. `walk_to` prüft jetzt die Sichtlinie
+  und geht sonst über das Wegenetz (wie ein Spieler um Häuser herum). Ursache der ersten Korrektur: `find_path` kennt den
+  Modus „all“ nicht (fällt auf das Autonetz zurück) → vollständiges Netz über „police“.
+- **Gesamtlauf auf der OSM-Welt (Stand Commit `7b4a15d`): 138 Tests, 0 fehlgeschlagen (1 746 s).**
+- **Screenshot-Tour (46 Bilder, visuell geprüft) → Befunde und Korrekturen:**
+  - Zoo: Die freie Gehege-Anordnung lag teils im Stadtgartensee (Giraffen 813 m² Wasser), in Zoogebäuden und außerhalb der
+    Zoofläche (Flamingos). Neu `zoo_fit.py`: Gehege auf freie Stellen der realen Zoofläche (ohne Wasser/Gebäude/Wege),
+    9/9 in voller Größe, max. 83 m versetzt; Anordnung steht im Landmarkeneintrag, Spiel und Tiere übernehmen sie
+    (`LandmarksExtra.use_zoo_layout_from`).
+  - Objekte in Landmarken: Bäume standen in Brunnen, Pyramide, Rathaus, Gewächshäusern und unter den Bahnsteighallen → werden im
+    Generator entfernt; Validierung prüft „Objekte in Landmarken“. Grundrisse in der Validierung an die echten Modelle angepasst
+    (Gewächshäuser 3 Hallen, 4 Hafenkräne, Hbf mit Flügeln und Hallenstützen).
+  - Turmberg: Terrasse (28 × 24 m, 3 m hoch) ragte in die Reichardtstraße → 12 × 12 m.
+  - Tour-Standpunkte: Marktplatz real nur ≈ 38 m breit → Rathaus/Stadtkirche/Europaplatz/Zoo/Gewächshäuser mit erhöhter Kamera;
+    Ortsbilder bei Tageslicht.
+- **Speicherbudget:** gzip ohne Zeitstempel (`mtime=0`) und `install_world.py` (übernimmt nur inhaltlich geänderte Dateien):
+  ein Zoo-Neubau änderte so 1 statt 3 194 Dateien in der Git-Historie.
+
+## 2026-09-29 – W12-Abschluss: Endstand, Tests, Build, Release
+
+- **Restore-Punkt:** Commit `43686ab` (Zoo/Landmarken), davor `7b4a15d` (erste OSM-Welt).
+- **Letzte Korrekturen:** Laufzeit-Vegetation (Parks/Zoo/Wald) spart Gebäude, Gewässer und Landmarken-Grundrisse aus
+  (Grundrisse stehen jetzt als `foot` im Landmarkeneintrag); Freiräumung von Nebenstraßen nutzt dieselben Grundrisse wie die
+  Validierung (Reichardtstraße am Turmberg). Doku-Zahlen an die exportierten Daten angeglichen (94 052 Gebäude im Ausschnitt).
+- **Prüfung:** Gesamtlauf 138/138 grün (2 072 s, Exit-Code 0); Nachtest nach der Vegetationsänderung 82/82 (Unit + Stadtwelt,
+  Tiere, Spieler, Verkehr, ÖPNV, Speichern/Laden); Validierung 5 × 0; Abschluss-Tour 46 Bilder + Hauptmenü geprüft,
+  29 Bilder in `artifacts/screenshots/v0.2/` (2,5 MB); lokaler Windows-Export mit Starttest
+  `[boot] OK: Knoten 42238, Aufträge 15, ÖPNV-Linien 177, Quelle osm`, Paket 56,5 MB.
+- **Release:** Commit mit `[release]` löst `.github/workflows/windows-release.yml` aus (Tag `v0.2.0`, Vorabversion).
+- **Budget:** Git-Objekte ≈ 128 MB (Grenze 300 MB), Weltdaten 11,5 MB (≤ 40 MB), größte Datei 2,0 MB (≤ 5 MB).
+- **Release verifiziert:** Workflow-Lauf 36547517758 grün (Unit 52/52, Export, Starttest mit OSM-Welt), Release `v0.2.0`
+  (Vorabversion) mit ZIP 56,5 MB (SHA256 `20328dce…`), Installer und Prüfsummen; per GitHub-API gegengeprüft.
+- **`release/` bereinigt (Budget-Addendum):** v0.1-ZIP, Installer und Prüfsumme aus dem Arbeitsstand entfernt, `release/README.md`
+  verweist auf die Releases. Rückweg: `git checkout b648134 -- release/` (Dateien bleiben in der Historie).

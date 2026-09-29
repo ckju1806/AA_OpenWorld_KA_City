@@ -1,12 +1,13 @@
 extends Node
 ## Minimaler Testrunner (ohne externe Abhängigkeiten).
-## Aufruf: godot --headless --path . --fixed-fps 60 res://tests/test_runner.tscn -- [--filter=unit|integration|<name>]
+## Aufruf: godot --headless --path . --fixed-fps 60 res://tests/test_runner.tscn -- [--filter=unit|integration|<name>[::test_praefix]]
 ## Exit-Code: 0 = alle Tests bestanden, 1 = Fehler.
 
 const DIRS: Array[String] = ["res://tests/unit", "res://tests/integration"]
 
 var _total: int = 0
 var _failed: int = 0
+var _method_filter: String = ""
 var _lines: Array[String] = []
 var _errors: TestErrorCounter = TestErrorCounter.new()
 
@@ -23,6 +24,10 @@ func _run() -> void:
 	for a: String in OS.get_cmdline_user_args():
 		if a.begins_with("--filter="):
 			filter = a.substr(9)
+	# „datei::methode“ filtert zusätzlich auf einzelne Testmethoden (Präfix-Vergleich)
+	if filter.contains("::"):
+		_method_filter = filter.get_slice("::", 1)
+		filter = filter.get_slice("::", 0)
 	var t0: int = Time.get_ticks_msec()
 	_log("=== Fächer-City Tests (Godot %s) ===" % Engine.get_version_info().string)
 	for dir_path: String in DIRS:
@@ -61,7 +66,8 @@ func _run_file(path: String) -> void:
 	for m: Dictionary in script.get_script_method_list():
 		var mname: String = str(m.name)
 		if mname.begins_with("test_") and not methods.has(mname):
-			methods.append(mname)
+			if _method_filter == "" or mname.begins_with(_method_filter):
+				methods.append(mname)
 	for mname: String in methods:
 		var inst: TestCase = script.new() as TestCase
 		if inst == null:

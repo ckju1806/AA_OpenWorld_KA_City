@@ -26,6 +26,13 @@ var _pos: Vector3 = Vector3.ZERO
 var _base_fov: float = 72.0
 var _excluded: RID = RID()
 var _snap_next: bool = true
+var _shake: float = 0.0
+
+
+## Kurzes Kamerawackeln (z. B. bei Aufprall), abschaltbar in den Optionen.
+func add_shake(amount: float) -> void:
+	if Settings.camera_shake:
+		_shake = minf(1.0, _shake + amount)
 
 
 func _ready() -> void:
@@ -61,12 +68,15 @@ func follow_player(p: Node3D) -> void:
 	_target_distance = FOOT_DISTANCE
 
 
-func follow_vehicle(v: Node3D) -> void:
+func follow_vehicle(v: Node3D, params: Vector2 = Vector2.ZERO) -> void:
 	target = v
 	vehicle_mode = true
 	var dist: float = 7.0
 	var h: float = 2.1
-	if v.has_method("get_camera_params"):
+	if params != Vector2.ZERO:
+		dist = params.x
+		h = params.y
+	elif v.has_method("get_camera_params"):
 		var cp: Vector2 = v.call("get_camera_params")
 		dist = cp.x
 		h = cp.y
@@ -119,17 +129,27 @@ func _process(delta: float) -> void:
 	if vehicle_mode and target.has_method("get_forward_speed"):
 		speed = float(target.call("get_forward_speed"))
 		# Automatisch hinter das Fahrzeug schwenken, wenn die Maus ruht
-		if _mouse_idle > AUTO_ALIGN_DELAY and speed > 3.0:
+		if Settings.camera_autocenter and _mouse_idle > AUTO_ALIGN_DELAY and speed > 3.0:
 			var fwd: Vector3 = -target.global_transform.basis.z
 			var heading: float = atan2(-fwd.x, -fwd.z)
 			yaw = lerp_angle(yaw, heading, clampf(delta * 2.2, 0.0, 1.0))
 			pitch = lerpf(pitch, -0.2, clampf(delta * 1.5, 0.0, 1.0))
 
-	global_position = _pos + _offset
-	rotation = Vector3(0, yaw, 0)
+	var jitter: Vector3 = Vector3.ZERO
+	if _shake > 0.0:
+		_shake = maxf(0.0, _shake - delta * 2.5)
+		var t: float = Time.get_ticks_msec() * 0.05
+		jitter = Vector3(sin(t * 1.7), sin(t * 2.3), cos(t * 1.9)) * _shake * 0.18
+	global_position = _pos + _offset + jitter
+	var view_yaw: float = yaw
+	if vehicle_mode and Input.is_action_pressed("look_behind"):
+		# Rückblick (Taste C): solange gedrückt, Blick entgegen der Fahrtrichtung
+		var fwd_b: Vector3 = -target.global_transform.basis.z
+		view_yaw = atan2(-fwd_b.x, -fwd_b.z) + PI
+	rotation = Vector3(0, view_yaw, 0)
 	_pitch_node.rotation = Vector3(pitch, 0, 0)
 	_arm.spring_length = _distance + clampf(speed * 0.04, 0.0, 1.6)
-	camera.fov = lerpf(camera.fov, _base_fov + clampf(speed * 0.35, 0.0, 12.0), clampf(delta * 3.0, 0.0, 1.0))
+	camera.fov = lerpf(camera.fov, Settings.fov + clampf(speed * 0.35, 0.0, 12.0), clampf(delta * 3.0, 0.0, 1.0))
 
 
 func get_camera() -> Camera3D:

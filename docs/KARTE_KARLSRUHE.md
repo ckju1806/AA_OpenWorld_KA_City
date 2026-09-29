@@ -1,49 +1,65 @@
-# Kartengrundlage „Fächer-City“ – künstlerische Interpretation von Karlsruhe
+# Kartengrundlage Karlsruhe (v0.2) – Maßstab 1:1
 
-> **Hinweis:** Die Spielwelt ist eine **verdichtete, künstlerische Interpretation** der Karlsruher Innenstadt und
-> **kein digitaler Zwilling**. Maßstab, Straßenverläufe, Gebäude und Nebenstraßen sind vereinfacht bzw. erfunden.
-> Es wurden **keine** Geodaten, Kartenkacheln, Luftbilder oder fremden 3D-Stadtmodelle verwendet.
-> Der Spielstart benötigt keinen Kartendienst.
+> **Hinweis:** Die Spielwelt bildet Karlsruhe im Maßstab 1:1 über den Ausschnitt des Referenz-Screenshots ab
+> (≈ 17,5 × 10,4 km: Neureut/Knielingen bis Rheinstetten/Rüppurr, Rheinhafen bis Durlach/Turmberg). Sie ist ein **Spiel**,
+> kein digitaler Zwilling: Gebäude sind prozedural, Innenräume fehlen, alle Figuren, Firmen und Gruppen sind erfunden.
+> Der Spielstart benötigt keinen Kartendienst; alle Kartendaten liegen kompakt im Projekt (`data/world/ka/`).
 
-## 1. Recherchierte Lagebeziehungen (Stand 2026-09-23)
+## 1. Zwei Datenquellen, ein Format
 
-Direkter Zugriff auf Wikipedia/OpenStreetMap war im Entwicklungscontainer durch die Netzwerkrichtlinie gesperrt.
-Die folgenden Fakten wurden über eine Websuche (Suchmaschinen-Zusammenfassungen) ermittelt und sind **nicht**
-gegen Primärkarten nachgemessen worden:
+| Quelle | Datei | Inhalt | Genauigkeit | Status |
+|---|---|---|---|---|
+| **OpenStreetMap** (im Build verwendet) | `tools/worldgen/fetch_osm.py` → `~/osm_cache` → `source_osm.py` | echte Straßen (Breite, Einbahn, Brücken), ≈ 94 000 Gebäudegrundrisse im Ausschnitt mit Höhen/Dachform, 17 500 Flächen, Gewässer, Gleise, 558 Ampelkreuzungen, ≈ 30 000 Einzelbäume, 573 Haltestellen, 177 ÖPNV-Linienverläufe (63 Bahn, 87 Bus, Rest Zug) mit U-Strab-Tunnel | Geodaten (ODbL), Stand des Abrufs 2026-09-29 | **implementiert, getestet** |
+| Handgezeichnete 1:1-Näherung (Rückfall) | `tools/worldgen/ka_authored.py` | Hauptachsen, Ringe, Fächer, Viertel mit typischem Raster, Landmarken, POIs, ÖPNV-Näherung | typ. ± 50–150 m | implementiert, getestet (nicht mehr im Build) |
 
-| Fakt | Quelle(n) | Umsetzung |
-|---|---|---|
-| Das Schloss ist Zentrum des „Karlsruher Fächers“; 32 Straßen/Alleen führen strahlenförmig zum Schlossturm, Winkelabstand 11,25°; neun davon führen in die Stadt, die übrigen durch Schlosspark/Hardtwald | [lokalmatador.de – Schloss Karlsruhe](https://www.lokalmatador.de/ausflugsziel/schloss-karlsruhe-zentrum-des-karlsruher-faechers-263/), [Stadtwiki Karlsruher Fächer](https://ka.stadtwiki.net/Karlsruher_F%C3%A4cher) | 9 Strahlen −45° … +45° in 11,25°-Schritten vom Turm (Ursprung) |
-| Die neun Fächerstraßen von West nach Ost: Waldstraße, Herrenstraße, Ritterstraße, Lammstraße, Karl-Friedrich-Straße, Kreuzstraße, Adlerstraße, Kronenstraße, Waldhornstraße | [Stadtlexikon – Waldstraße](https://stadtlexikon.karlsruhe.de/index.php/De:Lexikon:top-2864), [Stadtlexikon – Waldhornstraße](https://stadtlexikon.karlsruhe.de/index.php/De:Lexikon:top-2854), [Wikipedia – Kaiserstraße](https://de.wikipedia.org/wiki/Kaiserstra%C3%9Fe_(Karlsruhe)) | Namen und Reihenfolge übernommen |
-| Der Zirkel verläuft als Halbkreis um den Schlossturm | [Wikipedia – Zirkel](https://de.wikipedia.org/wiki/Zirkel_(Karlsruhe)), [Stadtlexikon – Zirkel](https://stadtlexikon.karlsruhe.de/index.php/De:Lexikon:top-3043) | Halbkreis r = 200 m |
-| Karl-Friedrich-Straße = zentrale Nord-Süd-Achse: Zirkel → Marktplatz → Rondellplatz → Ettlinger Tor/Kriegsstraße | [Wikipedia – Karl-Friedrich-Straße](https://de.wikipedia.org/wiki/Karl-Friedrich-Stra%C3%9Fe_(Karlsruhe)), [Stadtlexikon – Rondellplatz](https://stadtlexikon.karlsruhe.de/index.php/De:Lexikon:top-3109) | Achse x = 0 von z = 200 bis 640 |
-| Marktplatz: Pyramide (Grabmal des Stadtgründers, 1823) zwischen Rathaus (Westseite, Portikus) und Evangelischer Stadtkirche (Ostseite, korinthischer Portikus); Kaiserstraße an der Nordseite | [Wikipedia – Marktplatz](https://de.wikipedia.org/wiki/Marktplatz_(Karlsruhe)), [Stadtlexikon – Pyramide](https://stadtlexikon.karlsruhe.de/index.php/De:Lexikon:top-2219) | Pyramide (0, 360), Rathaus West, Kirche Ost |
-| Kaiserstraße: ca. 2 km, gerade Ost-West; Durlacher Tor → Kronenplatz → Marktplatz → Europaplatz; Fußgängerzone Europaplatz–Kronenplatz; trifft am Marktplatz rechtwinklig auf die Karl-Friedrich-Straße | [Wikipedia – Kaiserstraße](https://de.wikipedia.org/wiki/Kaiserstra%C3%9Fe_(Karlsruhe)), [Wikipedia – Europaplatz](https://de.wikipedia.org/wiki/Europaplatz_(Karlsruhe)) | z = 330, Fußgängerzone x −470 … 220 |
+Beide Quellen liefern dasselbe Zwischenformat; `tools/worldgen/build_world.py` erzeugt daraus Straßengraph, 256-m-Sektoren,
+LOD-Kacheln, Übersichtskarte und ÖPNV-Daten (OSM: ≈ 11,5 MB, ≈ 6 min). Welche Quelle im Build steckt, zeigen `world.json.gz`
+(`source`, `note`), das Startprotokoll („Quelle: osm“) und das Hauptmenü (Namensnennung).
 
-## 2. Spielgeometrie (Koordinaten in m, Ursprung = Schlossturm, Norden = −Z, Osten = +X)
+**Lizenz:** Kartendaten © OpenStreetMap-Mitwirkende, Open Database License 1.0. Die abgeleiteten Weltdaten in
+`data/world/ka/` stehen unter ODbL; der Programmcode bleibt MIT. Rohdaten (≈ 460 MB Overpass-Kacheln) werden nicht versioniert.
 
-- Verdichtungsfaktor gegenüber der Realität ca. **0,55**; Kernfläche ca. 1,1 km × 1,2 km (Nordhälfte Park).
-- **Schloss:** Hauptbau mit Mittelrisalit, Säulenportikus, Mansarddach, zwei abgewinkelten Flügeln (±55°), achteckigem Turm mit Kuppel und Laterne.
-- **Schlossplatz:** Kiesvorplatz, Kieswege entlang der Fächerstrahlen, Baumreihen; nördlich Schlossgarten mit See und lockerem Baumbestand.
-- **Fächer:** 9 Strahlen vom Zirkel (r = 200) bis zur Kaiserstraße (z = 330). Südlich der Kaiserstraße gehen ausgewählte Strahlen in Nord-Süd-Straßen über (Interpretation).
-- **Karl-Friedrich-Straße** nördlich des Marktplatzes als Fußgänger-Boulevard (Sichtachse zum Schloss, frei von Möblierung).
-- **Plätze:** Marktplatz, Europaplatz, Kronenplatz, Rondellplatz (mit Säule), Durlacher Tor (Torbogen-Skulptur), Ettlinger Tor (Pavillon).
-- **Äußerer Rundkurs** (spielerisch verdichtet): Adenauerring (Bogen um den Schlossgarten), Westring und Ostring (fiktiv), Kriegsstraße.
-- **Fiktive Nebenstraßen:** Schlossallee West/Ost, Hofgartenstraße, Stallhofstraße, Kutschergasse, Kanzleistraße, Rondellstraße.
-- **Straßenbahn:** nur dekorative Gleise auf der Kriegsstraße, eine stilisierte Haltestelle und U-Strab-Zugänge als Kulisse. **Keine** Behauptung einer realen, aktuellen Linienführung.
-- **Weitere Stadtteile** (Durlach, Turmberg, Rheinhafen, ZKM-Umfeld) sind nicht enthalten und nicht neben das Schloss gesetzt.
+### Aufbereitung der OSM-Daten für ein befahrbares Spiel (Regeln in `source_osm.py`, `blocks.py`, `export.py`)
+- **Mindestbreiten** je Straßenklasse (OSM-`width` beschreibt teils nur einen Fahrstreifen), z. B. zweispurige Tertiärstraße
+  ≥ 7 m, Wohnstraße ≥ 5,5 m, Einbahnstraße ≥ 4 m.
+- **Gebäude** werden an Fahrbahnen (halbe Breite + 0,2 m, runde Kappen) zugeschnitten und morphologisch geöffnet (keine Nadeln).
+- **Sackgassen-Stummel**, die an Gebäuden enden (Ladehof-/Garageneinfahrten), werden entfernt (278); Straßentunnel ausgelassen.
+- **Landmarken** werden an realen OSM-Objekten verankert (Name/Tags, Ausrichtung aus dem Grundriss); Nebenstraßen unter
+  Landmarken-Grundrissen entfallen. Das Schloss sitzt am realen Schlossturm (Mittelpunkt des Fächers); Schloss, Pyramide,
+  Rathaus und Stadtkirche folgen der realen Stadtachse (Schlossturm → Pyramide, ≈ 4° gegen Nord gedreht). Rathaus
+  (≈ 62 × 76 m) und Stadtkirche (≈ 61 × 31 m, Portikus nach Westen) haben die Maße ihrer OSM-Grundrisse.
+- **Auftragsorte (POIs)** rasten auf die benannte Straße ein; Fahrzeugziele an Fußgängerzonen auf die Fahrbahn daneben
+  (z. B. Ladezone Kanzlei → Adlerstraße).
+- **Objekte mit Kollision** (Laternen, Bäume, Poller, Bänke) und parkende Autos nie auf Fahrbahnen; Ampelmasten ≥ 1,2 m neben
+  der Fahrbahnkante.
+- **Zoo:** Die Gehege (9, eigene Anordnung) werden auf freie Stellen der realen Zoofläche gesetzt – ohne Stadtgartensee,
+  Zoogebäude und Wege (`zoo_fit.py`, max. Versatz ≈ 83 m, Ergebnis im Landmarkeneintrag); Spiel und Tiere übernehmen es.
+- **Objekte in Landmarken:** Bäume/Laternen/Bänke innerhalb von Landmarken-Grundrissen werden entfernt (Zoo-Gehege ausgenommen).
+- **Validierung** (`validate_world.py`): Gebäude (Fläche und Eindringtiefe), parkende Autos, Objekte und die Grundrisse aller
+  Landmarken (Detail- und Platzhaltermodelle) gegen alle Fahrbahnen, keine Objekte in Landmarken – der Build bricht bei
+  Verstößen ab. Installation mit `install_world.py` (nur inhaltlich geänderte Dateien; gzip ohne Zeitstempel).
 
-## 3. Bewusste Abweichungen
+## 2. Koordinaten
+Ursprung ≈ Schlossturm (49,013480 N, 8,404440 E; der reale Turm liegt laut OSM 54 m nördlich – dort ist die Schloss-Landmarke verankert), x = Osten, z = Süden (Norden = −Z), 1 Einheit = 1 m, lokale
+äquirektanguläre Projektion. Kartenausschnitt (x, z): −9 500 … 8 000 × −4 100 … 6 300.
 
+## 3. Prioritätsorte (einzeln modelliert, Position real)
+Schloss mit Schlossplatz und Schlossgarten, Zirkel und Fächerstraßen, Marktplatz (Pyramide, Rathaus, Stadtkirche),
+Kaiserstraße, Europaplatz, Kronenplatz, Durlacher Tor, Ettlinger Tor, Staatstheater-Umfeld, **Hauptbahnhof** (Empfangsgebäude,
+Bahnsteighallen), **Zoo** (9 Gehege mit Tieren, Stadtgartensee), Botanischer Garten (Gewächshäuser), Stadion am Wildpark,
+Rheinhafen (Becken, Kräne), Durlach mit Turmberg, U-Strab (Tunnel, U-Stationen, Rampen).
+
+## 4. ÖPNV-Daten
+Aus OSM: `route=tram|light_rail|bus|train`-Relationen (je Richtung eine Linie), Haltepositionen, Tunnelabschnitte aus
+`tunnel=yes`-Gleisen (U-Strab Kaiserstraße und Südabzweig mit unterirdischen Haltestellen). Linien mit passender Gegenrichtung
+pendeln, andere starten nach der Endhaltestelle neu. Liniennummern/-farben dienen der Orientierung; Takt und Fahrzeiten sind
+spielerisch, **kein** realer Fahrplan. Rückfall ohne OSM: Linie 1, Linie 2, Bus 62 (Näherung).
+
+## 5. Bewusste Abweichungen
 | Abweichung | Grund |
 |---|---|
-| Einige Fächerstraßen kreuzen die Fußgängerzone für Autos | Befahrbares, zusammenhängendes Straßennetz ohne Sackgassen |
-| Lamm- und Kreuzstraße als schmale Anliegerstraßen ohne KI-Verkehr | Vermeidung von Sackgassen für die Verkehrs-KI |
-| Rundkurs-Straßen „Westring/Ostring“ fiktiv | Spielerischer Rundkurs für Verfolgungen |
-| Gebäude sind generische Blockrandbebauung | Kein Anspruch auf reale Gebäude außer den Landmarken |
-| Alle Firmen, Personen und Geschäfte sind erfunden | Keine Darstellung realer Unternehmen |
-
-## 4. Datenquelle im Projekt
-
-`data/world/karlsruhe_layout.json` ist die **einzige** Kartenquelle. Daraus erzeugt `CityGraphBuilder` den Straßengraphen,
-aus dem Weltaufbau, Verkehr, Polizei, Missionsziele und Karte abgeleitet werden.
+| Mindestbreiten, entfernte Stummel, zugeschnittene Gebäude | Befahrbarkeit und Kollisionsfreiheit im Spiel |
+| Straßentunnel (Kriegsstraße) ausgelassen | Spielbarkeit/Streaming; Oberfläche bleibt befahrbar |
+| Rampen der U-Strab als überdachte Bauwerke | Straßenoberfläche wird nicht ausgeschnitten |
+| Gebäude generisch (Fassaden-Shader nach Viertel/Epoche) | nur Landmarken sind individuell modelliert |
+| Alle Firmen, Personen, Gruppen erfunden | keine Darstellung realer Unternehmen/Personen; reale Institutionen nur als Orte, nie negativ |

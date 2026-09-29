@@ -1,0 +1,84 @@
+{
+  "id": "m07_probefahrt",
+  "title": "Probefahrt mit Folgen",
+  "order": 7,
+  "reward": 500,
+  "requires": [
+    "m06_ersatzteile"
+  ],
+  "chapter": "Autohaus Kessler",
+  "summary": "Ein Kunde ist mit dem Vorführwagen einfach losgefahren. Unauffällig folgen!",
+  "giver": {
+    "poi": "toni",
+    "name": "Toni „Turbo“ Kessler",
+    "role": "Autohändler",
+    "look": {
+      "skin": "#c99a78",
+      "shirt": "#f2f2f2",
+      "jacket": "#b3261e",
+      "pants": "#26262b",
+      "shoes": "#f0f0f0",
+      "hair": "#1e1a18",
+      "hair_style": 0
+    },
+    "prompt": "Mit Toni sprechen (Probefahrt)",
+    "done_line": "Der Vorführwagen isch wieder da. Nie wieder Probefahrt ohne Ausweis!"
+  },
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Toni",
+          "Da! Der Kerl ist mit meinem Vorführwagen einfach losgefahren!"
+        ],
+        [
+          "Toni",
+          "Nimm den Fächer GT und folg ihm – aber nicht zu dicht, er soll dich nicht bemerken. Ich will wissen, wo er hinfährt."
+        ]
+      ]
+    },
+    {
+      "type": "spawn_npc_vehicle",
+      "tag": "kunde",
+      "spec": "kompakt",
+      "poi": "kunde_wagen",
+      "color": "#e8e8e8"
+    },
+    {
+      "type": "spawn_vehicle",
+      "tag": "gt",
+      "spec": "sport",
+      "poi": "autohaus_parken",
+      "color": "#c81e1e",
+      "livery": "Kessler Automobile"
+    },
+    {
+      "type": "enter_vehicle",
+      "tag": "gt",
+      "text": "Steig in den Fächer GT."
+    },
+    {
+      "type": "follow",
+      "tag": "kunde",
+      "dest": "kunde_ziel",
+      "speed": 10.5,
+      "min": 15,
+      "max": 140,
+      "text": "Folge dem Vorführwagen unauffällig (15–140 m Abstand)."
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Du (Telefon)",
+          "Toni? Er parkt an der Pfinztalstraße in Durlach."
+        ],
+        [
+          "Toni (Telefon)",
+          "Perfekt. Die Polizei holt den Wagen ab. Danke dir!"
+        ]
+      ]
+    }
+  ]
+}

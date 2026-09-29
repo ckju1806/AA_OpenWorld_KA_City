@@ -5,6 +5,7 @@ extends Node
 
 var game: Node = null
 var out_dir: String = "user://screenshots"
+var only: PackedStringArray = PackedStringArray()   ## --tour-only=a,b: nur Stationen, deren Name einen der Teile enthält
 var _stations: Array[Dictionary] = []
 
 
@@ -13,12 +14,21 @@ func _ready() -> void:
 	for a: String in OS.get_cmdline_user_args():
 		if a.begins_with("--shot-dir="):
 			out_dir = a.substr(11)
+		elif a.begins_with("--tour-only="):
+			only = a.substr(12).split(",", false)
 	DirAccess.make_dir_recursive_absolute(out_dir if out_dir.is_absolute_path() else ProjectSettings.globalize_path(out_dir))
 	_run.call_deferred()
 
 
 ## station: { name, setup: Callable, frames: int }
 func add_station(station_name: String, setup: Callable, frames: int = 45) -> void:
+	if not only.is_empty():
+		var keep: bool = false
+		for part: String in only:
+			if station_name.contains(part):
+				keep = true
+		if not keep:
+			return
 	_stations.append({"name": station_name, "setup": setup, "frames": frames})
 
 
@@ -37,8 +47,9 @@ func _run() -> void:
 			await get_tree().process_frame
 		await RenderingServer.frame_post_draw
 		var img: Image = get_viewport().get_texture().get_image()
-		var path: String = "%s/%02d_%s.png" % [out_dir, idx, st.name]
-		var err: Error = img.save_png(path)
+		# JPEG statt PNG: Speicherbudget des Repositorys (Screenshots ≤ 200 KB)
+		var path: String = "%s/%02d_%s.jpg" % [out_dir, idx, st.name]
+		var err: Error = img.save_jpg(path, 0.8)
 		print("[screenshot] %s -> %s" % [path, error_string(err)])
 	print("[screenshot] Tour beendet (%d Bilder)." % _stations.size())
 	get_tree().quit(0)

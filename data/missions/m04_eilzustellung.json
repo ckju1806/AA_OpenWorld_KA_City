@@ -1,0 +1,78 @@
+{
+  "id": "m04_eilzustellung",
+  "title": "Eilzustellung",
+  "order": 4,
+  "reward": 350,
+  "requires": [
+    "m01_erste_schicht"
+  ],
+  "chapter": "Fächerblitz-Kurier",
+  "summary": "Drei eilige Sendungen quer durch die Stadt – unter Zeitdruck.",
+  "giver": {
+    "poi": "hanne",
+    "name": "Hanne Brettschneider",
+    "role": "Chefin Fächerblitz-Kurier",
+    "look": {
+      "skin": "#e0b39a",
+      "shirt": "#f08a24",
+      "jacket": "#2a3b4c",
+      "pants": "#1d2430",
+      "shoes": "#2b2b2b",
+      "hair": "#8a4b2a",
+      "hair_style": 1
+    },
+    "prompt": "Mit Hanne sprechen (Eilzustellung)",
+    "done_line": "Heut sin alle Eilsachen raus. Morgen wieder!"
+  },
+  "fail_vehicle": "van",
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Hanne",
+          "Du schon wieder – gut! Drei Eilsendungen, alle müssen in einer Runde raus."
+        ],
+        [
+          "Hanne",
+          "Karlstraße, dann das Institut am Adenauerring, zuletzt die Praxis in der Rüppurrer Straße. Die Uhr läuft!"
+        ]
+      ]
+    },
+    {
+      "type": "spawn_vehicle",
+      "tag": "van",
+      "spec": "transporter",
+      "poi": "depot_van",
+      "color": "#f2f1ec",
+      "livery": "Fächerblitz Kurier"
+    },
+    {
+      "type": "enter_vehicle",
+      "tag": "van",
+      "text": "Steig in den Lieferwagen."
+    },
+    {
+      "type": "multi_drop",
+      "drops": [
+        "drop_karlstrasse",
+        "drop_adenauerring",
+        "drop_ruepurrer"
+      ],
+      "radius": 10,
+      "wait": 2.0,
+      "time_limit": 420,
+      "vehicle": "van",
+      "text": "Liefere alle drei Eilsendungen aus (kurz anhalten)."
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Hanne (Funk)",
+          "Alle drei pünktlich? Du bisch jetzt offiziell unser schnellster Neuer."
+        ]
+      ]
+    }
+  ]
+}

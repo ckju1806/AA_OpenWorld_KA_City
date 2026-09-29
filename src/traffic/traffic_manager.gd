@@ -46,12 +46,15 @@ func _physics_process(delta: float) -> void:
 	var p: Node3D = _focus()
 	if p == null:
 		return
-	# Despawn
+	# Despawn; Licht nach Tageszeit/Wetter
+	var want_lights: bool = WorldClock.night_factor() > 0.35 or WorldClock.fog > 0.5 or WorldClock.rain > 0.5
 	for i: int in range(vehicles.size() - 1, -1, -1):
 		var v: Vehicle = vehicles[i]
 		if not is_instance_valid(v):
 			vehicles.remove_at(i)
 			continue
+		if v.lights_on != want_lights and v.driver == Vehicle.Driver.AI:
+			v.set_lights(want_lights)
 		if v.driver == Vehicle.Driver.PLAYER:
 			# vom Spieler übernommen -> nicht mehr Teil des Verkehrs
 			vehicles.remove_at(i)
@@ -87,11 +90,14 @@ func _visible(pos: Vector3) -> bool:
 
 
 func _try_spawn(center: Vector3) -> bool:
+	var near: PackedInt32Array = _traffic_edges_near(center)
+	if near.is_empty():
+		return false
 	for attempt: int in 6:
-		var e: int = _pick_edge()
+		var e: int = near[_rng.randi() % near.size()]
 		var a: int = graph.edge_a[e]
 		var b: int = graph.edge_b[e]
-		if _rng.randf() < 0.5:
+		if _rng.randf() < 0.5 and not graph.is_oneway(e):
 			var tmp: int = a
 			a = b
 			b = tmp
@@ -103,12 +109,15 @@ func _try_spawn(center: Vector3) -> bool:
 		var t: float = _rng.randf_range(0.25, 0.75)
 		var dir: Vector2 = (pb - pa) / length
 		var right: Vector2 = Vector2(-dir.y, dir.x)
-		var p2: Vector2 = pa.lerp(pb, t) + right * LaneDriver.LANE_OFFSET
+		var p2: Vector2 = pa.lerp(pb, t) + right * graph.lane_offset(e, LaneDriver.LANE_OFFSET)
 		var pos: Vector3 = Vector3(p2.x, 0.0, p2.y)
 		var d: float = pos.distance_to(center)
 		if d < SPAWN_MIN or d > SPAWN_MAX:
 			continue
 		if _visible(pos) and d < 150.0:
+			continue
+		var city: CityWorld = game.call("get_city")
+		if city != null and not city.is_loaded_at(pos):
 			continue
 		var yaw: float = atan2(-dir.x, -dir.y)
 		var spec_id: String = SPECS[_rng.randi() % SPECS.size()]
@@ -122,11 +131,22 @@ func _try_spawn(center: Vector3) -> bool:
 		v.ai_controller = drv
 		v.driver = Vehicle.Driver.AI
 		v.add_to_group("traffic")
+		if WorldClock.night_factor() > 0.35 or WorldClock.fog > 0.5 or WorldClock.rain > 0.5:
+			v.set_lights(true)
 		v.linear_velocity = Vector3(dir.x, 0, dir.y) * 6.0
 		vehicles.append(v)
 		spawned_total += 1
 		return true
 	return false
+
+
+## Verkehrskanten im Spawn-Ring (Rasterindex des Graphen).
+func _traffic_edges_near(center: Vector3) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for e: int in graph.edges_near(Vector2(center.x, center.z), SPAWN_MAX):
+		if graph.is_traffic(e) and graph.edge_length(e) >= 25.0:
+			out.append(e)
+	return out
 
 
 func _pick_edge() -> int:

@@ -32,6 +32,8 @@ func _continue_into_new_game() -> Array[String]:
 	game = (load("res://scenes/game.tscn") as PackedScene).instantiate() as Game
 	game.world_mode = "city"
 	game.ambient_life = false
+	game.stream_sync = true
+	game.stream_radius = 1
 	add_child(game)
 	game.player.use_sim_input = true
 	game.missions.auto_skip_dialog = true
@@ -97,11 +99,15 @@ func test_save_during_wanted_uses_safe_point() -> void:
 
 func test_blocked_position_falls_back_to_start() -> void:
 	var inside: Vector3 = Vector3.INF
-	for lot: Dictionary in BuildingBuilder.lots:
-		if str(lot.get("removed", "")) == "" and not bool(lot.get("shop_street", false)):
-			var c: Vector2 = lot.centroid
-			inside = Vector3(c.x, 0.2, c.y)
-			break
+	var w: WorldData = city().world
+	var sec: Dictionary = w.load_sector(w.sector_of(Vector2(-18, 505)))
+	for b: Variant in sec.get("b", []):
+		var poly: PackedVector2Array = w.pts(b[0])
+		if PolyUtil.area(poly) > 120.0:
+			var c: Vector2 = PolyUtil.centroid(poly)
+			if Geometry2D.is_point_in_polygon(c, poly):
+				inside = Vector3(c.x, 0.2, c.y)
+				break
 	assert_true(inside != Vector3.INF, "Gebäudeparzelle gefunden")
 	var text: String = SaveCodec.encode(GameState.to_dict(), {"position": SaveCodec.vec3_to_array(inside), "yaw": 0.0, "health": 80.0})
 	var f: FileAccess = FileAccess.open(SaveManager.save_path, FileAccess.WRITE)

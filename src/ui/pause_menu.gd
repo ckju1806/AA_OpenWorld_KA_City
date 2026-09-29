@@ -3,19 +3,16 @@ extends CanvasLayer
 ## Pausenmenü (Esc): Fortsetzen, Speichern, Einstellungen, Steuerung, Hauptmenü, Beenden.
 ## Pausiert den Szenenbaum und gibt die Maus frei.
 
-const CONTROLS_TEXT: String = """Zu Fuß: W A S D bewegen · Maus umsehen · Umschalt rennen · Leertaste springen
-E interagieren / sprechen · F einsteigen / aussteigen · M Karte · Esc Pause · F3 Entwickleranzeige
-
-Im Fahrzeug: W Gas · S Bremse / rückwärts · A D lenken · Leertaste Handbremse
-H Hupe · L Licht · R Fahrzeug bergen (umgekippt/festgefahren) · F aussteigen (nur langsam)
-
-Missionen: E überspringt Dialogzeilen · Eingabe = erneut versuchen · Rücktaste = Auftrag abbrechen"""
+const CONTROLS_NOTE: String = """Zu Fuß: Maus umsehen · im Fahrzeug: A/D lenken, S bremst bzw. fährt rückwärts
+ÖPNV: an der Haltestelle mit „Interagieren“ einsteigen, während der Fahrt Haltewunsch
+Missionen: Interagieren überspringt Dialogzeilen · Eingabe = erneut versuchen · Rücktaste = Auftrag abbrechen"""
 
 var game: Node = null
 var _root: Control
 var _menu: VBoxContainer
 var _settings: SettingsPanel
 var _controls: PanelContainer
+var _controls_label: Label
 var _status: Label
 
 
@@ -55,7 +52,11 @@ func setup(p_game: Node) -> void:
 	var cv := VBoxContainer.new()
 	_controls.add_child(cv)
 	cv.add_child(UiStyle.label("STEUERUNG", 34, UiStyle.ACCENT))
-	cv.add_child(UiStyle.label(CONTROLS_TEXT, 22))
+	_controls_label = UiStyle.label("", 20)
+	_controls_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_controls_label.custom_minimum_size = Vector2(980, 0)
+	cv.add_child(_controls_label)
+	cv.add_child(UiStyle.label(CONTROLS_NOTE, 18, UiStyle.TEXT_DIM))
 	var back := UiStyle.button("Zurück")
 	back.pressed.connect(_show_menu)
 	cv.add_child(back)
@@ -114,8 +115,29 @@ func _on_settings() -> void:
 
 
 func _on_controls() -> void:
+	_controls_label.text = controls_text()
 	_menu.visible = false
 	_controls.visible = true
+
+
+## Übersicht aus der aktuellen Tastenbelegung (Einstellungen → Tastenbelegung), nach Kategorien.
+static func controls_text() -> String:
+	var b: Dictionary = Settings.bindings if not Settings.bindings.is_empty() else InputSetup.default_bindings()
+	var cats: Dictionary = {}
+	for action: String in InputSetup.LABELS:
+		var info: Array = InputSetup.LABELS[action]
+		var keys: Array = b.get(action, InputSetup.DEFAULTS.get(action, []))
+		var names: Array[String] = []
+		for k: Variant in keys:
+			names.append(InputSetup.key_name(int(k)))
+		var line: String = "%s %s" % [" / ".join(names) if not names.is_empty() else "—", str(info[0])]
+		var arr: Array = cats.get(str(info[1]), [])
+		arr.append(line)
+		cats[str(info[1])] = arr
+	var out: Array[String] = []
+	for c: String in cats:
+		out.append("%s: %s" % [c, " · ".join(cats[c])])
+	return "\n".join(out)
 
 
 func _on_main_menu() -> void:

@@ -46,6 +46,25 @@ print(f"  PCK: Kennung {magic!r}")
 assert magic == b"GDPC", "PCK-Kennung falsch"
 PY
 
+echo "[build] Prüfe Inhalt der PCK (Weltdaten, Missionen) ..."
+python3 - "$OUT_DIR/Faecherstadt.pck" <<'PY'
+import sys
+data = open(sys.argv[1], "rb").read()
+for need in (b"data/world/ka/world.json.gz", b"data/world/ka/sectors/", b"data/missions/m15_", b"data/world/gangs.json"):
+    assert need in data, f"fehlt in der PCK: {need.decode()}"
+print("  PCK enthält Weltdaten, Sektoren, Missionen und Gruppen")
+PY
+
+echo "[build] Starttest des exportierten Pakets (Linux-Engine, headless, --main-pack) ..."
+BOOT_LOG="$LOG_DIR/boot_${STAMP}.log"
+if ! timeout 300 "$GODOT" --headless --main-pack "$OUT_DIR/Faecherstadt.pck" -- --autostart --boot-check > "$BOOT_LOG" 2>&1; then
+  echo "[build] Starttest fehlgeschlagen (Log: $BOOT_LOG)"; grep -E "boot|ERROR" "$BOOT_LOG" | head -20; exit 5
+fi
+grep "\[boot\]" "$BOOT_LOG"
+if grep -E "SCRIPT ERROR|Weltdaten fehlen" "$BOOT_LOG"; then
+  echo "[build] Fehler beim Start des Pakets (Log: $BOOT_LOG)"; exit 6
+fi
+
 echo "[build] ZIP ..."
 STAGE="$(mktemp -d)"
 mkdir -p "$STAGE/Faecherstadt"

@@ -10,6 +10,8 @@ var _route: Array[int] = []
 var _replan_t: float = 0.0
 var _goal: Vector3 = Vector3.INF
 var _rng: RandomNumberGenerator
+var dispatch_goal: Vector3 = Vector3.INF     ## Einsatzort (Ereignis) ohne Fahndung
+var dispatch_until: float = 0.0              ## Spielzeit (s), bis zu der die Einheit vor Ort bleibt
 
 
 func _init(seed_value: int) -> void:
@@ -53,9 +55,28 @@ func update(v: Vehicle, delta: float) -> void:
 	if pursuit and sees_player and chase_target != Vector3.INF and v.global_position.distance_to(chase_target) < 45.0:
 		_direct_chase(v, delta)
 		return
+	# Einsatzfahrt zu einem Ereignis (keine Fahndung): mit Blaulicht hin, vor Ort anhalten, dann Streife
+	if not pursuit and dispatch_goal != Vector3.INF:
+		var now: float = Time.get_ticks_msec() / 1000.0
+		if now > dispatch_until:
+			dispatch_goal = Vector3.INF
+			v.set_siren(false)
+		else:
+			if not v.siren_on:
+				v.set_siren(true)
+				v.set_lights(true)
+			ignore_lights = true
+			personality = 1.25
+			if v.global_position.distance_to(dispatch_goal) < 16.0:
+				speed_limit_override = 0.0
+			else:
+				_replan_t -= delta
+				if _replan_t <= 0.0 or _goal.distance_to(dispatch_goal) > 5.0:
+					_replan_t = 3.0
+					_replan(dispatch_goal)
 	if pursuit:
 		_replan_t -= delta
-		var goal: Vector3 = manager.call("police_goal") as Vector3
+		var goal: Vector3 = manager.call("police_goal_for", v) as Vector3
 		if _replan_t <= 0.0 or (_goal != Vector3.INF and goal.distance_to(_goal) > 25.0):
 			_replan_t = 2.0
 			_replan(goal)
