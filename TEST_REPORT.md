@@ -16,7 +16,7 @@ Status-Begriffe: **implementiert** (Code vorhanden), **getestet** (automatisiert
 | Weltdaten-Validierung (Gebäude, Autos, Objekte, Landmarken gegen Fahrbahnen) | **getestet** – 5 Prüfungen, 0 Verstöße |
 | Visuelle Kontrolle (Screenshot-Tour, Software-Rendering) | **getestet** – 46 Bilder + Hauptmenü visuell geprüft, Auswahl in `artifacts/screenshots/v0.2/` |
 | Windows-Export + Starttest der PCK (`--boot-check`) | **getestet** (unter Linux): PCK-Inhalt geprüft, Starttest „OK“ |
-| GitHub-Release (Workflow) | siehe Abschnitt 5 |
+| GitHub-Release (Workflow) | **durchgeführt** – v0.2.0 veröffentlicht (Abschnitt 5) |
 | Start unter echtem Windows 10/11 | **ungetestet** – kein Windows verfügbar |
 | Leistung (FPS) auf echter Hardware | **ungetestet** – keine GPU |
 | Subjektives Spielgefühl, Balance | **ungetestet** (nur messbare Kriterien) |
@@ -132,7 +132,12 @@ d9cad95cb1ec54ab4ecc883df78fe6ce763caa646371c81e485da39a9d5dabfc  Faecherstadt.e
 ```
 **GitHub-Release:** Der Build liegt nicht im Repository (Speicherbudget). Der Workflow `.github/workflows/windows-release.yml`
 baut unter Linux neu, führt die Unit-Tests aus und veröffentlicht ZIP, Installer und `SHA256SUMS.txt` als Release-Anhang
-(eigene Prüfsummen des CI-Builds). Status: ausgelöst durch den Commit mit diesem Bericht (Tag `v0.2.0`, Vorabversion); das Ergebnis wird hier nachgetragen.
+(eigene Prüfsummen des CI-Builds). **Ergebnis:** Workflow-Lauf 36547517758 (Commit `f6a9595`) erfolgreich – Unit-Tests 52/52, Export, PE-/PCK-Prüfung, Starttest
+`[boot] OK: Knoten 42238, Aufträge 15, ÖPNV-Linien 177, Quelle osm`. Release **v0.2.0** (Vorabversion) veröffentlicht:
+https://github.com/ckju1806/AA_OpenWorld_KA_City/releases/tag/v0.2.0 mit `Faecherstadt_Windows_x64_v0.2.0.zip`
+(56 485 010 Bytes, SHA256 `20328dced74b8dfcda4b62e53e9627ff0b0b32e6febe08e114221f09a2d3f3f0`),
+`GTA_KA_installieren_und_starten.bat`, `SHA256SUMS.txt`. Die EXE des CI-Builds ist bitgleich zum lokalen Build (`d9cad95c…`);
+PCK und ZIP unterscheiden sich im Hash (Zeitstempel/Reihenfolge im Paket).
 
 ## 6. Blockiert / nicht durchgeführt
 - **Start unter Windows 10/11 – ungetestet:** kein Windows verfügbar. Ein Wine-Rauchtest war schon in v0.1 blockiert

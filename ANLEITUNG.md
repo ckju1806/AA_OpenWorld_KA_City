@@ -20,7 +20,7 @@ Die Spieldateien liegen **nicht** im Quellcode-Ordner, sondern als Anhang eines 
 
 Beide Hauptdateien müssen im **selben Ordner** liegen (typisch: **Downloads**).
 
-Die ältere Version 0.1.0 (kleiner Innenstadt-Prototyp) liegt weiterhin im Ordner [`release/`](release/) bzw. in der Git-Historie.
+Die ältere Version 0.1.0 (kleiner Innenstadt-Prototyp) liegt in der Git-Historie (siehe [`release/README.md`](release/README.md)).
 
 ## 2. Installieren und starten – Variante A (empfohlen, automatisch)
 

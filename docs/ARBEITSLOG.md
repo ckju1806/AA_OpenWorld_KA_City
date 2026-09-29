@@ -385,4 +385,7 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   `[boot] OK: Knoten 42238, Aufträge 15, ÖPNV-Linien 177, Quelle osm`, Paket 56,5 MB.
 - **Release:** Commit mit `[release]` löst `.github/workflows/windows-release.yml` aus (Tag `v0.2.0`, Vorabversion).
 - **Budget:** Git-Objekte ≈ 128 MB (Grenze 300 MB), Weltdaten 11,5 MB (≤ 40 MB), größte Datei 2,0 MB (≤ 5 MB).
-
+- **Release verifiziert:** Workflow-Lauf 36547517758 grün (Unit 52/52, Export, Starttest mit OSM-Welt), Release `v0.2.0`
+  (Vorabversion) mit ZIP 56,5 MB (SHA256 `20328dce…`), Installer und Prüfsummen; per GitHub-API gegengeprüft.
+- **`release/` bereinigt (Budget-Addendum):** v0.1-ZIP, Installer und Prüfsumme aus dem Arbeitsstand entfernt, `release/README.md`
+  verweist auf die Releases. Rückweg: `git checkout b648134 -- release/` (Dateien bleiben in der Historie).
