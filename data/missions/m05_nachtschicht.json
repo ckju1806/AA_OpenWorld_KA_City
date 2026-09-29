@@ -1,0 +1,96 @@
+{
+  "id": "m05_nachtschicht",
+  "title": "Nachtschicht",
+  "order": 5,
+  "reward": 400,
+  "requires": [
+    "m04_eilzustellung"
+  ],
+  "chapter": "Fächerblitz-Kurier",
+  "summary": "Vier Paketkästen leeren und alles zur Ladezone am Hauptbahnhof bringen.",
+  "giver": {
+    "poi": "hanne",
+    "name": "Hanne Brettschneider",
+    "role": "Chefin Fächerblitz-Kurier",
+    "look": {
+      "skin": "#e0b39a",
+      "shirt": "#f08a24",
+      "jacket": "#2a3b4c",
+      "pants": "#1d2430",
+      "shoes": "#2b2b2b",
+      "hair": "#8a4b2a",
+      "hair_style": 1
+    },
+    "prompt": "Mit Hanne sprechen (Nachtschicht)",
+    "done_line": "Nachtschicht erledigt. Schlaf dich aus!"
+  },
+  "fail_vehicle": "van",
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Hanne",
+          "Die Paketkästen in der Stadt quellen über. Hol die Sendungen ab, egal in welcher Reihenfolge."
+        ],
+        [
+          "Hanne",
+          "Danach alles zur Ladezone am Hauptbahnhof – der Nachtzug wartet nicht."
+        ]
+      ]
+    },
+    {
+      "type": "spawn_vehicle",
+      "tag": "van",
+      "spec": "transporter",
+      "poi": "depot_van",
+      "color": "#f2f1ec",
+      "livery": "Fächerblitz Kurier"
+    },
+    {
+      "type": "enter_vehicle",
+      "tag": "van",
+      "text": "Steig in den Lieferwagen."
+    },
+    {
+      "type": "collect",
+      "items": [
+        "paket_1",
+        "paket_2",
+        "paket_3",
+        "paket_4"
+      ],
+      "radius": 9,
+      "vehicle": "van",
+      "collected_text": "Paketkasten geleert",
+      "text": "Leere alle vier Paketkästen (Reihenfolge egal)."
+    },
+    {
+      "type": "goto",
+      "poi": "hbf_ladezone",
+      "radius": 10,
+      "vehicle": "van",
+      "marker": "ziel",
+      "text": "Bring alles zur Ladezone am Hauptbahnhof."
+    },
+    {
+      "type": "wait_zone",
+      "poi": "hbf_ladezone",
+      "radius": 10,
+      "vehicle": "van",
+      "seconds": 3.0,
+      "max_speed": 2.0,
+      "text": "Halte an – ausladen.",
+      "progress": "Ausladen"
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Bahnhofsmitarbeiter Kuhn",
+          "Gerade noch! Der Nachtzug nach Hamburg dankt."
+        ]
+      ]
+    }
+  ]
+}

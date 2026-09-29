@@ -7,10 +7,12 @@ extends Node3D
 const LAMP_LIGHTS: int = 18
 
 var sun: DirectionalLight3D
+var underground: float = 0.0   ## 0 = oberirdisch, 1 = Kamera im Tunnel (Sonne/Himmelslicht gedämpft, kein Regen)
 var fill: DirectionalLight3D
 var world_env: WorldEnvironment
 var sky_mat: ProceduralSkyMaterial
 var rain_fx: GPUParticles3D
+var rain_audio: AudioStreamPlayer
 var lamp_positions: PackedVector3Array = PackedVector3Array()
 var _pool: Array[OmniLight3D] = []
 var _timer: float = 0.0
@@ -83,6 +85,11 @@ func setup(lamps: PackedVector3Array) -> void:
 		add_child(l)
 		_pool.append(l)
 	_make_rain()
+	rain_audio = AudioStreamPlayer.new()
+	rain_audio.stream = AudioManager.get_stream("ambience_rain", true)
+	rain_audio.bus = "Umgebung"
+	rain_audio.volume_db = -80.0
+	add_child(rain_audio)
 	apply_quality()
 	Settings.changed.connect(apply_quality)
 	update_environment(true)
@@ -153,6 +160,14 @@ func _process(delta: float) -> void:
 	_update_lamp_pool(cam)
 
 
+## Tunnel (U-Strab): Außenlicht dämpfen, solange die Kamera unter Gelände ist.
+func set_underground(v: float) -> void:
+	v = clampf(v, 0.0, 1.0)
+	if absf(v - underground) > 0.04 or (v != underground and (v == 0.0 or v == 1.0)):
+		underground = v
+		update_environment(false)
+
+
 ## Sonne, Himmel, Nebel, Materialien aus Uhrzeit und Wetter setzen.
 func update_environment(force: bool) -> void:
 	if sun == null:
@@ -182,12 +197,13 @@ func update_environment(force: bool) -> void:
 	sun.light_color = cols[2]
 	var e_sun: float = lerpf(0.0, 1.6, clampf(inverse_lerp(-4.0, 10.0, el), 0.0, 1.0)) * lerpf(1.0, 0.3, cloud)
 	var e_moon: float = 0.1 * night * lerpf(1.0, 0.4, cloud)
-	sun.light_energy = maxf(e_sun, e_moon)
+	var ug: float = 1.0 - underground
+	sun.light_energy = maxf(e_sun, e_moon) * ug
 	sun.shadow_opacity = lerpf(1.0, 0.35, cloud)
-	fill.light_energy = lerpf(0.18, 0.06, night)
+	fill.light_energy = lerpf(0.18, 0.06, night) * ug
 	var env: Environment = world_env.environment
-	env.ambient_light_color = cols[4]
-	env.ambient_light_energy = lerpf(0.7, 0.35, night) * lerpf(1.0, 1.15, cloud)
+	env.ambient_light_color = cols[4].lerp(Color(0.62, 0.6, 0.56), underground)
+	env.ambient_light_energy = lerpf(lerpf(0.7, 0.35, night) * lerpf(1.0, 1.15, cloud), 0.55, underground)
 	env.fog_light_color = cols[3]
 	env.fog_density = lerpf(0.0009, 0.0008, night) + fogv * 0.012 + WorldClock.rain * 0.0025
 	env.fog_sun_scatter = lerpf(0.25, 0.02, cloud)
@@ -195,9 +211,15 @@ func update_environment(force: bool) -> void:
 	env.volumetric_fog_density = 0.005 + fogv * 0.03
 	env.volumetric_fog_albedo = cols[3]
 	# Regen
-	var raining: bool = WorldClock.rain > 0.15
+	var raining: bool = WorldClock.rain > 0.15 and underground < 0.5
 	if rain_fx.emitting != raining:
 		rain_fx.emitting = raining
+	if WorldClock.rain > 0.02:
+		rain_audio.volume_db = linear_to_db(clampf(WorldClock.rain, 0.001, 1.0)) - 4.0
+		if not rain_audio.playing and rain_audio.is_inside_tree():
+			rain_audio.play()
+	elif rain_audio.playing:
+		rain_audio.stop()
 	# Materialien (nur bei merklicher Änderung)
 	if force or absf(night - _last_night) > 0.02:
 		_last_night = night

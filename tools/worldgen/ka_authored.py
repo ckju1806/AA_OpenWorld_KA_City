@@ -141,6 +141,58 @@ RAILWAYS.append({"name": "Rheintalbahn Süd", "tracks": 2, "pts": [(1300, 2290),
 RAILWAYS.append({"name": "Rheinbahn West", "tracks": 2, "pts": [(-1500, 2330), (-3000, 1700), (-4600, 700), (-6000, -200),
     (-7200, -2000), (-9500, -3300)]})
 
+# ---------------------------------------------------------------- ÖPNV-Näherung (nur ohne OSM-Daten; Linienführung vereinfacht)
+# U-Strab: Stadtbahntunnel unter der Kaiserstraße (Rampen westlich Europaplatz und östlich Durlacher Tor)
+_KS = [(-1290, kaiser_z(-1290)), (-900, kaiser_z(-900)), (-720, kaiser_z(-720)), (-300, kaiser_z(-300)), (0, kaiser_z(0)),
+       (515, kaiser_z(515)), (800, kaiser_z(800)), (1030, kaiser_z(1030))]
+RAILWAYS.append({"name": "Stadtbahntunnel Kaiserstraße", "tracks": 1, "kind": "tram", "tunnel": True,
+                 "pts": [(-950, kaiser_z(-950)), (-720, kaiser_z(-720)), (0, kaiser_z(0)), (515, kaiser_z(515)), (900, kaiser_z(900))]})
+# Südabzweig: Ettlinger Straße – Karl-Friedrich-Straße bis Marktplatz (Rampe südlich Kongresszentrum)
+RAILWAYS.append({"name": "Stadtbahntunnel Südabzweig", "tracks": 1, "kind": "tram", "tunnel": True,
+                 "pts": [(-47, 1250), (-60, 875), (0, 790), (0, 700), (0, kaiser_z(0))]})
+TRACK_OFFSET = 1.6   # Linien folgen der Straßenachse: Bahnen je Richtung rechts versetzt
+STOPS: list[dict] = []
+ROUTES: list[dict] = []
+
+
+def _stop(name, pos, tram=True, bus=False):
+    STOPS.append({"name": name, "pos": (float(pos[0]), float(pos[1])), "tram": tram, "bus": bus, "train": False, "kind": "stop_position"})
+    return (float(pos[0]), float(pos[1]))
+
+
+_s_mbt = _stop("Mühlburger Tor", (-1290, kaiser_z(-1290)))
+_s_eur = _stop("Europaplatz (U)", (-720, kaiser_z(-720)))
+_s_mkt = _stop("Marktplatz (U)", (0, kaiser_z(0)))
+_s_krp = _stop("Kronenplatz (U)", (515, kaiser_z(515)))
+_s_dt = _stop("Durlacher Tor", (1030, kaiser_z(1030)))
+_s_gtt = _stop("Gottesauer Platz", (2000, 560))
+_s_dur = _stop("Durlach Schlossplatz", (5190, 1620))
+_s_hbf = _stop("Hauptbahnhof (Vorplatz)", (20, 2060))
+_s_ett = _stop("Ettlinger Tor", (-60, 875), tram=False, bus=True)
+_s_kgz = _stop("Kongresszentrum (U)", (-54, 1050))
+_s_etu = _stop("Ettlinger Tor/Staatstheater (U)", (0, 745))
+_s_kri = _stop("Kriegsstraße/Karlstor", (-520, 905), tram=False, bus=True)
+_s_kvp = _stop("Kaiserplatz", (-1275, 460), tram=False, bus=True)
+_line1 = _KS + [(2000, 560), (3000, 800), (3600, 1000), (4300, 1330), (4650, 1460), (5190, 1620)]
+ROUTES.append({"ref": "1", "name": "Linie 1: Mühlburger Tor – Durlach", "route": "tram", "colour": "#e2001a", "from": "Mühlburger Tor",
+               "to": "Durlach", "stops": [_s_mbt, _s_eur, _s_mkt, _s_krp, _s_dt, _s_gtt, _s_dur], "ways": [_line1]})
+ROUTES.append({"ref": "1", "name": "Linie 1: Durlach – Mühlburger Tor", "route": "tram", "colour": "#e2001a", "from": "Durlach",
+               "to": "Mühlburger Tor", "stops": [_s_dur, _s_gtt, _s_dt, _s_krp, _s_mkt, _s_eur, _s_mbt], "ways": [_line1[::-1]]})
+_line2 = [(20, 2060), (-40, 1450), (-60, 875), (0, 790), (0, 700), (0, kaiser_z(0))]
+ROUTES.append({"ref": "2", "name": "Linie 2: Hauptbahnhof – Marktplatz", "route": "tram", "colour": "#0069b4", "from": "Hauptbahnhof",
+               "to": "Marktplatz", "stops": [_s_hbf, _s_kgz, _s_etu, _s_mkt], "ways": [_line2]})
+ROUTES.append({"ref": "2", "name": "Linie 2: Marktplatz – Hauptbahnhof", "route": "tram", "colour": "#0069b4", "from": "Marktplatz",
+               "to": "Hauptbahnhof", "stops": [_s_mkt, _s_etu, _s_kgz, _s_hbf], "ways": [_line2[::-1]]})
+# Straßenbahngleise an der Oberfläche (Tunnelabschnitt ausgenommen)
+RAILWAYS.append({"name": "Straßenbahn Kaiserstraße West", "tracks": 2, "kind": "tram", "pts": [(-1290, kaiser_z(-1290)), (-1020, kaiser_z(-1020))]})
+RAILWAYS.append({"name": "Straßenbahn Durlacher Allee", "tracks": 2, "kind": "tram", "pts": [(970, kaiser_z(970))] + _line1[7:]})
+RAILWAYS.append({"name": "Straßenbahn Ettlinger Straße", "tracks": 2, "kind": "tram", "pts": [(20, 2060), (-40, 1450), (-44, 1320)]})
+_bus = [(-1290, kaiser_z(-1290)), (-1250, 700), (-1100, 880), (-520, 905), (-60, 875), (-40, 1450), (20, 2060)]
+ROUTES.append({"ref": "62", "name": "Bus 62: Kaiserplatz – Hauptbahnhof", "route": "bus", "colour": "#8a5cb0", "from": "Kaiserplatz",
+               "to": "Hauptbahnhof", "stops": [_s_kvp, _s_kri, _s_ett, _s_hbf], "ways": [_bus]})
+ROUTES.append({"ref": "62", "name": "Bus 62: Hauptbahnhof – Kaiserplatz", "route": "bus", "colour": "#8a5cb0", "from": "Hauptbahnhof",
+               "to": "Kaiserplatz", "stops": [_s_hbf, _s_ett, _s_kri, _s_kvp], "ways": [_bus[::-1]]})
+
 # --------------------------------------------------------------------------- Wasser
 AREAS.append({"kind": "water", "name": "Rhein", "poly": [(-7400, -4100), (-7100, -4100), (-7650, -2464), (-7950, -184),
     (-8250, 1482), (-8700, 2797), (-9500, 3900), (-9500, 3300), (-9000, 2600), (-8500, 1300), (-8250, -200),
@@ -273,6 +325,40 @@ poi("ewald", "Ewald Riegel (Antiquitäten)", (1500, 225), 0, "auftraggeber", 3, 
 poi("riegel_wagen", "Dunkle Limousine", (1540, 232), 0, "fahrzeug", 8, road="Haid-und-Neu-Straße", side="curb", heading=-90)
 poi("lager", "Lagerhof Rheinhafen", (-5600, 330), 0, "fahrziel", 10, road="Honsellstraße", side="curb", heading=90)
 poi("maeule", "Schrauberei Mäule", (-2000, -318), 0, "fahrziel", 12, road="Hertzstraße", side="curb", heading=90, sign="Schrauberei Mäule")
+
+# ---------------------------------------------------------------- Kampagne W8 (fiktive Personen/Firmen, reale Straßen nur als Orte)
+# Hanne (Kurier): Eilzustellung / Nachtschicht
+poi("drop_karlstrasse", "Kanzleibote Karlstraße", (-640, 520), 0, "fahrziel", 0, road="Karlstraße", side="curb", heading=0)
+poi("drop_adenauerring", "Institut am Ring", (683, -553), 0, "fahrziel", 0, road="Adenauerring", side="curb", heading=120)
+poi("drop_ruepurrer", "Praxis Rüppurrer Straße", (660, 1250), 0, "fahrziel", 0, road="Rüppurrer Straße", side="curb", heading=180)
+poi("drop_ostring", "Werkstatt Ostring", (2640, 700), 0, "fahrziel", 0, road="Ostring", side="curb", heading=180)
+poi("paket_1", "Paketkasten Hans-Thoma-Straße", (-315, 125), 0, "abholung", 0, road="Hans-Thoma-Straße", side="curb", heading=0)
+poi("paket_2", "Paketkasten Moltkestraße", (-1134, 57), 0, "abholung", 0, road="Moltkestraße", side="curb", heading=0)
+poi("paket_3", "Paketkasten Kaiserallee", (-1900, 280), 0, "abholung", 0, road="Kaiserallee", side="curb", heading=90)
+poi("paket_4", "Paketkasten Ludwig-Erhard-Allee", (1500, 900), 0, "abholung", 0, road="Ludwig-Erhard-Allee", side="curb", heading=90)
+poi("hbf_ladezone", "Ladezone Hauptbahnhof", (-40, 2000), 0, "fahrziel", 0, road="Ettlinger Straße", side="curb", heading=180)
+# Toni (Autohaus): Ersatzteile / Probefahrt
+poi("autohaus_parken", "Hof Autohaus Kessler", (1300, 480), 0, "fahrziel", 0, road="Durlacher Allee", side="curb", heading=-90)
+poi("kunde_wagen", "Vorführwagen", (1250, 470), 0, "fahrzeug", 8, road="Durlacher Allee", side="lane", heading=90)
+poi("kunde_ziel", "Parkplatz Pfinztalstraße", (5500, 1700), 0, "fahrziel", 0, road="Pfinztalstraße", side="curb", heading=90)
+# Mira (Informantin, freie Journalistin „Fächerbote“)
+poi("mira", "Mira Kessel (Fächerbote)", (-600, 175), 0, "auftraggeber", 3, road="Stephanienstraße", side="sidewalk", sign="Redaktion Fächerbote")
+poi("mira_wagen", "Miras Kombi", (-560, 178), 0, "fahrzeug", 8, road="Stephanienstraße", side="curb", heading=90)
+poi("lager_beobachtung", "Beobachtungsposten Lagerhof", (-5600, 330), 0, "fahrziel", 0, road="Honsellstraße", side="center")
+poi("spur_1", "Spur: Kapellenstraße", (750, 565), 0, "abholung", 2, road="Kapellenstraße", side="sidewalk")
+poi("spur_2", "Spur: Hirschstraße", (-870, 600), 0, "abholung", 2, road="Hirschstraße", side="sidewalk")
+poi("spur_3", "Spur: Amalienstraße", (-870, 275), 0, "abholung", 2, road="Amalienstraße", side="sidewalk")
+poi("vesper_transporter", "Grauer Transporter", (-5560, 330), 0, "fahrzeug", 8, road="Honsellstraße", side="lane", heading=90)
+poi("vesper_halle", "Halle Vesper-Logistik (fiktiv)", (-1500, 2900), 0, "fahrziel", 14, road="Durmersheimer Straße", side="curb", heading=45)
+poi("tram_treff", "Treffpunkt Durlacher Tor", (930, 460), 0, "fahrziel", 0, road="Kaiserstraße", side="sidewalk")
+poi("mira_wagen2", "Miras Kombi (Beweise)", (960, 462), 0, "fahrzeug", 8, road="Kaiserstraße", side="lane", heading=-90)
+# Die zwei Gruppen (fiktiv)
+poi("jo", "Jo Brenner (Hafenkolonne)", (-4700, -450), 0, "auftraggeber", 3, road="Rheinhafenstraße", side="sidewalk")
+poi("jo_crew", "Kumpel an der Kaiserallee", (-1740, 290), 0, "abholung", 0, road="Kaiserallee", side="curb", heading=90)
+poi("jo_wagen", "Pritschenwagen", (-4650, -420), 0, "fahrzeug", 8, road="Rheinhafenstraße", side="curb", heading=45)
+poi("lia", "Lia Voss (Ringbande)", (620, 1500), 0, "auftraggeber", 3, road="Rüppurrer Straße", side="sidewalk")
+poi("lia_wagen", "Lias Kompaktwagen", (630, 1540), 0, "fahrzeug", 8, road="Rüppurrer Straße", side="curb", heading=180)
+poi("lia_garage", "Garagenhof Wolfartsweierer Straße", (2400, 2800), 0, "fahrziel", 0, road="Wolfartsweierer Straße", side="curb", heading=135)
 
 # --------------------------------------------------------------------------- Beschriftungen
 for text, pos, size in [

@@ -79,5 +79,8 @@ static func register(bindings: Dictionary = {}) -> void:
 static func key_name(key: int) -> String:
 	if key <= 0:
 		return "—"
-	var s: String = OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(key as Key))
+	# Anzeige im aktuellen Tastaturlayout (ohne Anzeigeserver, z. B. in Tests: US-Namen)
+	var s: String = ""
+	if DisplayServer.get_name() not in ["headless", "Headless"]:
+		s = OS.get_keycode_string(DisplayServer.keyboard_get_keycode_from_physical(key as Key))
 	return s if s != "" else OS.get_keycode_string(key as Key)

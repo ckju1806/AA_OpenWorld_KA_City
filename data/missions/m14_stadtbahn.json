@@ -1,0 +1,60 @@
+{
+  "id": "m14_stadtbahn",
+  "title": "Mit der Bahn",
+  "order": 14,
+  "reward": 400,
+  "requires": [
+    "m13_doppeltes_spiel"
+  ],
+  "chapter": "Fächerbote",
+  "summary": "Unauffällig per Stadtbahn zum Treffpunkt am Durlacher Tor.",
+  "giver": {
+    "poi": "mira",
+    "name": "Mira Kessel",
+    "role": "Freie Journalistin („Fächerbote“, fiktiv)",
+    "look": {
+      "skin": "#b98a6a",
+      "shirt": "#e8e2d4",
+      "jacket": "#3d5a4a",
+      "pants": "#22262e",
+      "shoes": "#5a3a2a",
+      "hair": "#2a1a14",
+      "hair_style": 2
+    },
+    "prompt": "Mit Mira sprechen (Treffen)",
+    "done_line": "Die Quelle hat geliefert. Jetzt geht's ans Eingemachte."
+  },
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Mira",
+          "Vespers Leute kennen inzwischen die Autos, mit denen wir unterwegs waren."
+        ],
+        [
+          "Mira",
+          "Nimm die Stadtbahn zum Durlacher Tor. Dort wartet eine Quelle mit Unterlagen auf dich."
+        ]
+      ]
+    },
+    {
+      "type": "ride_transit",
+      "from_stop": "Europaplatz",
+      "to_stop": "Durlacher Tor",
+      "to_poi": "tram_treff",
+      "radius": 30,
+      "text": "Fahr mit der Stadtbahn zum Durlacher Tor (Haltestelle Europaplatz oder in der Nähe einsteigen).",
+      "fallback_text": "Geh zum Treffpunkt am Durlacher Tor."
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Quelle",
+          "Hier. Frachtbriefe, Rechnungen, alles. Bring das zu Mira – sofort."
+        ]
+      ]
+    }
+  ]
+}

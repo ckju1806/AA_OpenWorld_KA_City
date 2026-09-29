@@ -273,3 +273,22 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
 - **W9:** `CheatManager` (Autoload, erweiterbare Registry, 40 eigene deutsche Codes, Tippen im Spiel oder Konsole `^`,
   Schalt-Cheats, ALLESZURUECK, Sperre über Optionen, Nutzung im Spielstand vermerkt), `CheatConsole`.
 - **Prüfung:** 109/109 Tests grün (neu: WorldClock, Settings v2, Cheats). Screenshot-Tour mit Mittag/Nacht/Regen/Nebel visuell geprüft.
+
+## 2026-09-29 – Zwischenstand W5–W8, W10 (ÖPNV, Tiere, Ereignisse, Kampagne, Optionsmenü)
+
+- **Restore-Punkt:** vorheriger Commit `520bd3c` (Branch `claude/confident-volta-6a71kc`); dieser Commit ist der nächste.
+- **W5 ÖPNV:** `TransitSystem` (virtuelle Fahrzeuge auf der ganzen Karte, sichtbare Knoten nur in Spielernähe),
+  Stadtbahn (3 Wagenteile folgen der Gleislinie) und Bus, Pendelbetrieb (Gegenrichtung an der Endhaltestelle), Haltezeiten,
+  Bremsen vor Hindernissen (Erkennung 42 m, Bremskurve, Klingel), U-Strab: Tunnelröhre (Kaiserstraße + Südabzweig),
+  U-Haltestellen mit Bahnsteigen/Stationsschildern/Leuchten, Rampenbauwerke mit Portal, Tunnelbeleuchtung, Außenlicht
+  gedämpft unter Gelände; Haltestellen mit Wartehäuschen bzw. Abgang (U); Passanten steigen ein; Spieler steigt an
+  Haltestellen ein (3 € Fahrschein, E), Haltewunsch (E/F), Ausstieg am nächsten Halt, HUD mit Linie/nächstem Halt/Tempo.
+  Weltgenerator: Tunnelbereiche jetzt als Bogenlängen (robust bei wenigen Stützpunkten), Kamera-Kollisions-Layer „kamera“.
+- **W6 Tiere, W7 Ereignisse/Banden/Polizei, W8 Kampagne (M4–M15, 5 fiktive Auftraggeber, Jobs, Auftragsliste J),
+  W10 Optionsmenü mit Tabs und Tastenbelegung:** siehe Commit; Details im TEST_REPORT (folgt in W12).
+- **Testrunner:** Filter `datei::test_praefix` für einzelne Testmethoden. Screenshot-Tour: Filter `--tour-only=`.
+- **Prüfung:** test_transit 4/4, test_campaign M4–M9 6/6, test_player 6/6 grün; ÖPNV-Screenshots visuell geprüft
+  (Haltestelle, Rampe/Portal, U-Station, Tunnel, Bus). Budget: Git-Objekte 83,8 MB, Weltdaten 3,2 MB.
+- **Bekannte Einschränkungen:** Fahrzeuge fern vom Spieler fahren ohne Physik (keine Kollisionen); Bahnen beachten keine
+  Ampeln (Vorrang, bremsen aber vor Hindernissen); an Endhaltestellen im Tunnel (Linie 2, Marktplatz) können sich Wagen
+  kurz überlappen; Straßenbelag über Rampen wird vom Rampenbauwerk verdeckt statt ausgespart.

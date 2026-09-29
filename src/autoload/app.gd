@@ -12,10 +12,32 @@ var pending_message: String = ""
 var user_args: PackedStringArray = PackedStringArray()
 
 
+var _cb_layer: CanvasLayer
+var _cb_mat: ShaderMaterial
+
+
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	user_args = OS.get_cmdline_user_args()
 	get_tree().root.focus_exited.connect(_on_focus_lost)
+	# Farbfilter (Barrierefreiheit), über allem
+	_cb_layer = CanvasLayer.new()
+	_cb_layer.layer = 120
+	var rect := ColorRect.new()
+	rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cb_mat = ShaderMaterial.new()
+	_cb_mat.shader = load("res://assets/shaders/colorblind.gdshader")
+	rect.material = _cb_mat
+	_cb_layer.add_child(rect)
+	add_child(_cb_layer)
+	Settings.changed.connect(_apply_colorblind)
+	_apply_colorblind()
+
+
+func _apply_colorblind() -> void:
+	_cb_layer.visible = Settings.colorblind > 0
+	_cb_mat.set_shader_parameter("mode", Settings.colorblind)
 
 
 func has_arg(arg: String) -> bool:

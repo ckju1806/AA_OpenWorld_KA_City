@@ -22,6 +22,7 @@ const REGEN_RATE: float = 2.5
 var health: float = MAX_HEALTH
 var camera_rig: Node3D = null            ## PlayerCamera
 var current_vehicle: Node3D = null       ## Vehicle
+var riding: Node3D = null                ## ÖPNV-Wagen, in dem der Spieler mitfährt (TransitSystem)
 var rig: HumanoidRig
 var input_enabled: bool = true
 var is_dead: bool = false
@@ -99,6 +100,14 @@ func _physics_process(delta: float) -> void:
 	if is_in_vehicle():
 		# Position mitführen (Kollision ist deaktiviert), damit Abstandsprüfungen die echte Lage nutzen
 		global_position = current_vehicle.global_position
+		return
+	if riding != null:
+		if is_instance_valid(riding):
+			global_position = riding.global_position + Vector3.UP * 0.4
+		_scan_timer -= delta
+		if _scan_timer <= 0.0:
+			_scan_timer = 0.2
+			_update_targets()
 		return
 	_move(delta)
 	_scan_timer -= delta
@@ -222,6 +231,12 @@ func _try_step_up(motion_h: Vector3) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if is_dead or not input_enabled or use_sim_input:
 		return
+	if riding != null and event.is_action_pressed("enter_exit"):
+		# F während der Fahrt = Haltewunsch (wie E)
+		if _interact_target != null and is_instance_valid(_interact_target):
+			_interact_target.call("interact", self)
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("enter_exit"):
 		toggle_vehicle()
 		get_viewport().set_input_as_handled()
@@ -277,11 +292,47 @@ func detach_from_vehicle(exit_pos: Vector3, facing_yaw: float) -> void:
 	EventBus.player_exited_vehicle.emit(v)
 
 
+## ÖPNV: Mitfahrt beginnen (Figur ausgeblendet, Kamera folgt dem vorderen Wagenteil).
+func begin_ride(seg: Node3D) -> void:
+	riding = seg
+	velocity = Vector3.ZERO
+	_collision.disabled = true
+	_hit_area.set_deferred("monitoring", false)
+	rig.visible = false
+	_vehicle_target = null
+	_scan_timer = 0.0
+	if camera_rig != null:
+		camera_rig.call("follow_vehicle", seg, Vector2(9.0, 3.1))
+	EventBus.player_entered_vehicle.emit(seg)
+
+
+## ÖPNV: Mitfahrt beenden (an der Haltestelle absetzen).
+func end_ride(pos: Vector3) -> void:
+	var seg: Node3D = riding
+	riding = null
+	global_position = pos
+	velocity = Vector3.ZERO
+	_collision.disabled = false
+	_hit_area.set_deferred("monitoring", true)
+	rig.visible = true
+	reset_physics_interpolation()
+	if camera_rig != null:
+		camera_rig.call("follow_player", self)
+		camera_rig.call("snap")
+	_scan_timer = 0.0
+	EventBus.player_exited_vehicle.emit(seg)
+
+
+func is_riding() -> bool:
+	return riding != null
+
+
 ## Verlässt ein Fahrzeug ohne Prüfung (z. B. bei Neustart/Respawn).
 func force_leave_vehicle(pos: Vector3) -> void:
 	if current_vehicle != null and is_instance_valid(current_vehicle) and current_vehicle.has_method("release_driver"):
 		current_vehicle.call("release_driver")
 	current_vehicle = null
+	riding = null
 	_collision.disabled = false
 	_hit_area.set_deferred("monitoring", true)
 	rig.visible = true
@@ -299,7 +350,7 @@ func _update_targets() -> void:
 		_set_hint("")
 		return
 	_interact_target = Interactables.find_best(self)
-	_vehicle_target = _find_vehicle()
+	_vehicle_target = _find_vehicle() if riding == null else null
 	var hint: String = ""
 	if _interact_target != null:
 		hint = "[E] " + str(_interact_target.call("get_interaction_text", self))

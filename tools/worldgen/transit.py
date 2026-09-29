@@ -2,7 +2,8 @@
 
 Ausgabe (world.json -> "transit"):
   stops: [{name, pos:[x,z] (dm), modes:"t"/"b"/"tb"...}]
-  lines: [{ref, name, mode, colour, pts: flach (dm), tun: [[i0, i1], ...] Tunnel-Punktbereiche, stops: [stop_idx], s: [m entlang]}]
+  lines: [{ref, name, mode, colour, pts: flach (dm), tun_m: [[s0, s1], ...] Tunnelbereiche (m entlang), stops: [stop_idx], s: [m entlang]}]
+  track_offset: seitlicher Versatz (m) je Fahrtrichtung für Bahnen (0 bei OSM-Gleisen, die je Richtung eigene Gleise haben)
 Linien verlassen teils die Karte: dann wird der längste zusammenhängende Abschnitt im Ausschnitt verwendet.
 """
 from __future__ import annotations
@@ -107,22 +108,28 @@ def build(src, nodes, edges, names):
         if key in seen:
             continue
         seen.add(key)
+        # Tunnelabschnitte als Bogenlängen-Bereiche (m); robust auch bei wenigen Stützpunkten
         tun = []
         if tun_geom is not None and mode != "bus":
-            cur = None
-            for i, c in enumerate(coords):
-                inside_t = tun_geom.contains(Point(c))
-                if inside_t and cur is None:
-                    cur = i
-                elif not inside_t and cur is not None:
-                    tun.append([cur, i - 1])
-                    cur = None
-            if cur is not None:
-                tun.append([cur, len(coords) - 1])
-        lines.append({"ref": r["ref"], "name": r["name"], "mode": mode, "colour": r["colour"], "pts": flat(coords), "tun": tun,
+            inter = part.intersection(tun_geom)
+            for g in getattr(inter, "geoms", [inter]):
+                if not isinstance(g, LineString) or g.length < 20.0:
+                    continue
+                a = part.project(Point(g.coords[0]))
+                b = part.project(Point(g.coords[-1]))
+                tun.append([round(min(a, b), 1), round(max(a, b), 1)])
+            tun.sort()
+            merged = []
+            for rg in tun:
+                if merged and rg[0] - merged[-1][1] < 25.0:
+                    merged[-1][1] = max(merged[-1][1], rg[1])
+                else:
+                    merged.append(rg)
+            tun = [rg for rg in merged if rg[1] - rg[0] >= 40.0]
+        lines.append({"ref": r["ref"], "name": r["name"], "mode": mode, "colour": r["colour"], "pts": flat(coords), "tun_m": tun,
             "stops": [si for _s, si in dedup], "s": [round(s, 1) for s, _si in dedup]})
     lines.sort(key=lambda l: ({"tram": 0, "train": 1, "bus": 2}[l["mode"]], l["ref"]))
     print(f"[welt] ÖPNV: {len(lines)} Linienverläufe ({sum(1 for l in lines if l['mode'] == 'tram')} Bahn, "
         f"{sum(1 for l in lines if l['mode'] == 'bus')} Bus), {len(stops)} Haltestellen, "
-        f"{sum(len(l['tun']) for l in lines)} Tunnelabschnitte")
-    return {"stops": stops, "lines": lines}
+        f"{sum(len(l['tun_m']) for l in lines)} Tunnelabschnitte")
+    return {"stops": stops, "lines": lines, "track_offset": float(getattr(src, "TRACK_OFFSET", 0.0))}

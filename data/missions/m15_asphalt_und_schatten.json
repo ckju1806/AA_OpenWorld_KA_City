@@ -1,0 +1,100 @@
+{
+  "id": "m15_asphalt_und_schatten",
+  "title": "Asphalt & Schatten",
+  "order": 15,
+  "reward": 2000,
+  "requires": [
+    "m14_stadtbahn",
+    "m05_nachtschicht",
+    "m07_probefahrt"
+  ],
+  "chapter": "Finale",
+  "summary": "Die Beweise müssen zum Polizeirevier – und Vespers Leute wollen das verhindern.",
+  "giver": {
+    "poi": "mira",
+    "name": "Mira Kessel",
+    "role": "Freie Journalistin („Fächerbote“, fiktiv)",
+    "look": {
+      "skin": "#b98a6a",
+      "shirt": "#e8e2d4",
+      "jacket": "#3d5a4a",
+      "pants": "#22262e",
+      "shoes": "#5a3a2a",
+      "hair": "#2a1a14",
+      "hair_style": 2
+    },
+    "prompt": "Mit Mira sprechen (Finale)",
+    "done_line": "Die Geschichte ist raus. Karlsruhe weiß Bescheid – dank dir."
+  },
+  "reputation": {
+    "buerger": 20
+  },
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Mira",
+          "Das ist es. Mit diesen Unterlagen ist Vesper erledigt – wenn sie beim Revier ankommen."
+        ],
+        [
+          "Mira",
+          "Ich fahre, du begleitest mich mit dem Fächer GT. Vespers Leute werden versuchen, mich abzudrängen."
+        ],
+        [
+          "Mira",
+          "Bleib dicht bei mir. Wenn mein Wagen zu viel abbekommt, ist alles verloren."
+        ]
+      ]
+    },
+    {
+      "type": "spawn_npc_vehicle",
+      "tag": "mira",
+      "spec": "limousine",
+      "poi": "mira_wagen2",
+      "color": "#5a6b5a"
+    },
+    {
+      "type": "spawn_vehicle",
+      "tag": "gt",
+      "spec": "sport",
+      "poi": "tram_treff",
+      "color": "#c81e1e",
+      "livery": "Kessler Automobile"
+    },
+    {
+      "type": "enter_vehicle",
+      "tag": "gt",
+      "text": "Steig in den Fächer GT, den Toni dir geliehen hat."
+    },
+    {
+      "type": "protect",
+      "tag": "mira",
+      "dest": "revier",
+      "speed": 10.0,
+      "max": 90,
+      "min_health": 0.3,
+      "chasers": 2,
+      "text": "Begleite Mira zum Polizeirevier und halte ihr die Verfolger vom Leib."
+    },
+    {
+      "type": "notify",
+      "title": "BEWEISE ÜBERGEBEN",
+      "subtitle": "Vesper-Logistik unter Verdacht",
+      "seconds": 4.0
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Mira",
+          "Geschafft. Morgen steht alles im Fächerboten – mit deinem Namen in der Danksagung."
+        ],
+        [
+          "Hanne (Funk)",
+          "Hab's gehört! Du hast ab jetzt einen festen Platz bei Fächerblitz. Und in dieser Stadt."
+        ]
+      ]
+    }
+  ]
+}

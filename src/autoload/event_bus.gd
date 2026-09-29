@@ -31,3 +31,4 @@ signal dialog_closed
 # Fahrzeugereignisse (für Audio/Polizei)
 signal vehicle_collision(vehicle: Node, impulse: float, other: Node)
 signal horn(position: Vector3)
+signal bark(speaker: String, text: String, position: Vector3)   ## Zuruf einer Figur (Untertitel, W7)

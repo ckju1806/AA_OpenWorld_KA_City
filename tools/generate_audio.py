@@ -226,8 +226,84 @@ def music_menu():
     write("music_menu", out)
 
 
+def animal_sounds():
+    """Tierlaute (W6): stark vereinfachte Synthesen."""
+    rng = random.Random(71)
+    # Ente: zwei nasale Quaks (Rechteck mit Formant-Tiefpass, fallende Tonhöhe)
+    out = []
+    for q in range(2):
+        n = int(0.16 * RATE)
+        lp = LowPass(1600)
+        ph = 0.0
+        for i in range(n):
+            f = 520 - 180 * i / n
+            ph += f / RATE
+            sq = 1.0 if (ph % 1.0) < 0.35 else -1.0
+            out.append(lp(sq) * env_ad(i, n, 0.01, 1.2) * 0.8)
+        out += [0.0] * int(0.08 * RATE)
+    write("tier_ente", out)
+    # Flügelschlag: kurze Rauschimpulse
+    out = []
+    lp = LowPass(900)
+    for k in range(7):
+        n = int(0.05 * RATE)
+        for i in range(n):
+            out.append(lp(noise(rng)) * env_ad(i, n, 0.004, 2.5))
+        out += [0.0] * int(0.03 * RATE)
+    write("tier_flattern", out)
+    # Hund: zwei Beller (Rauschen + tiefer Grundton, schneller Abfall)
+    out = []
+    for b in range(2):
+        n = int(0.18 * RATE)
+        lp = LowPass(1200)
+        for i in range(n):
+            f = 330 + 120 * math.sin(math.pi * i / n)
+            s = math.sin(2 * math.pi * f * i / RATE) * 0.7 + noise(rng) * 0.35
+            out.append(lp(s) * env_ad(i, n, 0.006, 1.8))
+        out += [0.0] * int(0.12 * RATE)
+    write("tier_hund", out)
+    # Elefant: Trompeten (Sägezahn mit Vibrato, ansteigend)
+    n = int(1.1 * RATE)
+    out = []
+    lp = LowPass(2400)
+    ph = 0.0
+    for i in range(n):
+        t = i / n
+        f = 380 + 260 * t + 18 * math.sin(2 * math.pi * 7 * i / RATE)
+        ph += f / RATE
+        saw = 2.0 * (ph % 1.0) - 1.0
+        out.append(lp(saw + noise(rng) * 0.1) * min(1.0, t * 8) * (1 - t) ** 0.6 * 0.8)
+    write("tier_elefant", out)
+    # Löwe: tiefes Brüllen (gefiltertes Rauschen + Grundton 90 Hz, An- und Abschwellen)
+    n = int(1.4 * RATE)
+    out = []
+    lp = LowPass(500)
+    for i in range(n):
+        t = i / n
+        f = 95 - 25 * t
+        s = math.sin(2 * math.pi * f * i / RATE) * 0.6 + noise(rng) * 0.6
+        out.append(lp(s) * math.sin(math.pi * t) ** 0.7)
+    write("tier_loewe", out)
+    # Regen (Schleife): dichtes, gefiltertes Rauschen mit einzelnen Tropfen
+    n = int(3.0 * RATE)
+    out = []
+    lp = LowPass(3500)
+    for i in range(n):
+        s = lp(noise(rng)) * 0.35
+        if rng.random() < 0.0015:
+            s += 0.4
+        out.append(s)
+    # nahtlos: Anfang/Ende überblenden
+    fade = int(0.2 * RATE)
+    for i in range(fade):
+        a = i / fade
+        out[i] = out[i] * a + out[n - fade + i] * (1 - a)
+    write("ambience_rain", out[:n - fade])
+
+
 def main():
     print("Erzeuge Audio nach", OUT)
+    animal_sounds()
     step()
     jump()
     door()

@@ -1,0 +1,78 @@
+{
+  "id": "m11_hafenfreundschaft",
+  "title": "Hafenfreundschaft",
+  "order": 11,
+  "reward": 500,
+  "requires": [
+    "m03_falsche_lieferung"
+  ],
+  "chapter": "Die zwei Gruppen",
+  "summary": "Die Hafenkolonne braucht einen Fahrer – schnell und ohne Fragen.",
+  "reputation": {
+    "hafenkolonne": 15,
+    "ringbande": -5
+  },
+  "giver": {
+    "poi": "jo",
+    "name": "Jo Brenner",
+    "role": "Hafenkolonne (fiktive Gruppe)",
+    "look": {
+      "skin": "#d9b08c",
+      "shirt": "#303030",
+      "jacket": "#f08420",
+      "pants": "#2a2a30",
+      "shoes": "#1a1a1a",
+      "hair": "#3a2a1a",
+      "hair_style": 0
+    },
+    "prompt": "Mit Jo sprechen (Fahrt)",
+    "done_line": "Du bisch in Ordnung. Die Kolonne vergisst nix."
+  },
+  "fail_vehicle": "pritsche",
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Jo",
+          "Ewald sagt, du fährst gut. Einer von uns sitzt an der Kaiserallee fest – Auto kaputt."
+        ],
+        [
+          "Jo",
+          "Hol ihn ab und bring ihn her. Und keine Umwege über die Ringbande-Ecke."
+        ]
+      ]
+    },
+    {
+      "type": "spawn_vehicle",
+      "tag": "pritsche",
+      "spec": "transporter",
+      "poi": "jo_wagen",
+      "color": "#b85a20",
+      "livery": "Hafenkolonne"
+    },
+    {
+      "type": "enter_vehicle",
+      "tag": "pritsche",
+      "text": "Steig in den Pritschenwagen."
+    },
+    {
+      "type": "taxi",
+      "pickup": "jo_crew",
+      "dest": "jo",
+      "radius": 10,
+      "text": "Hol Jos Kumpel an der Kaiserallee ab.",
+      "board_text": "Warte, bis er eingestiegen ist.",
+      "drive_text": "Bring ihn zurück in den Rheinhafen."
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Jo",
+          "Sauber. Wir merken uns so was."
+        ]
+      ]
+    }
+  ]
+}

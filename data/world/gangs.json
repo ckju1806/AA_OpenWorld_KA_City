@@ -1,0 +1,26 @@
+{
+  "_hinweis": "FIKTIVE Gruppen und Risikoprofile (Spielgestaltung). Keine realen Personen, Gruppen oder Institutionen; Stadtteile nur als Orte. risk: 0..1 = Grundwahrscheinlichkeit für Zufallsereignisse im Viertel.",
+  "groups": [
+    {"id": "hafenkolonne", "name": "Hafenkolonne", "color": [0.95, 0.52, 0.12], "turf": ["rheinhafen", "muehlburg", "daxlanden", "knielingen"]},
+    {"id": "ringbande", "name": "Ringbande", "color": [0.55, 0.25, 0.75], "turf": ["suedstadt", "oststadt", "suedost", "rintheim"]},
+    {"id": "nordlichter", "name": "Die Nordlichter", "color": [0.15, 0.75, 0.8], "turf": ["nordweststadt", "neureut", "nordstadt", "waldstadt"]},
+    {"id": "turmberg_clique", "name": "Turmberg-Clique", "color": [0.3, 0.72, 0.28], "turf": ["durlach", "durlach_altstadt", "aue", "hagsfeld"]}
+  ],
+  "zones": {
+    "innenstadt": {"risk": 0.55, "events": {"theft": 3, "rally": 3, "police_check": 2, "scuffle": 1}},
+    "kit": {"risk": 0.25, "events": {"rally": 3, "theft": 1}},
+    "weststadt": {"risk": 0.35, "events": {"theft": 2, "police_check": 2, "race": 1}},
+    "muehlburg": {"risk": 0.5, "events": {"scuffle": 3, "race": 2, "theft": 1}},
+    "rheinhafen": {"risk": 0.6, "events": {"scuffle": 3, "race": 3, "police_check": 1}},
+    "suedstadt": {"risk": 0.55, "events": {"scuffle": 3, "theft": 2, "rally": 1}},
+    "oststadt": {"risk": 0.45, "events": {"scuffle": 2, "theft": 2, "police_check": 1}},
+    "suedost": {"risk": 0.35, "events": {"race": 2, "scuffle": 1, "police_check": 2}},
+    "nordweststadt": {"risk": 0.4, "events": {"scuffle": 2, "race": 2}},
+    "durlach": {"risk": 0.3, "events": {"scuffle": 2, "police_check": 2, "theft": 1}},
+    "durlach_altstadt": {"risk": 0.35, "events": {"theft": 2, "rally": 1, "scuffle": 1}},
+    "_default": {"risk": 0.2, "events": {"police_check": 2, "theft": 1, "race": 1}}
+  },
+  "rally_slogans": ["Mehr Radwege!", "Rettet den Stadtgarten!", "Tempo 30 in der Oststadt!", "Kultur statt Kommerz!", "Längere Bahntakte, bitte!", "Grün statt Grau!"],
+  "scuffle_lines": ["Das ist unser Block!", "Verzieht euch!", "Was willst du hier?", "Hier habt ihr nichts zu suchen!", "Komm doch her!"],
+  "theft_lines": ["Haltet den Dieb!", "Meine Tasche!", "Hilfe, mein Rucksack!"]
+}

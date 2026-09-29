@@ -125,6 +125,9 @@ func _draw_markers() -> void:
 					_marker(Vector2(g.global_position.x, g.global_position.z), UiStyle.ACCENT, "◆", full)
 		if ms.active != null and ms.has_target:
 			_marker(Vector2(ms.target.x, ms.target.z), Color(1.0, 0.85, 0.3), "●", true)
+	var wp: Variant = game.get("waypoint")
+	if wp is Vector3 and (wp as Vector3) != Vector3.INF:
+		_marker(Vector2((wp as Vector3).x, (wp as Vector3).z), Color(0.35, 0.85, 1.0), "✚", true)
 	var police: PoliceManager = game.get("police") as PoliceManager
 	if police != null and police.wanted_level() > 0:
 		var blink: bool = int(Time.get_ticks_msec() / 300) % 2 == 0

@@ -1,0 +1,91 @@
+{
+  "id": "m06_ersatzteile",
+  "title": "Ersatzteile",
+  "order": 6,
+  "reward": 450,
+  "requires": [
+    "m02_faecher_runde"
+  ],
+  "chapter": "Autohaus Kessler",
+  "summary": "Ersatzteile in der Weststadt abholen – und heil zurückbringen.",
+  "giver": {
+    "poi": "toni",
+    "name": "Toni „Turbo“ Kessler",
+    "role": "Autohändler",
+    "look": {
+      "skin": "#c99a78",
+      "shirt": "#f2f2f2",
+      "jacket": "#b3261e",
+      "pants": "#26262b",
+      "shoes": "#f0f0f0",
+      "hair": "#1e1a18",
+      "hair_style": 0
+    },
+    "prompt": "Mit Toni sprechen (Ersatzteile)",
+    "done_line": "Die Teile sin eingebaut. Läuft wie ein Kätzchen!"
+  },
+  "fail_vehicle": "kombi",
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Toni",
+          "Mein Laden läuft wieder! Kessler Automobile – klein, aber fein."
+        ],
+        [
+          "Toni",
+          "Die Schrauberei Mäule hat meine Ersatzteile. Hol sie ab – und fahr bitte vorsichtig, da sind Scheinwerfer dabei."
+        ]
+      ]
+    },
+    {
+      "type": "spawn_vehicle",
+      "tag": "kombi",
+      "spec": "limousine",
+      "poi": "rennwagen",
+      "color": "#3a4a5a",
+      "livery": "Kessler Automobile"
+    },
+    {
+      "type": "enter_vehicle",
+      "tag": "kombi",
+      "text": "Steig in Tonis Werkstattwagen."
+    },
+    {
+      "type": "goto",
+      "poi": "maeule",
+      "radius": 12,
+      "vehicle": "kombi",
+      "marker": "abholung",
+      "text": "Fahr zur Schrauberei Mäule (Hertzstraße)."
+    },
+    {
+      "type": "wait_zone",
+      "poi": "maeule",
+      "radius": 12,
+      "vehicle": "kombi",
+      "seconds": 3.0,
+      "max_speed": 2.0,
+      "text": "Halte an – die Teile werden eingeladen.",
+      "progress": "Einladen"
+    },
+    {
+      "type": "goto",
+      "poi": "autohaus_parken",
+      "radius": 10,
+      "vehicle": "kombi",
+      "marker": "ziel",
+      "text": "Bring die Teile zu Toni an die Durlacher Allee."
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Toni",
+          "Alles ganz? Wunderbar. Du hast Talent – fürs Fahren und fürs Nicht-Kaputtmachen."
+        ]
+      ]
+    }
+  ]
+}

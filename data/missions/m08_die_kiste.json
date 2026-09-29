@@ -1,0 +1,69 @@
+{
+  "id": "m08_die_kiste",
+  "title": "Die Kiste",
+  "order": 8,
+  "reward": 400,
+  "requires": [
+    "m03_falsche_lieferung"
+  ],
+  "chapter": "Fächerbote",
+  "summary": "Eine Journalistin interessiert sich für den Lagerhof im Rheinhafen.",
+  "giver": {
+    "poi": "mira",
+    "name": "Mira Kessel",
+    "role": "Freie Journalistin („Fächerbote“, fiktiv)",
+    "look": {
+      "skin": "#b98a6a",
+      "shirt": "#e8e2d4",
+      "jacket": "#3d5a4a",
+      "pants": "#22262e",
+      "shoes": "#5a3a2a",
+      "hair": "#2a1a14",
+      "hair_style": 2
+    },
+    "prompt": "Mit Mira sprechen (Recherche)",
+    "done_line": "Die Fotos sind gut. Wir bleiben dran."
+  },
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Mira",
+          "Du bist doch der Fahrer, der für Ewald die Kiste aus dem Rheinhafen geholt hat, oder?"
+        ],
+        [
+          "Mira",
+          "Mira Kessel, Fächerbote. Auf dem Lagerhof verschwinden seit Wochen Dinge, die es auf Papier nie gab."
+        ],
+        [
+          "Mira",
+          "Beobachte den Hof eine Weile aus sicherem Abstand. Nicht zu nah – dort sind Kameras."
+        ]
+      ]
+    },
+    {
+      "type": "observe",
+      "poi": "lager_beobachtung",
+      "min": 30,
+      "max": 90,
+      "seconds": 25,
+      "text": "Beobachte den Lagerhof aus 30–90 m Abstand."
+    },
+    {
+      "type": "escape_area",
+      "poi": "lager_beobachtung",
+      "radius": 200,
+      "text": "Verschwinde unauffällig aus dem Hafen."
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Mira (Telefon)",
+          "Ein grauer Transporter ohne Kennzeichen? Das ist unser Faden. Ich melde mich."
+        ]
+      ]
+    }
+  ]
+}

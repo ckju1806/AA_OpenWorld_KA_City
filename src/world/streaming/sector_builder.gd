@@ -105,7 +105,35 @@ static func build(w: WorldData, g: CityGraph, ij: Vector2i, data: Dictionary, qu
 		shape.set_faces(col_faces)
 		cs.shape = shape
 		body.add_child(cs)
-	return {"node": root, "lamps": lamps, "cars": cars}
+	return {"node": root, "lamps": lamps, "cars": cars, "habitats": _habitats(w, data)}
+
+
+## Lebensräume für Tiere (W6): Wasser, Parks/Gärten, Plätze – Polygon, Art, Bodenhöhe, Fläche.
+static func _habitats(w: WorldData, data: Dictionary) -> Array:
+	var out: Array = []
+	for a: Variant in data.get("a", []):
+		var kind: String = w.area_kinds[int(a[0])]
+		if kind == "water" or kind == "zoo":
+			continue
+		if kind in ["park", "garden", "forest"]:
+			var poly: PackedVector2Array = w.pts(a[1])
+			var ar: float = absf(PolyUtil.signed_area(poly))
+			if ar > 600.0:
+				out.append({"kind": "park", "poly": poly, "y": 0.0, "area": ar})
+	for a2: Variant in data.get("a", []):
+		if w.area_kinds[int(a2[0])] == "water":
+			var poly2: PackedVector2Array = w.pts(a2[1])
+			var ar2: float = absf(PolyUtil.signed_area(poly2))
+			if ar2 > 200.0:
+				out.append({"kind": "water", "poly": poly2, "y": -0.02, "area": ar2})
+	for k: Variant in data.get("k", []):
+		var kind3: String = w.area_kinds[int(k[0])]
+		if kind3 in ["plaza", "park", "garden"]:
+			var poly3: PackedVector2Array = w.pts(k[1])
+			var ar3: float = absf(PolyUtil.signed_area(poly3))
+			if ar3 > 300.0:
+				out.append({"kind": "plaza" if kind3 == "plaza" else "park", "poly": poly3, "y": SLAB_H, "area": ar3})
+	return out
 
 
 # ------------------------------------------------------------------ Straßen

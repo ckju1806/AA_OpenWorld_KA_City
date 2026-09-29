@@ -42,6 +42,8 @@ var _temp_vehicles: Array[Node3D] = []
 var _pending_fail: String = ""
 var _frozen: bool = false
 var _despawn_t: float = 0.0
+var extras: Array[Node] = []               ## Zusatzobjekte (Fahrgäste, Kisten, Verfolger) – beim Ende entfernt
+var _giver_t: float = 0.0
 
 
 func setup(p_game: Node) -> void:
@@ -218,6 +220,13 @@ func _begin_step(i: int) -> void:
 			return
 		"lose_wanted":
 			pass
+		_:
+			if MissionStepsExt.handles(t):
+				if not MissionStepsExt.begin(self, t, _step):
+					_begin_step(i + 1)
+					return
+				if active == null:
+					return
 	EventBus.mission_objective.emit(active.id, objective)
 	changed.emit()
 
@@ -243,10 +252,18 @@ func _spawn_vehicle(s: Dictionary) -> void:
 	if old != null:
 		_remove_vehicle(old)
 	var city: CityWorld = game.call("get_city")
-	var poi: String = str(s.get("poi", ""))
-	city.ensure_loaded(city.graph.poi_pos3(poi))
-	var pos: Vector3 = city.poi_position(poi)
-	var yaw: float = city.graph.poi_yaw(poi)
+	var pos: Vector3
+	var yaw: float
+	if s.has("pos"):
+		var pa: Array = s.pos
+		city.ensure_loaded(Vector3(float(pa[0]), 0, float(pa[1])))
+		pos = Vector3(float(pa[0]), city.ground_y(Vector2(float(pa[0]), float(pa[1]))), float(pa[1]))
+		yaw = float(s.get("yaw", 0.0))
+	else:
+		var poi: String = str(s.get("poi", ""))
+		city.ensure_loaded(city.graph.poi_pos3(poi))
+		pos = city.poi_position(poi)
+		yaw = city.graph.poi_yaw(poi)
 	if game.has_method("clear_area"):
 		game.call("clear_area", pos, 7.0)
 	var col: Color = Color.html(str(s.color)) if s.has("color") else Color(-1, 0, 0)
@@ -257,7 +274,50 @@ func _spawn_vehicle(s: Dictionary) -> void:
 	_entities[tag] = v
 
 
+## Mehrere Missionen teilen sich eine Auftraggeber-Figur: sichtbar ist nur die nächste verfügbare
+## (bzw. die zuletzt abgeschlossene für den Plauder-Satz).
+func refresh_givers() -> void:
+	var by_giver: Dictionary = {}
+	for id: String in givers:
+		var d: MissionDefinition = definitions[id]
+		var arr: Array = by_giver.get(d.giver_id, [])
+		arr.append(d)
+		by_giver[d.giver_id] = arr
+	for gid: String in by_giver:
+		var list: Array = by_giver[gid]
+		list.sort_custom(func(a: MissionDefinition, b: MissionDefinition) -> bool: return a.order < b.order)
+		# Vorrang: offener (noch nie abgeschlossener) Auftrag, danach wiederholbare
+		var show: MissionDefinition = null
+		for d2: MissionDefinition in list:
+			if is_available(d2.id) and not GameState.is_mission_completed(d2.id):
+				show = d2
+				break
+		if show == null:
+			for d5: MissionDefinition in list:
+				if is_available(d5.id):
+					show = d5
+					break
+		if show == null:
+			for d3: MissionDefinition in list:
+				if GameState.is_mission_completed(d3.id):
+					show = d3
+			if show == null:
+				show = list[0]
+		for d4: MissionDefinition in list:
+			var gv: MissionGiver = givers[d4.id]
+			var vis: bool = d4 == show
+			if gv.visible != vis:
+				gv.visible = vis
+				gv.set_process(vis)
+				gv.set_physics_process(vis)
+			gv.set_meta("active_giver", vis)
+
+
 func _physics_process(delta: float) -> void:
+	_giver_t -= delta
+	if _giver_t <= 0.0:
+		_giver_t = 1.0
+		refresh_givers()
 	_despawn_t -= delta
 	if _despawn_t <= 0.0:
 		_despawn_t = 2.0
@@ -321,6 +381,9 @@ func _physics_process(delta: float) -> void:
 			if lvl == 0:
 				EventBus.notify.emit("Verfolger abgeschüttelt.", "erfolg")
 				_begin_step(step_index + 1)
+		_:
+			if MissionStepsExt.handles(t):
+				MissionStepsExt.update(self, t, _step, delta)
 
 
 func _in_zone(s: Dictionary, p: Player) -> bool:
@@ -415,7 +478,7 @@ func _update_checkpoints(delta: float, p: Player) -> void:
 	var tt: float = float(_st.time) + delta
 	_st["time"] = tt
 	race_time = tt
-	var limit: float = float(_step.get("time_limit", 999.0))
+	var limit: float = float(_step.get("time_limit", 999.0)) * (1.5 if Settings.simplified_missions else 1.0)
 	var key: String = active.best_time_key if active.best_time_key != "" else active.id
 	var best: float = GameState.get_best_time(key)
 	timer_text = "Zeit %s / %s%s" % [_fmt_time(tt), _fmt_time(limit), ("   Bestzeit %s" % _fmt_time(best)) if best > 0.0 else ""]
@@ -509,6 +572,12 @@ func fail(reason: String) -> void:
 func _complete() -> void:
 	var d: MissionDefinition = active
 	var first: bool = GameState.complete_mission(d.id, d.reward)
+	if d.pay_always and not first:
+		GameState.add_money(d.reward)
+		first = true
+	if first:
+		for grp: Variant in d.reputation:
+			GameState.add_reputation(str(grp), int(d.reputation[grp]))
 	_clear_step_visuals()
 	_cleanup_entities(false)
 	active = null
@@ -561,6 +630,13 @@ func _clear_step_visuals() -> void:
 
 ## Missionsfahrzeuge: bei Fehlschlag entfernen, bei Erfolg als normale Fahrzeuge später ausblenden.
 func _cleanup_entities(delete_now: bool) -> void:
+	for x: Node in extras:
+		if is_instance_valid(x):
+			if x is Vehicle:
+				_remove_vehicle(x as Vehicle)
+			else:
+				x.queue_free()
+	extras.clear()
 	for tag: String in _entities.keys():
 		var v: Vehicle = mission_vehicle(tag)
 		if v == null:

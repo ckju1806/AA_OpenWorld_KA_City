@@ -14,6 +14,14 @@ var missions: MissionSystem = null
 var lights: TrafficLights = null
 var traffic: TrafficManager = null
 var peds: PedestrianManager = null
+var animals: AnimalManager = null
+var waypoint: Vector3 = Vector3.INF          ## vom Spieler gesetzter Wegpunkt (Auftragsliste/Karte)
+var jobs: JobSystem = null
+var mission_list: MissionList = null
+var events: EventDirector = null
+var transit: TransitSystem = null
+var ride_info: String = ""                    ## HUD-Text während einer ÖPNV-Fahrt
+var animals_in_tests: bool = false
 var police: PoliceManager = null
 var parked: ParkedCarManager = null
 ## Tests: geparkte Autos auch ohne Umgebungsleben
@@ -59,6 +67,14 @@ func _ready() -> void:
 		missions.name = "Missionen"
 		add_child(missions)
 		missions.setup(self)
+		jobs = JobSystem.new()
+		jobs.name = "Jobs"
+		add_child(jobs)
+		jobs.setup(self)
+		mission_list = MissionList.new()
+		mission_list.name = "Auftragsliste"
+		add_child(mission_list)
+		mission_list.setup(self)
 		_setup_maps(world as CityWorld)
 	pause_menu = PauseMenu.new()
 	pause_menu.name = "Pausenmenue"
@@ -135,6 +151,9 @@ func request_pause() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		request_pause()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("mission_list") and mission_list != null and not mission_list.is_open():
+		mission_list.open()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cheat_console") and cheat_console != null and not cheat_console.is_open():
 		cheat_console.open()
@@ -289,13 +308,30 @@ func _setup_city_systems(city: CityWorld) -> void:
 	add_child(peds)
 	peds.setup(self, city)
 	peds.enabled = ambient_life
+	animals = AnimalManager.new()
+	animals.name = "Tiere"
+	add_child(animals)
+	animals.setup(self, st)
+	animals.enabled = ambient_life or animals_in_tests
 	police = PoliceManager.new()
 	police.name = "Polizei"
 	add_child(police)
 	police.setup(self, city.graph, lights)
 	police.patrol_enabled = ambient_life
+	events = EventDirector.new()
+	events.name = "Ereignisse"
+	add_child(events)
+	events.setup(self, city, lights)
+	events.enabled = ambient_life
+	transit = TransitSystem.new()
+	transit.name = "OePNV"
+	add_child(transit)
+	transit.setup(self, city)
 	EventBus.player_busted.connect(_on_busted)
 	EventBus.player_entered_vehicle.connect(_on_player_entered_vehicle)
+	EventBus.vehicle_collision.connect(func(v: Node, dv: float, _o: Node) -> void:
+		if player != null and v == player.current_vehicle and camera_rig != null:
+			camera_rig.add_shake(clampf(dv / 12.0, 0.1, 0.8)))
 
 
 # ------------------------------------------------------------------ Schnittstellen für Missionen/Systeme
@@ -315,7 +351,10 @@ func teleport_player(pos: Vector3) -> void:
 	if cw != null:
 		cw.ensure_loaded(pos)
 		pos.y = cw.ground_y(Vector2(pos.x, pos.z)) + 0.2
-	if player.is_in_vehicle():
+	if player.is_riding() and transit != null:
+		transit.cancel_ride()
+		player.end_ride(pos)
+	elif player.is_in_vehicle():
 		var v: Vehicle = player.current_vehicle as Vehicle
 		v.teleport_to(pos + Vector3.UP * 0.3, v.rotation.y)
 	else:
@@ -377,6 +416,10 @@ func _physics_process(delta: float) -> void:
 	_update_safe_point(delta)
 	if world is CityWorld and player != null:
 		(world as CityWorld).update_focus(player.current_vehicle.global_position if player.is_in_vehicle() else player.global_position)
+		# Wegpunkt erreicht -> löschen
+		if waypoint != Vector3.INF and Vector2(player.global_position.x - waypoint.x, player.global_position.z - waypoint.z).length() < 15.0:
+			waypoint = Vector3.INF
+			EventBus.notify.emit("Wegpunkt erreicht.", "info")
 	if _respawn_t > 0.0:
 		_respawn_t -= delta
 		if _respawn_t <= 0.0:
@@ -425,7 +468,7 @@ func prepare_mission_retry(_mission_id: String, xf: Transform3D) -> void:
 
 
 func on_mission_completed(_mission_id: String) -> void:
-	if autosave_enabled:
+	if autosave_enabled and Settings.autosave:
 		var r: Dictionary = save_now()
 		EventBus.notify.emit("Automatisch gespeichert." if r.ok else str(r.message), "hinweis" if r.ok else "warnung")
 
@@ -551,6 +594,82 @@ func _lm_station(tour: ScreenshotTour, station_name: String, lm_type: String, of
 		return
 
 
+## ÖPNV-Stationen: Bahn an der Haltestelle, Rampenportal, Mitfahrt in U-Station und Tunnel, Bus.
+func _transit_stations(tour: ScreenshotTour, y: float) -> void:
+	if transit == null or not transit.has_lines():
+		return
+	tour.add_station("oepnv_bahn_haltestelle", func() -> void:
+		WorldClock.set_time(12.0)
+		var vh: Dictionary = transit.debug_place_at_stop("Durlacher Tor", "tram")
+		if vh.is_empty():
+			return
+		var f: Node3D = vh.segs[0]
+		var side: Vector3 = f.global_basis.x
+		var pp: Vector3 = f.global_position + side * 14.0 - f.global_basis.z * 6.0
+		(world as CityWorld).ensure_loaded(pp)
+		player.global_position = Vector3(pp.x, y, pp.z)
+		var to: Vector3 = f.global_position + f.global_basis.z * 10.0 - player.global_position
+		camera_rig.yaw = atan2(-to.x, -to.z)
+		camera_rig.pitch = -0.08
+		camera_rig.snap()
+	, 60)
+	tour.add_station("oepnv_ustrab_rampe", func() -> void:
+		for ln: Dictionary in transit.lines:
+			if (ln.tun as Array).is_empty() or ln.mode != "tram":
+				continue
+			var r1: float = float(ln.tun[0][1])
+			if r1 + TransitSystem.RAMP + 40.0 > float(ln.len):
+				continue
+			var pd: Array = transit.point_at(ln, r1 + TransitSystem.RAMP + 28.0)
+			var d: Vector2 = pd[1]
+			var p2: Vector2 = (pd[0] as Vector2) + Vector2(-d.y, d.x) * 9.0
+			(world as CityWorld).ensure_loaded(Vector3(p2.x, 0, p2.y))
+			player.global_position = Vector3(p2.x, y, p2.y)
+			camera_rig.yaw = atan2(d.x, d.y)
+			camera_rig.pitch = -0.1
+			camera_rig.snap()
+			return
+	, 60)
+	tour.add_station("oepnv_mitfahrt_ustation", func() -> void:
+		var vh: Dictionary = transit.debug_place_at_stop("Marktplatz", "tram")
+		if vh.is_empty():
+			return
+		player.global_position = transit.stop_world_pos(int(transit.lines[int(vh.line)].stops[int(vh.stop_k)])) + Vector3.UP * 0.2
+		transit.board(vh)
+		camera_rig.yaw = (vh.segs[0] as Node3D).rotation.y + 0.35
+		camera_rig.pitch = -0.12
+		camera_rig.snap()
+	, 60)
+	tour.add_station("oepnv_mitfahrt_tunnel", func() -> void:
+		if not transit.is_riding():
+			return
+		var vh: Dictionary = transit.ride.veh
+		vh.dwell = 0.0
+		vh.stop_k = int(vh.stop_k) + 1
+		vh.s = float(vh.s) + 150.0
+		vh.v = 11.0
+		camera_rig.yaw = (vh.segs[0] as Node3D).rotation.y
+		camera_rig.pitch = -0.1
+		camera_rig.snap()
+	, 50)
+	tour.add_station("oepnv_bus_hbf", func() -> void:
+		if transit.is_riding():
+			transit.cancel_ride()
+			player.end_ride(Vector3(0, y, 520))
+		var vh: Dictionary = transit.debug_place_at_stop("Hauptbahnhof", "bus")
+		if vh.is_empty():
+			return
+		var f: Node3D = vh.segs[0]
+		var pp: Vector3 = f.global_position + f.global_basis.x * 12.0 - f.global_basis.z * 10.0
+		(world as CityWorld).ensure_loaded(pp)
+		player.global_position = Vector3(pp.x, y, pp.z)
+		var to: Vector3 = f.global_position - player.global_position
+		camera_rig.yaw = atan2(-to.x, -to.z)
+		camera_rig.pitch = -0.08
+		camera_rig.snap()
+	, 60)
+
+
 func _register_city_stations(tour: ScreenshotTour) -> void:
 	var cw: CityWorld = get_city()
 	var y: float = cw.slab_h + 0.05
@@ -575,6 +694,7 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 	_cam_station(tour, "weststadt", Vector3(-1900, y, 300), 90.0, -0.08)
 	_cam_station(tour, "durlach", Vector3(5190, y, 1640), -80.0, -0.08)
 	_cam_station(tour, "rheinhafen", Vector3(-5600, y, 330), 90.0, -0.12)
+	_transit_stations(tour, y)
 	_weather_station(tour, "tageslicht_mittag", Vector3(0, y, 520), 0.0, -0.05, 13.0, "klar")
 	_weather_station(tour, "nacht_kaiserstrasse", Vector3(-300, y, kz.call(-300.0)), 90.0, -0.06, 23.0, "klar")
 	_weather_station(tour, "regen_nasse_strasse", Vector3(-300, y, 912), -90.0, -0.1, 15.0, "regen")
@@ -721,7 +841,21 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		map_overlay.close()
 		pause_menu.open()
 	, 20)
+	tour.add_station("optionen_grafik", func() -> void:
+		pause_menu.call("_on_settings")
+	, 20)
+	tour.add_station("optionen_tastenbelegung", func() -> void:
+		var sp: SettingsPanel = pause_menu.get("_settings") as SettingsPanel
+		sp._tabs.current_tab = 3
+	, 20)
+	tour.add_station("cheat_konsole", func() -> void:
+		(pause_menu.get("_settings") as SettingsPanel).close()
+		pause_menu.close()
+		cheat_console.open()
+		cheat_console._submit("HILFE")
+	, 20)
 	tour.add_station("entwickleranzeige_minikarte", func() -> void:
+		cheat_console.close()
 		pause_menu.close()
 		camera_rig.yaw = 0.0
 		camera_rig.pitch = -0.12

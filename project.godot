@@ -48,6 +48,7 @@ theme/default_font_multichannel_signed_distance_field=true
 3d_physics/layer_3="fahrzeuge"
 3d_physics/layer_4="npc"
 3d_physics/layer_5="trigger"
+3d_physics/layer_6="kamera"
 
 [physics]
 

@@ -46,6 +46,87 @@ func police_goal() -> Vector3:
 	return wanted.last_known
 
 
+## Ziel je Einheit: bei Sichtkontakt die bekannte Position, in der Suchphase ein eigener Punkt im Suchgebiet
+## (Radius wächst mit der Suchdauer) – die Einheiten verteilen sich statt alle zum selben Punkt zu fahren.
+func police_goal_for(u: Node) -> Vector3:
+	if wanted.state != "suche":
+		return wanted.last_known
+	var r: float = clampf(30.0 + wanted.search_time * 4.0, 30.0, 140.0)
+	var h: int = u.get_instance_id()
+	var ang: float = DetRng.hash01(h & 0xFFFF, int(wanted.search_time / 8.0), 3) * TAU
+	var dist: float = r * (0.35 + 0.65 * DetRng.hash01(h & 0xFFFF, int(wanted.search_time / 8.0), 5))
+	return wanted.last_known + Vector3(cos(ang), 0.0, sin(ang)) * dist
+
+
+## Einsatz zu einem Ereignis (W7): eine Streife fährt mit Blaulicht hin und bleibt duration Sekunden.
+var dispatch_units: Array[Vehicle] = []
+
+
+func dispatch(pos: Vector3, duration: float) -> void:
+	if not enabled:
+		return
+	var before: int = units.size()
+	if not _try_spawn(pos):
+		return
+	var u: Vehicle = units.pop_back()
+	if units.size() != before:
+		return
+	var drv: PoliceDriver = u.ai_controller as PoliceDriver
+	drv.dispatch_goal = pos
+	drv.dispatch_until = Time.get_ticks_msec() / 1000.0 + 35.0 + duration
+	u.set_siren(true)
+	dispatch_units.append(u)
+
+
+## Straßensperren ab Fahndungsstufe 3: zwei Streifenwagen quer auf der Fahrbahn vor dem Spieler.
+var roadblocks: Array[Vehicle] = []
+var _roadblock_t: float = 20.0
+
+
+func _manage_roadblocks(delta: float, p: Player, ppos: Vector3) -> void:
+	for i: int in range(roadblocks.size() - 1, -1, -1):
+		var rb: Vehicle = roadblocks[i]
+		if not is_instance_valid(rb):
+			roadblocks.remove_at(i)
+			continue
+		if (wanted.level < 3 or rb.global_position.distance_to(ppos) > 380.0) and not _visible(rb.global_position):
+			rb.queue_free()
+			roadblocks.remove_at(i)
+	_roadblock_t -= delta
+	if wanted.level < 3 or not p.is_in_vehicle() or _roadblock_t > 0.0 or roadblocks.size() >= 4:
+		return
+	_roadblock_t = 35.0
+	var v: Vehicle = p.current_vehicle as Vehicle
+	var fwd: Vector3 = v.linear_velocity
+	fwd.y = 0.0
+	if fwd.length() < 5.0:
+		return
+	var ahead: Vector3 = ppos + fwd.normalized() * 200.0
+	var ne: Dictionary = graph.nearest_edge_point(Vector2(ahead.x, ahead.z), "drive", 60.0)
+	if int(ne.edge) < 0:
+		return
+	var e: int = int(ne.edge)
+	var pt: Vector2 = ne.point
+	var p3: Vector3 = Vector3(pt.x, 0.3, pt.y)
+	var city: CityWorld = game.call("get_city")
+	if _visible(p3) or (city != null and not city.is_loaded_at(p3)):
+		return
+	var dir: Vector2 = (graph.node_pos[graph.edge_b[e]] - graph.node_pos[graph.edge_a[e]]).normalized()
+	var right: Vector2 = Vector2(-dir.y, dir.x)
+	var half: float = graph.edge_width(e) * 0.25
+	for s: float in [-1.0, 1.0]:
+		var c: Vector2 = pt + right * half * s
+		var yaw: float = atan2(-right.x, -right.y) + (0.35 * s)
+		var u: Vehicle = game.call("spawn_vehicle", "polizei", Vector3(c.x, 0.3, c.y), yaw, Color(-1, 0, 0), Vehicle.Ownership.POLICE, "") as Vehicle
+		u.add_to_group("police")
+		u.add_to_group("roadblock")
+		u.set_lights(true)
+		u.set_siren(true)
+		u.driver = Vehicle.Driver.NONE
+		roadblocks.append(u)
+	EventBus.notify.emit("Straßensperre voraus!", "warnung")
+
+
 func _player() -> Player:
 	return game.get("player") as Player
 
@@ -95,7 +176,7 @@ func police_within(pos: Vector3, radius: float) -> bool:
 
 ## Kann irgendeine Einheit die Position sehen (Distanz + freie Sichtlinie)?
 func police_can_see(pos: Vector3) -> bool:
-	for u: Vehicle in units:
+	for u: Vehicle in units + dispatch_units + roadblocks:
 		if is_instance_valid(u) and _unit_sees(u, pos):
 			return true
 	return false
@@ -141,6 +222,8 @@ func _physics_process(delta: float) -> void:
 	if _spawn_t <= 0.0:
 		_spawn_t = 0.8
 		_manage_units(ppos)
+		_manage_dispatch(ppos)
+	_manage_roadblocks(delta, p, ppos)
 
 
 func _update_arrest(delta: float, p: Player, ppos: Vector3) -> void:
@@ -187,10 +270,29 @@ func _manage_units(ppos: Vector3) -> void:
 		_try_spawn(ppos)
 
 
+func _manage_dispatch(ppos: Vector3) -> void:
+	var now: float = Time.get_ticks_msec() / 1000.0
+	for i: int in range(dispatch_units.size() - 1, -1, -1):
+		var u: Vehicle = dispatch_units[i]
+		if not is_instance_valid(u) or u.driver == Vehicle.Driver.PLAYER:
+			dispatch_units.remove_at(i)
+			continue
+		var drv: PoliceDriver = u.ai_controller as PoliceDriver
+		var over: bool = drv == null or now > drv.dispatch_until
+		if (over or u.global_position.distance_to(ppos) > 380.0) and not _visible(u.global_position):
+			u.queue_free()
+			dispatch_units.remove_at(i)
+
+
 func _target_units() -> int:
 	if wanted.level == 0:
 		return 1 if patrol_enabled else 0
-	return UNITS_BY_LEVEL[clampi(wanted.level, 0, 3)]
+	var n: int = UNITS_BY_LEVEL[clampi(wanted.level, 0, 3)]
+	if Settings.police_difficulty == 0 or (Settings.simplified_missions and game.get("missions") != null and (game.get("missions") as MissionSystem).has_active()):
+		n = maxi(1, n - 1)
+	elif Settings.police_difficulty == 2:
+		n += 1
+	return n
 
 
 func _visible(pos: Vector3) -> bool:

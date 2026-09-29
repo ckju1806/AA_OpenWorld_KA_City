@@ -5,6 +5,7 @@ extends Node
 
 var game: Node = null
 var out_dir: String = "user://screenshots"
+var only: PackedStringArray = PackedStringArray()   ## --tour-only=a,b: nur Stationen, deren Name einen der Teile enthält
 var _stations: Array[Dictionary] = []
 
 
@@ -13,12 +14,21 @@ func _ready() -> void:
 	for a: String in OS.get_cmdline_user_args():
 		if a.begins_with("--shot-dir="):
 			out_dir = a.substr(11)
+		elif a.begins_with("--tour-only="):
+			only = a.substr(12).split(",", false)
 	DirAccess.make_dir_recursive_absolute(out_dir if out_dir.is_absolute_path() else ProjectSettings.globalize_path(out_dir))
 	_run.call_deferred()
 
 
 ## station: { name, setup: Callable, frames: int }
 func add_station(station_name: String, setup: Callable, frames: int = 45) -> void:
+	if not only.is_empty():
+		var keep: bool = false
+		for part: String in only:
+			if station_name.contains(part):
+				keep = true
+		if not keep:
+			return
 	_stations.append({"name": station_name, "setup": setup, "frames": frames})
 
 

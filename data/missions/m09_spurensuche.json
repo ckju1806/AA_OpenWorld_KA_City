@@ -1,0 +1,68 @@
+{
+  "id": "m09_spurensuche",
+  "title": "Spurensuche",
+  "order": 9,
+  "reward": 450,
+  "requires": [
+    "m08_die_kiste"
+  ],
+  "chapter": "Fächerbote",
+  "summary": "Drei Hinweise in der Innenstadt zusammentragen.",
+  "giver": {
+    "poi": "mira",
+    "name": "Mira Kessel",
+    "role": "Freie Journalistin („Fächerbote“, fiktiv)",
+    "look": {
+      "skin": "#b98a6a",
+      "shirt": "#e8e2d4",
+      "jacket": "#3d5a4a",
+      "pants": "#22262e",
+      "shoes": "#5a3a2a",
+      "hair": "#2a1a14",
+      "hair_style": 2
+    },
+    "prompt": "Mit Mira sprechen (Spurensuche)",
+    "done_line": "Die Spuren führen zu Vesper-Logistik. Spannend."
+  },
+  "steps": [
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Mira",
+          "Drei Leute haben den grauen Transporter gesehen. Frag sie – zu Fuß, das fällt weniger auf."
+        ],
+        [
+          "Mira",
+          "Kapellenstraße, Hirschstraße, Amalienstraße. Reihenfolge egal."
+        ]
+      ]
+    },
+    {
+      "type": "collect",
+      "items": [
+        "spur_1",
+        "spur_2",
+        "spur_3"
+      ],
+      "radius": 4,
+      "on_foot": true,
+      "marker": "abholung",
+      "collected_text": "Hinweis notiert",
+      "text": "Sprich mit den drei Zeugen (zu Fuß, Reihenfolge egal)."
+    },
+    {
+      "type": "talk",
+      "lines": [
+        [
+          "Du (Telefon)",
+          "Alle sagen dasselbe: Der Transporter gehört zu „Vesper-Logistik“."
+        ],
+        [
+          "Mira (Telefon)",
+          "Konrad Vesper … der macht auf seriösen Spediteur. Das wird eine Geschichte."
+        ]
+      ]
+    }
+  ]
+}

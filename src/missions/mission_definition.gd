@@ -4,7 +4,11 @@ extends RefCounted
 
 const DIR: String = "res://data/missions/"
 const STEP_TYPES: Array[String] = ["talk", "spawn_vehicle", "enter_vehicle", "goto", "wait_zone", "exit_vehicle",
-	"interact", "countdown", "checkpoints", "trigger_wanted", "lose_wanted"]
+	"interact", "countdown", "checkpoints", "trigger_wanted", "lose_wanted",
+	"spawn_npc_vehicle", "follow", "protect", "escape_area", "observe", "collect", "multi_drop", "destroy", "taxi",
+	"ride_transit", "reputation", "set_flag", "notify"]
+const POI_LIST_KEYS: Array[String] = ["items", "drops"]
+const POI_KEYS: Array[String] = ["poi", "dest", "pickup", "to_poi"]
 
 var id: String = ""
 var title: String = ""
@@ -16,6 +20,11 @@ var giver: Dictionary = {}
 var steps: Array[Dictionary] = []
 var fail_vehicle: String = ""
 var best_time_key: String = ""
+var giver_id: String = ""                  ## Auftraggeber (mehrere Missionen teilen sich eine Figur)
+var chapter: String = ""                   ## Kapitel/Handlungsstrang für die Auftragsliste
+var summary: String = ""
+var reputation: Dictionary = {}            ## Gruppe -> Änderung beim ersten Abschluss
+var pay_always: bool = false               ## Jobs: Bezahlung bei jedem Abschluss
 
 
 static func from_dict(d: Dictionary) -> MissionDefinition:
@@ -33,6 +42,11 @@ static func from_dict(d: Dictionary) -> MissionDefinition:
 			m.steps.append(s)
 	m.fail_vehicle = str(d.get("fail_vehicle", ""))
 	m.best_time_key = str(d.get("best_time_key", ""))
+	m.giver_id = str(d.get("giver_id", m.giver.get("poi", "")))
+	m.chapter = str(d.get("chapter", ""))
+	m.summary = str(d.get("summary", ""))
+	m.reputation = d.get("reputation", {})
+	m.pay_always = bool(d.get("pay_always", false))
 	return m
 
 
@@ -77,9 +91,16 @@ func validate(graph: CityGraph) -> Array[String]:
 		var t: String = str(s.get("type", ""))
 		if not STEP_TYPES.has(t):
 			errs.append("%s: Schritt %d hat unbekannten Typ '%s'" % [id, i, t])
-		if s.has("poi") and graph.get_poi(str(s.poi)).is_empty():
-			errs.append("%s: Schritt %d verweist auf fehlenden POI '%s'" % [id, i, s.poi])
-		if t == "spawn_vehicle":
+		for k: String in POI_KEYS:
+			if s.has(k) and graph.get_poi(str(s[k])).is_empty():
+				errs.append("%s: Schritt %d verweist auf fehlenden POI '%s'" % [id, i, s[k]])
+		for k2: String in POI_LIST_KEYS:
+			for pv: Variant in s.get(k2, []):
+				if graph.get_poi(str(pv)).is_empty():
+					errs.append("%s: Schritt %d verweist auf fehlenden POI '%s'" % [id, i, pv])
+		if t in ["follow", "protect"] and not tags.has(str(s.get("tag", ""))):
+			errs.append("%s: Schritt %d: Fahrzeug '%s' unbekannt" % [id, i, s.get("tag", "")])
+		if t == "spawn_vehicle" or t == "spawn_npc_vehicle":
 			tags[str(s.get("tag", ""))] = true
 		if s.has("vehicle") and not tags.has(str(s.vehicle)):
 			errs.append("%s: Schritt %d nutzt Fahrzeug '%s' vor dessen Erzeugung" % [id, i, s.vehicle])

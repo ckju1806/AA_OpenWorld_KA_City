@@ -31,9 +31,11 @@ var _anim_skip: int = 0
 var _speed_now: float = 0.0
 var _y: float = 0.12
 var _wall_t: float = 0.0
+var _boarding: bool = false
 
 
 func setup(p_manager: Node, p_net: SidewalkNetwork, seed_value: int) -> void:
+	add_to_group("pedestrians")
 	manager = p_manager
 	net = p_net
 	rng = DetRng.make_rng(seed_value)
@@ -103,6 +105,8 @@ func place_in_area(ai: int) -> void:
 
 
 func _reset_at(p: Vector2) -> void:
+	_boarding = false
+	set_physics_process(true)
 	state = State.WALK
 	_state_t = 0.0
 	_y = net.slab_h
@@ -145,6 +149,11 @@ func _physics_process(delta: float) -> void:
 			if target == Vector2.INF:
 				_pick_next(pos2)
 			var to: Vector2 = target - pos2
+			if _boarding and (to.length() < 0.8 or _state_t > 12.0):
+				visible = false
+				set_physics_process(false)
+				global_position = Vector3(pos2.x, -400.0, pos2.y)   # außer Sicht und außer Reichweite: Manager platziert ihn neu
+				return
 			if to.length() < 0.4:
 				_pick_next(pos2)
 				to = target - pos2
@@ -321,6 +330,18 @@ func _on_body_entered(body: Node3D) -> void:
 	AudioManager.play_3d("crash", global_position, -10.0, 1.4)
 	if manager != null:
 		manager.call("on_pedestrian_hit", self, v)
+
+
+## ÖPNV: zur Tür eines haltenden Fahrzeugs gehen und „einsteigen“ (ausblenden, bis der Manager den Passanten neu platziert).
+func board_transit(door: Vector3) -> void:
+	if state == State.DOWN or state == State.FLEE:
+		return
+	_boarding = true
+	crossing = false
+	loop_i = -1
+	target = Vector2(door.x, door.z)
+	state = State.WALK
+	_state_t = 0.0
 
 
 func is_down() -> bool:
