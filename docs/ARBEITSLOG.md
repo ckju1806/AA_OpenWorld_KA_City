@@ -389,3 +389,19 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   (Vorabversion) mit ZIP 56,5 MB (SHA256 `20328dce…`), Installer und Prüfsummen; per GitHub-API gegengeprüft.
 - **`release/` bereinigt (Budget-Addendum):** v0.1-ZIP, Installer und Prüfsumme aus dem Arbeitsstand entfernt, `release/README.md`
   verweist auf die Releases. Rückweg: `git checkout b648134 -- release/` (Dateien bleiben in der Historie).
+
+## 2026-09-29 – v0.2.1: Korrekturen aus dem automatischen Review von PR #2
+
+- **Restore-Punkt:** `main` = `f6fcd27` (Merge PR #2, v0.2.0); Branch `claude/confident-volta-6a71kc` neu von `main` gestartet.
+- **P1 NPC-Fahrzeuge gegen Einbahnstraßen:** Der A*-Modus „drive“ verbindet Einbahnkanten in beide Richtungen; Verfolgungs-/
+  Begleit-NPCs (m07, m10, m15) fuhren dadurch teils auf der Gegenspur (Gegenprobe mit den Weltdaten: 103 / 22 / 9 Abschnitte
+  gegen die Richtung). Neu: Modus `drive_dir` (befahrbar, Einbahnstraßen nur in Fahrtrichtung) in `CityGraph`; `_npc_drive`
+  nutzt ihn (Rückfall auf „drive“ nur ohne Weg). Test `test_npc_routes_respect_one_way`.
+- **P2 Ereignis-Wahrscheinlichkeiten je Bild:** Rangelei/Kundgebung würfelten pro Physik-Takt (bei 60 Hz ≈ 3 Parolen/s,
+  Eskalation nach 30 s praktisch sicher, abhängig von der Taktrate). Neu: `GameEvent.chance(rate_per_s, delta)` mit
+  p = 1 − e^(−Rate·Δt); Raten: Schubsen 1,2/s, Parolen 0,4/s, Eskalation im Mittel 90 s (Chaos 15 s), Gerangel 0,8/s.
+  Tests `test_event_rates.gd`.
+- **P2 Regler „Menü-Klänge“ ohne Wirkung:** Es gab keinen Bus „UI“. Neu: `AudioManager` legt „UI“ an, `play_2d` leitet
+  `ui_*`-Klänge dorthin. Test `test_ui_volume_controls_menu_sounds`.
+- Version 0.2.1.
+

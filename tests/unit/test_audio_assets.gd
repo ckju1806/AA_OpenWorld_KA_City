@@ -18,3 +18,23 @@ func test_loop_stream_has_loop_points() -> void:
 func test_missing_sound_is_graceful() -> void:
 	assert_true(AudioManager.get_stream("gibt_es_nicht_123") == null, "Fehlender Sound -> null")
 	AudioManager.play_2d("gibt_es_nicht_123")  # darf nicht abstürzen
+
+
+## Regler „Menü-Klänge“ wirkt: eigener Bus „UI“, Menüklänge laufen darüber, Spiel-Effekte nicht.
+func test_ui_volume_controls_menu_sounds() -> void:
+	var idx: int = AudioServer.get_bus_index("UI")
+	assert_true(idx >= 0, "Audiobus UI vorhanden")
+	var old: float = Settings.ui_volume
+	Settings.ui_volume = 0.0
+	Settings.apply()
+	assert_true(AudioServer.is_bus_mute(idx), "UI-Lautstärke 0 schaltet den UI-Bus stumm")
+	assert_false(AudioServer.is_bus_mute(AudioServer.get_bus_index("Effekte")) and Settings.sfx_volume > 0.001,
+		"Effekte bleiben unabhängig")
+	AudioManager.play_2d("ui_click", -60.0)
+	var last: AudioStreamPlayer = AudioManager._pool2d[(AudioManager._next2d - 1 + AudioManager._pool2d.size()) % AudioManager._pool2d.size()]
+	assert_eq(str(last.bus), "UI", "ui_click läuft über den UI-Bus")
+	AudioManager.play_2d("checkpoint", -60.0)
+	last = AudioManager._pool2d[(AudioManager._next2d - 1 + AudioManager._pool2d.size()) % AudioManager._pool2d.size()]
+	assert_eq(str(last.bus), "Effekte", "Spielklang läuft über Effekte")
+	Settings.ui_volume = old
+	Settings.apply()

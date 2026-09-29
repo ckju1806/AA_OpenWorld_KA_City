@@ -24,6 +24,7 @@ func _enter_tree() -> void:
 	_ensure_bus("Musik")
 	_ensure_bus("Effekte")
 	_ensure_bus("Umgebung")
+	_ensure_bus("UI")   # Menü-Klänge (Regler „Menü-Klänge“), getrennt von den Spiel-Effekten
 
 
 func _ready() -> void:
@@ -89,6 +90,7 @@ func play_2d(sound_name: String, volume_db: float = 0.0, pitch: float = 1.0) -> 
 	var p: AudioStreamPlayer = _pool2d[_next2d]
 	_next2d = (_next2d + 1) % _pool2d.size()
 	p.stream = s
+	p.bus = "UI" if sound_name.begins_with("ui_") else "Effekte"
 	p.volume_db = volume_db
 	p.pitch_scale = pitch
 	p.play()

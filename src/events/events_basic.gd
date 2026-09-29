@@ -42,11 +42,11 @@ class Scuffle extends GameEvent:
 			b.go_to(pos + Vector3(1.2, 0, rng.randf_range(-1.5, 1.5)), 1.8)
 		return true
 
-	func update(_delta: float) -> void:
+	func update(delta: float) -> void:
 		if phase == 0 and t > 4.0:
 			phase = 1
 			bark(side_a[0], director.line("scuffle_lines"))
-		if phase >= 1 and rng.randf() < 0.08:
+		if phase >= 1 and chance(1.2, delta):   # ≈ 1,2 Schubser pro Sekunde
 			var a: EventActor = side_a[rng.randi() % side_a.size()]
 			var b: EventActor = side_b[rng.randi() % side_b.size()]
 			if rng.randf() < 0.5:
@@ -190,10 +190,11 @@ class Rally extends GameEvent:
 		a.add_child(mi)
 		signs.append(mi)
 
-	func update(_delta: float) -> void:
-		if rng.randf() < 0.05 and not actors.is_empty():
+	func update(delta: float) -> void:
+		if chance(0.4, delta) and not actors.is_empty():   # ≈ alle 2,5 s eine Parole
 			bark(actors[rng.randi() % actors.size()], slogan)
-		if not escalated and Settings.events_unrest and t > 30.0 and rng.randf() < (0.02 if CheatManager.is_active("CHAOSTAG") else 0.004):
+		# Eskalation nach 30 s im Mittel nach weiteren 90 s (Chaos-Modus: 15 s)
+		if not escalated and Settings.events_unrest and t > 30.0 and chance(1.0 / 15.0 if CheatManager.is_active("CHAOSTAG") else 1.0 / 90.0, delta):
 			escalated = true
 			title = "Unruhe"
 			EventBus.notify.emit("Die Kundgebung kippt – Unruhe am Platz!", "warnung")
@@ -201,7 +202,7 @@ class Rally extends GameEvent:
 			for a: EventActor in actors:
 				if rng.randf() < 0.4:
 					a.go_to(pos + Vector3(rng.randf_range(-12, 12), 0, rng.randf_range(-12, 12)), 3.5)
-		if escalated and rng.randf() < 0.06 and actors.size() > 1:
+		if escalated and chance(0.8, delta) and actors.size() > 1:
 			var a1: EventActor = actors[rng.randi() % actors.size()]
 			var a2: EventActor = actors[rng.randi() % actors.size()]
 			if a1 != a2:

@@ -12,6 +12,9 @@ Tag/Nacht und Wetter, ÖPNV mit Stadtbahn, U-Strab-Tunnel und Bussen (Mitfahren 
 fiktiven Gruppen und Polizeieinsätzen, Kampagne mit 15 Aufträgen und wiederholbaren Jobs, eigene Cheat-Codes,
 umfangreiche Optionen mit Tastenbelegung.
 
+**Korrekturen in 0.2.1:** NPC-Fahrzeuge in Aufträgen halten Einbahnstraßen ein (Verfolgen/Begleiten),
+Zufallsereignisse unabhängig von der Bildrate (Kundgebungen eskalieren nicht mehr fast sicher), Regler „Menü-Klänge“ wirkt.
+
 **Hinweise:** Nicht code-signiert (SmartScreen: „Weitere Informationen“ → „Trotzdem ausführen“). Gebaut und automatisiert
 getestet unter Linux; **auf echtem Windows nicht gestartet**. Bekannte Einschränkungen: `KNOWN_ISSUES.md`.
 Kartendaten: © OpenStreetMap-Mitwirkende, Open Database License (ODbL) – siehe `ASSET_LICENSES.md`.

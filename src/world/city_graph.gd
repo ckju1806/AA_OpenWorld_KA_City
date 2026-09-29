@@ -16,6 +16,7 @@ var edge_street: PackedInt32Array = PackedInt32Array()
 var edge_flags: PackedInt32Array = PackedInt32Array()
 
 var _astar_drive: AStar2D
+var _astar_drive_dir: AStar2D   ## befahrbar, Einbahnstraßen nur in Fahrtrichtung (NPC-Fahrten)
 var _astar_traffic: AStar2D
 var _astar_police: AStar2D
 var _edge_grid: Dictionary = {}     ## Vector2i -> PackedInt32Array
@@ -204,7 +205,7 @@ func node_edges_mode(n: int, mode: String) -> PackedInt32Array:
 
 func _edge_ok(e: int, mode: String) -> bool:
 	match mode:
-		"drive":
+		"drive", "drive_dir":
 			return is_drivable(e)
 		"traffic":
 			return is_traffic(e)
@@ -299,7 +300,7 @@ func edges_near(p: Vector2, radius: float) -> PackedInt32Array:
 	return out
 
 
-## Kürzester Weg (Knotenfolge) über A*. mode: drive | traffic | police
+## Kürzester Weg (Knotenfolge) über A*. mode: drive | drive_dir (Einbahn beachtet) | traffic | police
 ## Kanten im Umkreis mit Mindestanforderungen (befahrbar/Verkehr, Länge, Breite) – für Zufallsauswahl ohne
 ## Fehlversuche an Fuß- und Radwegen (in OSM-Daten die Mehrheit der Kanten in der Innenstadt).
 func edges_near_where(p: Vector2, radius: float, traffic_only: bool, min_len: float = 0.0, min_width: float = 0.0) -> PackedInt32Array:
@@ -411,6 +412,10 @@ func _get_astar(mode: String) -> AStar2D:
 			if _astar_traffic == null:
 				_astar_traffic = _build_astar("traffic", 1.0)
 			return _astar_traffic
+		"drive_dir":
+			if _astar_drive_dir == null:
+				_astar_drive_dir = _build_astar("drive_dir", 1.0)
+			return _astar_drive_dir
 		"police":
 			if _astar_police == null:
 				_astar_police = _build_astar("police", 3.0)
@@ -436,8 +441,8 @@ func _build_astar(mode: String, ped_weight: float) -> AStar2D:
 		if not _edge_ok(e, mode):
 			continue
 		if a.has_point(edge_a[e]) and a.has_point(edge_b[e]):
-			# Verkehrs-KI hält Einbahnstraßen ein; Spieler-/Polizeirouten dürfen sie ignorieren
-			a.connect_points(edge_a[e], edge_b[e], not (mode == "traffic" and is_oneway(e)))
+			# Verkehrs-KI und NPC-Fahrten ("drive_dir") halten Einbahnstraßen ein; Spieler-/Polizeirouten dürfen sie ignorieren
+			a.connect_points(edge_a[e], edge_b[e], not ((mode == "traffic" or mode == "drive_dir") and is_oneway(e)))
 	return a
 
 
