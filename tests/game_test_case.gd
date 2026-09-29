@@ -234,11 +234,12 @@ func walk_to(target: Vector3, radius: float = 1.5, timeout: float = 30.0) -> boo
 func _walk_waypoints(from: Vector3, target: Vector3) -> Array[Vector3]:
 	var out: Array[Vector3] = []
 	if not _walk_line_clear(from, target):
+		# Vollständiges Wegenetz inkl. Fußwegen ("police" = alle Kanten; "all" kennt find_path nicht)
 		var g: CityGraph = city().graph
-		var a: int = g.nearest_node(Vector2(from.x, from.z), "all")
-		var b: int = g.nearest_node(Vector2(target.x, target.z), "all")
+		var a: int = g.nearest_node(Vector2(from.x, from.z), "police")
+		var b: int = g.nearest_node(Vector2(target.x, target.z), "police")
 		if a >= 0 and b >= 0 and a != b:
-			for n: int in g.find_path(a, b, "all"):
+			for n: int in g.find_path(a, b, "police"):
 				out.append(g.pos3(n, from.y))
 	out.append(target)
 	return out

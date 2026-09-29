@@ -345,3 +345,15 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   umgestellt (Fächerstraßen per Straßennamen, Zusammenhang > 97 %, Verkehrsketten nur auf Hauptstraßen ≥ 8 m); die
   Fächer-Runde ist real 13,9 km lang → Zeitlimit 18 min.
 - **Doku:** README, KNOWN_ISSUES, ASSET_LICENSES (ODbL gilt jetzt für `data/world/ka/`), ARCHITEKTUR, KARTE_KARLSRUHE.
+- **W3 Landmarken an der realen Stadt (Befund aus den OSM-Rohdaten):** Der Schlossturm liegt real 54 m nördlich des bisherigen
+  Ursprungs, die Hauptachse Schlossturm → Pyramide ist um −4,1° gegen Nord gedreht, Rathaus (≈ 64 × 77 m, Südwestecke schräg
+  an der Hebelstraße) und Stadtkirche (≈ 61 × 31 m, Langhaus Ost-West) wichen deutlich von den Modellen ab. Änderungen:
+  Schloss am Schlossturm verankert, Brunnen am Europaplatz, Verfassungssäule am Rondellplatz; achsgebundene Modelle werden
+  als Knoten gedreht (`LandmarkBuilder.MODEL_ROT`); Rathaus/Stadtkirche mit OSM-Maßen. `validate_world.py` prüft jetzt die
+  Grundrisse **aller** Landmarken gegen Fahrbahnen (vorher nur Platzhalter) – fand 3 Überschneidungen (Schlossflügel/
+  Schlossbezirk, Rathaus/Hebelstraße, Kirche/Pfarrer-Löw-Straße), nach den Korrekturen 0. Hafenkräne: keine Kran-Objekte
+  in den abgerufenen Daten → Näherung bleibt.
+- **Screenshot-Tour:** Standpunkte und Fahrwege aus Landmarken und Straßennamen statt fester Koordinaten der alten Näherung
+  (feste Fahrlinien hätten in der OSM-Welt durch Gebäude geführt).
+- **Test m01:** scheiterte im Gesamtlauf am Fußweg Ladezone (Adlerstraße) → Kanzleitür. `walk_to` prüft jetzt die Sichtlinie
+  und geht sonst über das Wegenetz (wie ein Spieler um Häuser herum).
