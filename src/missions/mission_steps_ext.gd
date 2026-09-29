@@ -245,9 +245,13 @@ static func _npc_drive(ms: MissionSystem, v: Vehicle, dest_poi: String, speed: f
 	var city: CityWorld = _city(ms)
 	var g: CityGraph = city.graph
 	var dest: Vector3 = g.poi_pos3(dest_poi)
-	var n0: int = g.nearest_node(Vector2(v.global_position.x, v.global_position.z), "drive")
-	var n1: int = g.nearest_node(Vector2(dest.x, dest.z), "drive")
-	var path: PackedInt32Array = g.find_path(n0, n1, "drive")
+	# NPC-Fahrzeuge fahren wie der Verkehr: Einbahnstraßen nur in Fahrtrichtung (sonst Gegenspur, Unfälle, Stillstand)
+	var n0: int = g.nearest_node(Vector2(v.global_position.x, v.global_position.z), "drive_dir")
+	var n1: int = g.nearest_node(Vector2(dest.x, dest.z), "drive_dir")
+	var path: PackedInt32Array = g.find_path(n0, n1, "drive_dir")
+	if path.size() < 2:
+		path = g.find_path(g.nearest_node(Vector2(v.global_position.x, v.global_position.z), "drive"),
+			g.nearest_node(Vector2(dest.x, dest.z), "drive"), "drive")
 	var pts: PackedVector3Array = PackedVector3Array([v.global_position])
 	pts.append_array(g.lane_path(path, 2.6))
 	pts.append(city.poi_position(dest_poi))

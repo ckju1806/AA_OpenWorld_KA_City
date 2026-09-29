@@ -42,6 +42,11 @@ func spawn_actor(p: Vector3, jacket: Color = Color(-1, 0, 0)) -> EventActor:
 	return a
 
 
+## Zufallsereignis mit einer Rate pro Sekunde (unabhängig von der Bildrate): true mit p = 1 − e^(−Rate·Δt).
+func chance(rate_per_s: float, delta: float) -> bool:
+	return rng.randf() < 1.0 - exp(-rate_per_s * delta)
+
+
 func bark(actor: Node3D, text: String) -> void:
 	if actor != null and is_instance_valid(actor):
 		EventBus.bark.emit(title, text, actor.global_position)

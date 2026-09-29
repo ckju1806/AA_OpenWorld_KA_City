@@ -142,3 +142,25 @@ func test_world_data_budget() -> void:
 		for f2: String in d2.get_files():
 			total += FileAccess.get_file_as_bytes(WorldData.DIR + sub + "/" + f2).size()
 	assert_lt(float(total), 40.0 * 1048576.0, "Weltdaten im Speicherbudget (%.1f MB)" % (float(total) / 1048576.0))
+
+
+## NPC-Fahrten in Aufträgen (Verfolgen/Begleiten) halten Einbahnstraßen ein (Modus "drive_dir").
+func test_npc_routes_respect_one_way() -> void:
+	var g: CityGraph = _graph()
+	var oneways: int = 0
+	for route: Array in [["kunde_wagen", "kunde_ziel"], ["vesper_transporter", "vesper_halle"], ["mira_wagen2", "revier"]]:
+		var a: Vector3 = g.poi_pos3(str(route[0]))
+		var b: Vector3 = g.poi_pos3(str(route[1]))
+		var path: PackedInt32Array = g.find_path(g.nearest_node(Vector2(a.x, a.z), "drive_dir"),
+			g.nearest_node(Vector2(b.x, b.z), "drive_dir"), "drive_dir")
+		assert_gt(float(path.size()), 1.0, "Weg %s -> %s gefunden" % route)
+		var wrong: int = 0
+		for i: int in range(1, path.size()):
+			var e: int = g.find_edge(path[i - 1], path[i])
+			if e >= 0 and g.is_oneway(e):
+				oneways += 1
+				if not g.can_leave(e, path[i - 1]):
+					wrong += 1
+		assert_eq(wrong, 0, "Keine Einbahnstraße gegen die Richtung (%s -> %s)" % route)
+	# Gegenprobe: das Netz enthält auf diesen Routen tatsächlich Einbahnstraßen (Test prüft etwas)
+	assert_gt(float(oneways), 0.0, "Routen führen über Einbahnstraßen")
