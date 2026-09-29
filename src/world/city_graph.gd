@@ -27,7 +27,8 @@ static func from_world(w: WorldData) -> CityGraph:
 	var g := CityGraph.new()
 	var d: Dictionary = w.meta
 	g.layout = {"pois": d.get("pois", []), "labels": d.get("labels", []), "landmarks": d.get("landmarks", []),
-		"districts": d.get("districts", []), "rail": d.get("rail", [])}
+		"districts": d.get("districts", []), "rail": d.get("rail", []), "signals": d.get("signals", []),
+		"transit": d.get("transit", {})}
 	var inv: float = 1.0 / w.q
 	var flat_nodes: Array = d.nodes
 	g.node_pos.resize(flat_nodes.size() / 2)
@@ -109,8 +110,31 @@ func street_of(e: int) -> Dictionary:
 	return streets[edge_street[e]]
 
 
+## Fahrbahnbreite: je Kante aus den Daten (Flags ab Bit 8, 0,5-m-Schritte; OSM) oder Breite der Straßenklasse.
 func edge_width(e: int) -> float:
-	return float(streets[edge_street[e]].width)
+	var w: int = (edge_flags[e] >> 8) & 0xFF
+	return float(w) * 0.5 if w > 0 else float(streets[edge_street[e]].width)
+
+
+## Einbahnstraße (nur Richtung edge_a -> edge_b).
+func is_oneway(e: int) -> bool:
+	return (edge_flags[e] & 4) != 0
+
+
+func is_bridge(e: int) -> bool:
+	return (edge_flags[e] & 2) != 0
+
+
+## Darf die Kante von Knoten n aus befahren werden (Einbahnrichtung)?
+func can_leave(e: int, n: int) -> bool:
+	return not is_oneway(e) or edge_a[e] == n
+
+
+## Spurversatz (Mitte der rechten Spur) auf einer Kante, höchstens max_offset.
+func lane_offset(e: int, max_offset: float = 2.6) -> float:
+	if e < 0:
+		return max_offset
+	return minf(max_offset, edge_width(e) * 0.25)
 
 
 func edge_kind(e: int) -> String:
@@ -295,6 +319,11 @@ func lane_path(path: PackedInt32Array, offset: float = 2.6, y: float = 0.0, samp
 	var n: int = path.size()
 	if n < 2:
 		return out
+	# Spurversatz je Wegabschnitt (schmale Straßen/Einbahnfahrbahnen -> kleiner)
+	var offs: PackedFloat32Array = PackedFloat32Array()
+	offs.resize(n - 1)
+	for i0: int in n - 1:
+		offs[i0] = lane_offset(find_edge(path[i0], path[i0 + 1]), offset)
 	var zones: Array[float] = []   # Länge der Abbiegezone je Knoten
 	var turn_pts: Array[PackedVector2Array] = []
 	for i: int in n:
@@ -303,8 +332,10 @@ func lane_path(path: PackedInt32Array, offset: float = 2.6, y: float = 0.0, samp
 		var zone: float = 0.0
 		if i == 0 or i == n - 1:
 			var d: Vector2 = (node_pos[path[1]] - p).normalized() if i == 0 else (p - node_pos[path[i - 1]]).normalized()
-			pts.append(p + Vector2(-d.y, d.x) * offset)
+			pts.append(p + Vector2(-d.y, d.x) * offs[0 if i == 0 else n - 2])
 		else:
+			var o_in: float = offs[i - 1]
+			var o_out: float = offs[i]
 			var d_in: Vector2 = (p - node_pos[path[i - 1]]).normalized()
 			var d_out: Vector2 = (node_pos[path[i + 1]] - p).normalized()
 			var r_in: Vector2 = Vector2(-d_in.y, d_in.x)
@@ -313,16 +344,16 @@ func lane_path(path: PackedInt32Array, offset: float = 2.6, y: float = 0.0, samp
 			if absf(cr) < 0.17:
 				if d_in.dot(d_out) > 0.0:
 					# nahezu geradeaus
-					pts.append(p + ((r_in + r_out) * 0.5).normalized() * offset)
+					pts.append(p + ((r_in + r_out) * 0.5).normalized() * (o_in + o_out) * 0.5)
 				else:
 					# Wende (nur in Sonderfällen)
-					pts.append(p + r_in * offset + d_in * 3.0)
+					pts.append(p + r_in * o_in + d_in * 3.0)
 					pts.append(p + d_in * 5.0)
-					pts.append(p - r_in * offset + d_in * 3.0)
+					pts.append(p - r_in * o_out + d_in * 3.0)
 					zone = 5.0
 			else:
-				var a: Vector2 = p + r_in * offset
-				var b: Vector2 = p + r_out * offset
+				var a: Vector2 = p + r_in * o_in
+				var b: Vector2 = p + r_out * o_out
 				var t: float = (b - a).cross(d_out) / cr
 				var corner: Vector2 = a + d_in * t
 				var k: float = clampf(node_radius(path[i], "all") + 1.5, 4.0, 11.0)
@@ -346,7 +377,7 @@ func lane_path(path: PackedInt32Array, offset: float = 2.6, y: float = 0.0, samp
 			var b2: Vector2 = node_pos[path[i2 + 1]]
 			var seg: float = a2.distance_to(b2)
 			var dd: Vector2 = (b2 - a2) / maxf(seg, 0.001)
-			var rr: Vector2 = Vector2(-dd.y, dd.x) * offset
+			var rr: Vector2 = Vector2(-dd.y, dd.x) * offs[i2]
 			var t0: float = zones[i2] + 2.0
 			var t1: float = seg - zones[i2 + 1] - 2.0
 			var tt: float = t0 + sample
@@ -395,7 +426,8 @@ func _build_astar(mode: String, ped_weight: float) -> AStar2D:
 		if not _edge_ok(e, mode):
 			continue
 		if a.has_point(edge_a[e]) and a.has_point(edge_b[e]):
-			a.connect_points(edge_a[e], edge_b[e], true)
+			# Verkehrs-KI hält Einbahnstraßen ein; Spieler-/Polizeirouten dürfen sie ignorieren
+			a.connect_points(edge_a[e], edge_b[e], not (mode == "traffic" and is_oneway(e)))
 	return a
 
 

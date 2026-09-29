@@ -18,7 +18,7 @@ func choose_next(prev: int, cur: int) -> int:
 		d_in = (graph.node_pos[cur] - graph.node_pos[prev]).normalized()
 	for e: int in graph.node_edges_mode(cur, mode):
 		var o: int = graph.other_node(e, cur)
-		if o == prev:
+		if o == prev or not graph.can_leave(e, cur):
 			continue
 		var d_out: Vector2 = graph.edge_dir(e, cur)
 		var straight: float = d_in.dot(d_out) if prev >= 0 else 0.5

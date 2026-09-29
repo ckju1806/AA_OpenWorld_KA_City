@@ -23,6 +23,12 @@ ROAD_CLASSES = {
     "pedestrian":  {"width": 14.0, "speed": 0.0, "drivable": False, "traffic": False, "major": False, "lights": False, "sidewalk": True, "rank": 2},
 }
 CLASS_ORDER = list(ROAD_CLASSES.keys())
+
+
+def edge_width(e) -> float:
+    """Fahrbahnbreite einer Kante: Flags ab Bit 8 (0,5-m-Schritte, OSM) oder Klassenbreite."""
+    w = (e[4] >> 8) & 0xFF
+    return w * 0.5 if w > 0 else ROAD_CLASSES[CLASS_ORDER[e[2]]]["width"]
 MAX_EDGE = 60.0
 SNAP = 2.5
 
@@ -143,8 +149,9 @@ def build_network(roads: list[dict], districts: list[dict], areas: list[dict]):
     return nodes, edges, names
 
 
-def _split_contacts(nodes, edges, tol: float = 0.4):
-    """Kanten, die sich ohne gemeinsamen Knoten berühren oder schneiden (Rundungs-/Einrast-Reste), am Kontaktpunkt teilen."""
+def _split_contacts(nodes, edges, tol: float = 0.4, ground_only: bool = False):
+    """Kanten, die sich ohne gemeinsamen Knoten berühren oder schneiden (Rundungs-/Einrast-Reste), am Kontaktpunkt teilen.
+    ground_only: Brücken/Tunnel (Flags 1|2) nie mit anderen Kanten verknoten."""
     for _round in range(4):
         lines = [LineString([nodes[e[0]], nodes[e[1]]]) for e in edges]
         tree = STRtree(lines)
@@ -157,6 +164,8 @@ def _split_contacts(nodes, edges, tol: float = 0.4):
                     continue
                 ej = edges[j]
                 if {ei[0], ei[1]} & {ej[0], ej[1]}:
+                    continue
+                if ground_only and ((ei[4] | ej[4]) & 3):
                     continue
                 lj = lines[j]
                 if li.distance(lj) > tol:

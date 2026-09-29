@@ -18,6 +18,7 @@ const AREA_MAT: Dictionary = {
 	"water": ["water", -0.02], "forest": ["forest_floor", -0.012], "park": ["grass", -0.01], "zoo": ["grass", -0.01],
 	"garden": ["grass", -0.01], "cemetery": ["grass", -0.01], "sports": ["turf", -0.01], "rail": ["gravel", -0.008],
 	"plaza": ["plaza", -0.006], "industry_yard": ["yard", -0.008], "field": ["field", -0.014], "urban": ["sidewalk", -0.006],
+	"parking": ["asphalt", -0.004],
 }
 const SLAB_TOP: Dictionary = {"urban": "sidewalk", "plaza": "plaza", "park": "grass", "zoo": "grass", "garden": "grass",
 	"cemetery": "grass", "sports": "turf", "industry_yard": "yard"}
@@ -72,7 +73,7 @@ static func build(w: WorldData, g: CityGraph, ij: Vector2i, data: Dictionary, qu
 		_append_slab_collision(col_faces, poly2)
 	# 4) Bahngleise
 	for r: Variant in data.get("r", []):
-		_rail(ground, int(r[0]), w.pts(r[1]))
+		_rail(ground, int(r[0]), w.pts(r[1]), int(r[2]) if (r as Array).size() > 2 else 0)
 	var gm := MeshInstance3D.new()
 	gm.name = "Boden"
 	gm.mesh = ground.commit()
@@ -130,8 +131,10 @@ static func _roads(kit: MeshKit, g: CityGraph, data: Dictionary) -> void:
 		# Mittellinie (gestrichelt; bei Hauptstraßen durchgezogen) und Randlinien
 		var cls: String = g.edge_kind(e)
 		kit.color = Color(0.9, 0.9, 0.86)
-		if cls in ["motorway", "trunk", "primary", "secondary", "tertiary"]:
-			var solid: bool = cls in ["motorway", "trunk", "primary"]
+		var oneway: bool = g.is_oneway(e)
+		if (oneway and hw * 2.0 >= 6.4) or (not oneway and cls in ["motorway", "trunk", "primary", "secondary", "tertiary"]):
+			# Einbahnfahrbahn: gestrichelte Spurtrennung; Gegenverkehr: Mittellinie
+			var solid: bool = not oneway and cls in ["motorway", "trunk", "primary"]
 			var t: float = 1.5
 			while t < L - 1.5:
 				var t1: float = minf(L - 1.5, t + (L if solid else 3.0))
@@ -158,8 +161,9 @@ static func _roads(kit: MeshKit, g: CityGraph, data: Dictionary) -> void:
 		kit.add_polygon_xz("asphalt", PolyUtil.ensure_ccw(circ), 0.002, 1.0)
 
 
-static func _rail(kit: MeshKit, tracks: int, line: PackedVector2Array) -> void:
-	var width: float = float(tracks) * 4.5 + 2.0
+## kind: 0 = Eisenbahn mit Schotterbett, 1 = Straßenbahn auf eigenem Gleiskörper, 2 = Straßenbahn in der Fahrbahn (bündig)
+static func _rail(kit: MeshKit, tracks: int, line: PackedVector2Array, kind: int = 0) -> void:
+	var width: float = float(tracks) * 4.5 + 2.0 if kind == 0 else float(tracks) * 3.2 + 0.4
 	for i: int in line.size() - 1:
 		var a: Vector2 = line[i]
 		var b: Vector2 = line[i + 1]
@@ -168,14 +172,18 @@ static func _rail(kit: MeshKit, tracks: int, line: PackedVector2Array) -> void:
 			continue
 		var dir: Vector2 = (b - a) / L
 		var r: Vector2 = Vector2(-dir.y, dir.x)
-		kit.add_polygon_xz("gravel", PackedVector2Array([a - r * width * 0.5, b - r * width * 0.5, b + r * width * 0.5, a + r * width * 0.5]), 0.03, 1.0)
-		kit.color = Color(0.35, 0.33, 0.32)
+		if kind != 2:
+			kit.add_polygon_xz("gravel", PackedVector2Array([a - r * width * 0.5, b - r * width * 0.5, b + r * width * 0.5, a + r * width * 0.5]), 0.03, 1.0)
+		kit.color = Color(0.35, 0.33, 0.32) if kind != 2 else Color(0.5, 0.5, 0.52)
 		for t: int in tracks:
-			var off: float = (float(t) - float(tracks - 1) * 0.5) * 4.5
+			var off: float = (float(t) - float(tracks - 1) * 0.5) * (4.5 if kind == 0 else 3.2)
 			for s: float in [-0.72, 0.72]:
 				var o: Vector2 = r * (off + s)
 				var m: Vector2 = (a + b) * 0.5 + o
-				kit.add_box("rail_steel", Vector3(m.x, 0.12, m.y), Vector3(0.08, 0.16, L), Basis(Vector3.UP, atan2(dir.x, dir.y)))
+				if kind == 2:
+					kit.add_polygon_xz("rail_steel", PackedVector2Array([a + o - r * 0.05, b + o - r * 0.05, b + o + r * 0.05, a + o + r * 0.05]), 0.011, 1.0)
+				else:
+					kit.add_box("rail_steel", Vector3(m.x, 0.12, m.y), Vector3(0.08, 0.16, L), Basis(Vector3.UP, atan2(dir.x, dir.y)))
 		kit.color = Color.WHITE
 
 

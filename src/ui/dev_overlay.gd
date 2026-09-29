@@ -64,7 +64,7 @@ func _refresh() -> void:
 	lines.append("Draw Calls %d   Objekte %d   Knoten %d" % [Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 		Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.OBJECT_NODE_COUNT)])
 	lines.append("Videospeicher %.0f MB   Qualität %s" % [Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
-		Settings.QUALITY_NAMES[Settings.quality]])
+		Settings.QUALITY_NAMES[clampi(Settings.quality, 0, 4)]])
 	var p: Player = game.get("player") as Player
 	if p != null:
 		var pos: Vector3 = p.global_position

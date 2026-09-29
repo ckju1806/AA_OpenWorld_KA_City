@@ -14,7 +14,7 @@ from shapely.ops import polygonize, unary_union
 from shapely.strtree import STRtree
 
 from geo import hash01
-from network import CLASS_ORDER, ROAD_CLASSES
+from network import CLASS_ORDER, ROAD_CLASSES, edge_width
 
 SIDEWALK = 3.2
 
@@ -33,19 +33,22 @@ STYLES = {
 WALL_COLORS = 12
 ROOF_COLORS = 4
 
-BLOCK_KIND_PRIORITY = ["water", "zoo", "garden", "cemetery", "sports", "rail", "plaza", "park", "forest", "industry_yard", "field"]
+BLOCK_KIND_PRIORITY = ["water", "zoo", "garden", "cemetery", "sports", "rail", "plaza", "parking", "park", "forest", "industry_yard",
+    "field"]
 
 
-def make_blocks(nodes, edges, bounds, districts, areas):
-    """Flächen zwischen Straßen -> Blöcke mit Bordsteinpolygon. Rückgabe: Liste {poly, kind, district, style}."""
+def make_blocks(nodes, edges, bounds, districts, areas, urban=None):
+    """Flächen zwischen Straßen -> Blöcke mit Bordsteinpolygon. Rückgabe: Liste {poly, kind, district, style}.
+    urban: optionale Geometrie bebauter Flächen (OSM: Wohn-/Gewerbegebiete + Gebäude); ohne sie gilt „in einem Viertel“."""
     lines = [LineString([nodes[e[0]], nodes[e[1]]]) for e in edges]
-    widths = [ROAD_CLASSES[CLASS_ORDER[e[2]]]["width"] for e in edges]
+    widths = [edge_width(e) for e in edges]
+    utree = STRtree(urban) if urban else None
     x0, z0, x1, z1 = bounds
     frame = LineString([(x0, z0), (x1, z0), (x1, z1), (x0, z1), (x0, z0)])
     faces = list(polygonize(unary_union(lines + [frame])))
     tree = STRtree(lines)
     dpolys = [(d, Polygon(d["poly"]).buffer(0)) for d in districts]
-    apolys = [(a, Polygon(a["poly"]).buffer(0)) for a in areas]
+    apolys = [(a, Polygon(a["poly"], a.get("holes") or []).buffer(0)) for a in areas]
     atree = STRtree([p for _, p in apolys])
     blocks = []
     for fi, face in enumerate(faces):
@@ -82,7 +85,13 @@ def make_blocks(nodes, edges, bounds, districts, areas):
                     if dp.contains(rp):
                         district = d
                         break
-                kind = kind0 if kind0 else ("urban" if district is not None else "field")
+                if kind0:
+                    kind = kind0
+                elif utree is not None:
+                    cover = sum(urban[i].intersection(part).area for i in utree.query(part)) if part.area < 4e6 else 0.0
+                    kind = "urban" if cover > part.area * 0.15 or cover > 800 else "field"
+                else:
+                    kind = "urban" if district is not None else "field"
                 blocks.append({"poly": part, "kind": kind, "name": name, "district": district["id"] if district else "",
                     "style": district["style"] if district else "", "face": fi})
     return blocks

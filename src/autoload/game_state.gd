@@ -11,6 +11,12 @@ var completed_missions: Dictionary = {}   ## mission_id -> true
 var best_times: Dictionary = {}           ## mission_id -> Sekunden (float)
 var mission_attempts: Dictionary = {}     ## mission_id -> Anzahl Versuche
 var play_time: float = 0.0
+var time_of_day: float = 19.5             ## Stunden 0..24 (WorldClock)
+var day: int = 1
+var weather: String = "klar"              ## klar | bewoelkt | regen | nebel
+var flags: Dictionary = {}                ## Kampagnen-/Story-Merker (String -> Variant, JSON-tauglich)
+var stats: Dictionary = {}                ## Statistiken (String -> float)
+var reputation: Dictionary = {}           ## Ruf bei fiktiven Gruppen/Auftraggebern (id -> int)
 
 
 func _process(delta: float) -> void:
@@ -24,6 +30,12 @@ func reset_new_game() -> void:
 	best_times.clear()
 	mission_attempts.clear()
 	play_time = 0.0
+	time_of_day = 19.5
+	day = 1
+	weather = "klar"
+	flags.clear()
+	stats.clear()
+	reputation.clear()
 	money_changed.emit(money)
 
 
@@ -72,6 +84,12 @@ func to_dict() -> Dictionary:
 		"best_times": best_times.duplicate(),
 		"mission_attempts": mission_attempts.duplicate(),
 		"play_time": play_time,
+		"time_of_day": time_of_day,
+		"day": day,
+		"weather": weather,
+		"flags": flags.duplicate(true),
+		"stats": stats.duplicate(),
+		"reputation": reputation.duplicate(),
 	}
 
 
@@ -97,4 +115,36 @@ func from_dict(d: Dictionary) -> void:
 			if k is String:
 				mission_attempts[k] = maxi(0, int(ma[k]))
 	play_time = maxf(0.0, float(d.get("play_time", 0.0)))
+	time_of_day = fposmod(float(d.get("time_of_day", 19.5)), 24.0)
+	day = maxi(1, int(d.get("day", 1)))
+	weather = str(d.get("weather", "klar"))
+	if not weather in ["klar", "bewoelkt", "regen", "nebel"]:
+		weather = "klar"
+	flags = (d.get("flags", {}) as Dictionary).duplicate(true) if d.get("flags", {}) is Dictionary else {}
+	stats.clear()
+	var st: Variant = d.get("stats", {})
+	if st is Dictionary:
+		for k: Variant in st:
+			stats[str(k)] = float(st[k])
+	reputation.clear()
+	var rp: Variant = d.get("reputation", {})
+	if rp is Dictionary:
+		for k: Variant in rp:
+			reputation[str(k)] = clampi(int(rp[k]), -100, 100)
 	money_changed.emit(money)
+
+
+func add_stat(key: String, amount: float = 1.0) -> void:
+	stats[key] = float(stats.get(key, 0.0)) + amount
+
+
+func set_flag(key: String, value: Variant = true) -> void:
+	flags[key] = value
+
+
+func get_flag(key: String, default: Variant = false) -> Variant:
+	return flags.get(key, default)
+
+
+func add_reputation(group: String, amount: int) -> void:
+	reputation[group] = clampi(int(reputation.get(group, 0)) + amount, -100, 100)

@@ -31,9 +31,9 @@ var stats: Dictionary = {"built": 0, "unloaded": 0, "last_build_ms": 0.0, "max_b
 func setup(w: WorldData, g: CityGraph) -> void:
 	world = w
 	graph = g
-	_quality = Settings.quality
+	_quality = Settings.level()
 	radius = Settings.sector_radius()
-	lod_radius = [1600.0, 2600.0, 3600.0][clampi(Settings.quality, 0, 2)]
+	lod_radius = [1600.0, 2600.0, 3600.0, 4600.0][Settings.level()]
 	SectorBuilder.warm_up()
 
 

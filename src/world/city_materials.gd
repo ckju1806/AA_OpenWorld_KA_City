@@ -64,15 +64,27 @@ static func _create(key: String) -> Material:
 		"lamp_glow":
 			return MatLib.emissive(Color(1.0, 0.82, 0.55), 5.0)
 		"water":
-			var w := StandardMaterial3D.new()
-			w.albedo_color = Color(0.16, 0.26, 0.32)
-			w.roughness = 0.05
-			w.metallic = 0.4
-			return w
+			return MatLib.shader_material("water", "res://assets/shaders/water.gdshader")
 		"glass_dark":
 			return MatLib.glass(Color(0.1, 0.13, 0.16, 0.8))
+		"glass":
+			return MatLib.glass(Color(0.72, 0.86, 0.9, 0.32))
 	push_warning("Unbekanntes Stadtmaterial: %s" % key)
 	return MatLib.solid(Color.MAGENTA)
+
+
+## Tageszeit: erleuchtete Fenster (Fassaden-Shader) und leuchtende Laternenköpfe.
+static func set_night(night: float) -> void:
+	(get_mat("facade") as ShaderMaterial).set_shader_parameter("night", clampf(night, 0.0, 1.0))
+	var lg: StandardMaterial3D = get_mat("lamp_glow") as StandardMaterial3D
+	lg.emission_energy_multiplier = lerpf(0.15, 5.0, clampf(night * 1.5, 0.0, 1.0))
+
+
+## Nässe der Straßen und Wege (Asphalt, Pflaster), Regen auf dem Wasser.
+static func set_wetness(wet: float) -> void:
+	for k: String in ["asphalt", "sidewalk", "plaza", "yard"]:
+		(get_mat(k) as ShaderMaterial).set_shader_parameter("wetness", clampf(wet, 0.0, 1.0))
+	(get_mat("water") as ShaderMaterial).set_shader_parameter("rain", 1.0 if WorldClock.rain > 0.3 else 0.0)
 
 
 ## Material-Schlüssel eines MeshKits mit den Stadtmaterialien belegen.

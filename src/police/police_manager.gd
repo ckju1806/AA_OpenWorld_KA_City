@@ -56,6 +56,8 @@ func _player_pos() -> Vector3:
 
 
 func _on_crime(kind: String, pos: Vector3, witnessed: bool) -> void:
+	if CheatManager.is_active("UNSICHTBAR"):
+		return
 	var w: bool = witnessed
 	if not w:
 		w = police_can_see(pos)
@@ -223,7 +225,7 @@ func _try_spawn(ppos: Vector3) -> bool:
 		var pa: Vector2 = graph.node_pos[a]
 		var pb: Vector2 = graph.node_pos[b]
 		var dir: Vector2 = (pb - pa).normalized()
-		var p2: Vector2 = pa.lerp(pb, _rng.randf_range(0.3, 0.7)) + Vector2(-dir.y, dir.x) * LaneDriver.LANE_OFFSET
+		var p2: Vector2 = pa.lerp(pb, _rng.randf_range(0.3, 0.7)) + Vector2(-dir.y, dir.x) * graph.lane_offset(e, LaneDriver.LANE_OFFSET)
 		var pos: Vector3 = Vector3(p2.x, 0.0, p2.y)
 		var d: float = pos.distance_to(ppos)
 		if d < dmin or d > 240.0 or _visible(pos):

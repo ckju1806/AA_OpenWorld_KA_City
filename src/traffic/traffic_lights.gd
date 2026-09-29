@@ -26,22 +26,39 @@ func setup(g: CityGraph, p_slab_h: float) -> void:
 	graph = g
 	slab_h = p_slab_h
 	_init_materials()
-	for n: int in g.node_count():
+	# Kandidaten: Ampelkreuzungen aus den Geodaten (OSM) oder – ohne Daten – Kreuzungen mit Haupt-/Ringstraßen
+	var data_signals: Array = g.layout.get("signals", [])
+	var candidates: Array[int] = []
+	if not data_signals.is_empty():
+		for v: Variant in data_signals:
+			candidates.append(int(v))
+	else:
+		for n: int in g.node_count():
+			var major: bool = false
+			for e: int in g.node_edges_mode(n, "traffic"):
+				if g.has_lights(e):
+					major = true
+			if major:
+				candidates.append(n)
+	# Knoten einer Kreuzung (z. B. zweibahnige Straßen) teilen Phase und Achsenbezug
+	var cluster_ref: Dictionary = {}
+	for n: int in candidates:
 		var edges: PackedInt32Array = g.node_edges_mode(n, "traffic")
 		if edges.size() < 3:
 			continue
-		var major: bool = false
-		for e: int in edges:
-			if g.has_lights(e):
-				major = true
-		if not major:
-			continue
+		var ck: Vector2i = Vector2i(int(floor(g.node_pos[n].x / 45.0)), int(floor(g.node_pos[n].y / 45.0)))
+		if not cluster_ref.has(ck):
+			var best_e: int = edges[0]
+			for e0: int in edges:
+				if g.edge_width(e0) > g.edge_width(best_e):
+					best_e = e0
+			cluster_ref[ck] = g.edge_dir(best_e, n)
+		var ref: Vector2 = cluster_ref[ck]
 		var groups: Dictionary = {}
-		var ref: Vector2 = g.edge_dir(edges[0], n)
 		for e2: int in edges:
 			var d: Vector2 = g.edge_dir(e2, n)
 			groups[e2] = 0 if absf(d.dot(ref)) > 0.7 else 1
-		signals[n] = {"groups": groups, "offset": DetRng.hash01(n, 3, 7) * CYCLE, "last": -1}
+		signals[n] = {"groups": groups, "offset": DetRng.hash01(ck.x, ck.y, 7) * CYCLE, "last": -1}
 
 
 ## Ampelmasten der Knoten in einem Sektor bauen und einhängen.

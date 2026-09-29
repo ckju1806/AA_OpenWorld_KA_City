@@ -7,6 +7,8 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
 | Datum | Commit | Stand |
 |---|---|---|
 | 2026-09-23 | `75fe4ae` | Ausgangsstand (nur LICENSE + README) |
+| 2026-09-28 | `46db3d1` | v0.1.0 (`main`, PR #1) – Ausgangspunkt Phase 2 |
+| 2026-09-28 | `e4f83c3` | W1 Weltsystem/Streaming, Karlsruhe 1:1 (Näherung) |
 
 ## 2026-09-23 – Meilenstein 0: Absicherung, Struktur, Toolchain
 
@@ -248,3 +250,26 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   führt (keine Wendemanöver in engen Straßen); der Autopilot hat zusätzlich eine Dreipunktwende.
 - **Bekannte Einschränkungen:** Karte ist eine **Näherung** (OSM gesperrt); Stadtteile rechteckig mit Lücken; Hbf, Zoo, Stadion,
   Gewächshäuser, Hafenkräne, Turmberg nur Platzhalter (W3); Pyramide im Marktplatz-Bild verdeckt.
+
+## 2026-09-29 – Zwischenstand W2–W4, W9 (Netzfreigabe, Landmarken, Tageszeit/Wetter, Einstellungen v2, Cheats)
+
+- **Netzwerk:** Nutzer hat `download.geofabrik.de` und `overpass-api.de` freigegeben. Geofabrik bleibt über das Egress-Gateway
+  unerreichbar (Tunnel bricht nach dem TLS-Handshake ab); Overpass antwortet, ist aber stark ausgelastet („server too busy“,
+  HTTP 504) → kachelweiser Abruf mit Wiederholungen (`tools/worldgen/fetch_osm.py`, 2 parallele Slots). Rohdaten nur lokal
+  (`~/osm_cache`, nicht versioniert).
+- **W2 (in Arbeit):** `source_osm.py` (Graph aus OSM-Topologie, Brücken ohne falsche Kreuzungen, Straßentunnel ausgelassen,
+  Breite je Kante in den Flags, Einbahnstraßen, echte Gebäudegrundrisse mit Höhen/Stockwerken/Dachform, Flächen inkl. Parkplätzen,
+  Gewässer, Gleise, Ampeln, Einzelbäume, Haltestellen/Linien), `transit.py` (ÖPNV-Linien), `fetch_geofabrik.sh` (Alternative).
+  Spielseite vorbereitet: `CityGraph.edge_width` je Kante, `is_oneway`/`can_leave`, Spurversatz je Kante, Verkehrs-A* mit
+  Einbahnrichtung, Ampeln aus Daten mit gemeinsamer Phase je Kreuzung, Parkplätze als Flächenart, Straßenbahngleise bündig.
+- **W3:** `LandmarksExtra`: Hauptbahnhof (Halle mit Bogenfenster, Uhrturm, Flügel, drei Bahnsteighallen), Zoo (Eingang, 9 Gehege
+  aus `data/world/zoo_layout.json` mit Zäunen, Häusern, Becken, Felsen, Schildern), Stadion (Tribünen, Dach, Flutlicht, offene Ecken),
+  Gewächshäuser (Glas, Sprossen, Tonnendächer), Hafenkräne, Turmberg (Bergfried + Fernsilhouette), Staatstheater.
+- **W4:** `WorldClock` (Autoload: Tageszeit, Tageswechsel, Wetter klar/bewölkt/Regen/Nebel mit Übergängen, Nässe), neue
+  `EnvironmentSetup` (Sonne/Mond nach Uhrzeit, Himmelsfarben, Nebel, Regenpartikel, Laternen/Fenster nachts), Asphalt/Pflaster
+  mit Nässe und Pfützen, Wasser-Shader, Verkehr mit Licht bei Nacht/Nebel/Regen, vier Qualitätsstufen + benutzerdefiniert.
+- **W10 (Grundlage):** `Settings` v2 (Kategorien A–E, Migration v1→v2, Tastenbelegung mit Konfliktprüfung, Renderskala, AA,
+  FPS-Limit, FOV, Dichten, Ereignis-Schalter, Barrierefreiheit), `InputSetup` mit Standardbelegung/Labels.
+- **W9:** `CheatManager` (Autoload, erweiterbare Registry, 40 eigene deutsche Codes, Tippen im Spiel oder Konsole `^`,
+  Schalt-Cheats, ALLESZURUECK, Sperre über Optionen, Nutzung im Spielstand vermerkt), `CheatConsole`.
+- **Prüfung:** 109/109 Tests grün (neu: WorldClock, Settings v2, Cheats). Screenshot-Tour mit Mittag/Nacht/Regen/Nebel visuell geprüft.

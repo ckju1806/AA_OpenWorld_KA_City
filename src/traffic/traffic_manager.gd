@@ -46,12 +46,15 @@ func _physics_process(delta: float) -> void:
 	var p: Node3D = _focus()
 	if p == null:
 		return
-	# Despawn
+	# Despawn; Licht nach Tageszeit/Wetter
+	var want_lights: bool = WorldClock.night_factor() > 0.35 or WorldClock.fog > 0.5 or WorldClock.rain > 0.5
 	for i: int in range(vehicles.size() - 1, -1, -1):
 		var v: Vehicle = vehicles[i]
 		if not is_instance_valid(v):
 			vehicles.remove_at(i)
 			continue
+		if v.lights_on != want_lights and v.driver == Vehicle.Driver.AI:
+			v.set_lights(want_lights)
 		if v.driver == Vehicle.Driver.PLAYER:
 			# vom Spieler übernommen -> nicht mehr Teil des Verkehrs
 			vehicles.remove_at(i)
@@ -94,7 +97,7 @@ func _try_spawn(center: Vector3) -> bool:
 		var e: int = near[_rng.randi() % near.size()]
 		var a: int = graph.edge_a[e]
 		var b: int = graph.edge_b[e]
-		if _rng.randf() < 0.5:
+		if _rng.randf() < 0.5 and not graph.is_oneway(e):
 			var tmp: int = a
 			a = b
 			b = tmp
@@ -106,7 +109,7 @@ func _try_spawn(center: Vector3) -> bool:
 		var t: float = _rng.randf_range(0.25, 0.75)
 		var dir: Vector2 = (pb - pa) / length
 		var right: Vector2 = Vector2(-dir.y, dir.x)
-		var p2: Vector2 = pa.lerp(pb, t) + right * LaneDriver.LANE_OFFSET
+		var p2: Vector2 = pa.lerp(pb, t) + right * graph.lane_offset(e, LaneDriver.LANE_OFFSET)
 		var pos: Vector3 = Vector3(p2.x, 0.0, p2.y)
 		var d: float = pos.distance_to(center)
 		if d < SPAWN_MIN or d > SPAWN_MAX:
@@ -128,6 +131,8 @@ func _try_spawn(center: Vector3) -> bool:
 		v.ai_controller = drv
 		v.driver = Vehicle.Driver.AI
 		v.add_to_group("traffic")
+		if WorldClock.night_factor() > 0.35 or WorldClock.fog > 0.5 or WorldClock.rain > 0.5:
+			v.set_lights(true)
 		v.linear_velocity = Vector3(dir.x, 0, dir.y) * 6.0
 		vehicles.append(v)
 		spawned_total += 1

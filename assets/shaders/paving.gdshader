@@ -7,6 +7,7 @@ uniform vec3 grout_color : source_color = vec3(0.42, 0.41, 0.4);
 uniform vec2 tile = vec2(0.8, 0.8);
 uniform float variation = 0.08;
 uniform float grout = 0.04;
+uniform float wetness = 0.0;   // 0 trocken .. 1 nass (WorldClock)
 
 varying vec3 wpos;
 
@@ -29,6 +30,6 @@ void fragment() {
 	} else if (edge > 0.0) {
 		col = grout_color;
 	}
-	ALBEDO = col;
-	ROUGHNESS = 0.88;
+	ALBEDO = col * mix(1.0, 0.62, wetness);
+	ROUGHNESS = mix(0.88, 0.22, wetness * (edge > 0.0 ? 0.6 : 1.0));
 }

@@ -29,7 +29,7 @@ func _ready() -> void:
 	_section("Grafik")
 	_check("Vollbild", Settings.fullscreen, func(b: bool) -> void: Settings.fullscreen = b)
 	_check("V-Sync", Settings.vsync, func(b: bool) -> void: Settings.vsync = b)
-	_option("Qualität", Settings.QUALITY_NAMES, Settings.quality, func(i: int) -> void: Settings.quality = i)
+	_option("Qualität", Settings.QUALITY_NAMES, Settings.quality, func(i: int) -> void: Settings.apply_preset(i))
 	_check("FPS anzeigen", Settings.show_fps, func(b: bool) -> void: Settings.show_fps = b)
 	_section("Spielwelt")
 	_slider("Verkehrs-/Passantendichte", Settings.traffic_density, 0.25, 1.5, 0.05, func(x: float) -> void: Settings.traffic_density = x, true)

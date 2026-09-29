@@ -412,6 +412,8 @@ func _detect_impacts(_delta: float) -> void:
 func apply_damage(amount: float) -> void:
 	if is_destroyed or amount <= 0.0:
 		return
+	if driver == Driver.PLAYER and CheatManager.is_active("PANZERGLAS"):
+		return
 	health = maxf(0.0, health - amount)
 	damaged.emit(amount)
 	var ratio: float = health / max_health

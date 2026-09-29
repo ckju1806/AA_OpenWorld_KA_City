@@ -128,7 +128,7 @@ func _move(delta: float) -> void:
 	if camera_rig != null:
 		yaw = float(camera_rig.get("yaw"))
 	var dir: Vector3 = Vector3(move2.x, 0, move2.y).rotated(Vector3.UP, yaw)
-	var target_speed: float = SPRINT_SPEED if sprint else WALK_SPEED
+	var target_speed: float = (SPRINT_SPEED if sprint else WALK_SPEED) * (1.8 if CheatManager.is_active("TURBOSCHUHE") else 1.0)
 	var target_vel: Vector3 = dir * target_speed
 	var accel: float = GROUND_ACCEL if is_on_floor() else AIR_ACCEL
 	var hv: Vector3 = Vector3(velocity.x, 0, velocity.z)
@@ -142,7 +142,7 @@ func _move(delta: float) -> void:
 		_air_time = 0.0
 		_max_fall_speed = 0.0
 		if jump:
-			velocity.y = JUMP_VELOCITY
+			velocity.y = JUMP_VELOCITY * (2.1 if CheatManager.is_active("SUPERSPRUNG") else 1.0)
 			AudioManager.play_3d("jump", global_position, -8.0)
 	else:
 		_air_time += delta
@@ -339,7 +339,7 @@ func set_health(v: float) -> void:
 
 
 func take_damage(amount: float, cause: String = "") -> void:
-	if is_dead or amount <= 0.0:
+	if is_dead or amount <= 0.0 or CheatManager.is_active("UNVERWUNDBAR"):
 		return
 	_since_damage = 0.0
 	set_health(health - amount)

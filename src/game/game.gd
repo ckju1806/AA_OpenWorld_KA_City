@@ -25,6 +25,7 @@ var stream_radius: int = -1
 var ambient_life: bool = true
 var pause_menu: PauseMenu = null
 var map_overlay: MapOverlay = null
+var cheat_console: CheatConsole = null
 var minimap: MapView = null
 var dev_overlay: DevOverlay = null
 ## Autosave nach Missionsabschluss (Tests leiten den Speicherort um)
@@ -39,6 +40,7 @@ var _safe_t: float = 0.0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_PAUSABLE
+	add_to_group("game")
 	if App.has_arg("--world=test"):
 		world_mode = "test"
 	entities = Node3D.new()
@@ -62,6 +64,9 @@ func _ready() -> void:
 	pause_menu.name = "Pausenmenue"
 	add_child(pause_menu)
 	pause_menu.setup(self)
+	cheat_console = CheatConsole.new()
+	cheat_console.name = "CheatKonsole"
+	add_child(cheat_console)
 	dev_overlay = DevOverlay.new()
 	dev_overlay.name = "Entwickleranzeige"
 	add_child(dev_overlay)
@@ -130,6 +135,9 @@ func request_pause() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause"):
 		request_pause()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("cheat_console") and cheat_console != null and not cheat_console.is_open():
+		cheat_console.open()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("map") and map_overlay != null and not player.is_dead:
 		map_overlay.open()
@@ -301,6 +309,22 @@ func set_wanted(level: int, reason: String, pos: Vector3) -> void:
 		police.set_wanted(level, reason, pos)
 
 
+## Spieler (bzw. sein Fahrzeug) an eine Position versetzen; Sektoren werden vorher geladen.
+func teleport_player(pos: Vector3) -> void:
+	var cw: CityWorld = get_city()
+	if cw != null:
+		cw.ensure_loaded(pos)
+		pos.y = cw.ground_y(Vector2(pos.x, pos.z)) + 0.2
+	if player.is_in_vehicle():
+		var v: Vehicle = player.current_vehicle as Vehicle
+		v.teleport_to(pos + Vector3.UP * 0.3, v.rotation.y)
+	else:
+		player.global_position = pos
+		player.velocity = Vector3.ZERO
+		player.reset_physics_interpolation()
+	camera_rig.snap()
+
+
 func reset_wanted() -> void:
 	if police != null:
 		police.reset_wanted()
@@ -425,6 +449,8 @@ func spawn_vehicle(spec_id: String, pos: Vector3, yaw: float, color: Color = Col
 	entities.add_child(v)
 	v.global_transform = Transform3D(Basis(Vector3.UP, yaw), pos + Vector3.UP * 0.15)
 	v.reset_physics_interpolation()
+	if CheatManager.is_active("MONDFAHRT"):
+		v.gravity_scale = 0.35
 	return v
 
 
@@ -480,8 +506,11 @@ func register_screenshot_stations(tour: ScreenshotTour) -> void:
 	, 150)
 
 
-func _cam_station(tour: ScreenshotTour, station_name: String, player_pos: Vector3, yaw_deg: float, pitch: float, frames: int = 40) -> void:
+func _cam_station(tour: ScreenshotTour, station_name: String, player_pos: Vector3, yaw_deg: float, pitch: float, frames: int = 40,
+		pre: Callable = Callable()) -> void:
 	tour.add_station(station_name, func() -> void:
+		if pre.is_valid():
+			pre.call()
 		if world is CityWorld:
 			(world as CityWorld).ensure_loaded(player_pos)
 		if player.is_in_vehicle():
@@ -492,6 +521,34 @@ func _cam_station(tour: ScreenshotTour, station_name: String, player_pos: Vector
 		camera_rig.pitch = pitch
 		camera_rig.snap()
 	, frames)
+
+
+## Station mit gesetzter Tageszeit und Wetter (Umgebung sofort aktualisiert).
+func _weather_station(tour: ScreenshotTour, station_name: String, player_pos: Vector3, yaw_deg: float, pitch: float, hour: float,
+		weather: String) -> void:
+	_cam_station(tour, station_name, player_pos, yaw_deg, pitch, 60, func() -> void:
+		WorldClock.set_time(hour)
+		WorldClock.set_weather(weather, true)
+		var cw: CityWorld = get_city()
+		if cw != null and cw.env != null:
+			cw.env.update_environment(true))
+
+
+## Station relativ zu einer Landmarke aus den Weltdaten (lokaler Versatz vor Drehung), Blick auf die Landmarke.
+func _lm_station(tour: ScreenshotTour, station_name: String, lm_type: String, offset: Vector2, y: float, pitch: float,
+		look_at_local: Vector2 = Vector2.ZERO) -> void:
+	var cw: CityWorld = get_city()
+	for lm: Variant in cw.graph.layout.landmarks:
+		if str(lm.type) != lm_type:
+			continue
+		var c: Vector2 = Vector2(float(lm.pos[0]), float(lm.pos[1]))
+		var rot: float = deg_to_rad(float(lm.get("rot", 0.0)))
+		var o: Vector2 = Vector2(offset.x * cos(rot) + offset.y * sin(rot), -offset.x * sin(rot) + offset.y * cos(rot))
+		var pp: Vector2 = c + o
+		var t: Vector2 = c + Vector2(look_at_local.x * cos(rot) + look_at_local.y * sin(rot), -look_at_local.x * sin(rot) + look_at_local.y * cos(rot))
+		var yaw: float = rad_to_deg(atan2(-(t.x - pp.x), -(t.y - pp.y)))
+		_cam_station(tour, station_name, Vector3(pp.x, y, pp.y), yaw, pitch)
+		return
 
 
 func _register_city_stations(tour: ScreenshotTour) -> void:
@@ -508,12 +565,23 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 	_cam_station(tour, "europaplatz", Vector3(-660, y, kz.call(-660.0) + 4.0), 90.0, -0.08)
 	_cam_station(tour, "durlacher_tor", Vector3(980, y, kz.call(980.0) + 6.0), -80.0, -0.1)
 	_cam_station(tour, "kriegsstrasse", Vector3(-300, y, 912), -90.0, -0.06)
-	_cam_station(tour, "hauptbahnhof", Vector3(-180, y, 2150), 180.0, -0.06)
-	_cam_station(tour, "zoo_stadtgarten", Vector3(-180, y, 1700), 180.0, -0.1)
+	_lm_station(tour, "hauptbahnhof", "hauptbahnhof", Vector2(-40, -95), y, -0.02)
+	_lm_station(tour, "zoo_eingang", "zoo", Vector2(10, 300), y, -0.06)
+	_lm_station(tour, "zoo_gehege", "zoo", Vector2(-60, 40), y, -0.3, Vector2(-60, 140))
+	_lm_station(tour, "stadion", "stadion", Vector2(-120, 160), y, 0.02)
+	_lm_station(tour, "gewaechshaeuser", "gewaechshaus", Vector2(-10, -55), y, -0.02)
+	_lm_station(tour, "hafenkraene", "hafenkran", Vector2(-20, 70), y, 0.12)
+	_lm_station(tour, "turmberg", "turmberg", Vector2(-25, -40), y, 0.15)
 	_cam_station(tour, "weststadt", Vector3(-1900, y, 300), 90.0, -0.08)
 	_cam_station(tour, "durlach", Vector3(5190, y, 1640), -80.0, -0.08)
 	_cam_station(tour, "rheinhafen", Vector3(-5600, y, 330), 90.0, -0.12)
+	_weather_station(tour, "tageslicht_mittag", Vector3(0, y, 520), 0.0, -0.05, 13.0, "klar")
+	_weather_station(tour, "nacht_kaiserstrasse", Vector3(-300, y, kz.call(-300.0)), 90.0, -0.06, 23.0, "klar")
+	_weather_station(tour, "regen_nasse_strasse", Vector3(-300, y, 912), -90.0, -0.1, 15.0, "regen")
+	_weather_station(tour, "nebel_morgen", Vector3(0, y, 200), 0.0, -0.04, 7.5, "nebel")
 	tour.add_station("mission_dialog", func() -> void:
+		WorldClock.set_time(19.5)
+		WorldClock.set_weather("klar", true)
 		var giver: MissionGiver = missions.givers["m01_erste_schicht"]
 		player.global_position = giver.global_position + (-giver.global_basis.z) * 2.2 + Vector3.UP * 0.1
 		camera_rig.yaw = giver.rotation.y + PI + 0.5

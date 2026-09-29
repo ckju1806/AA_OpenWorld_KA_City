@@ -13,14 +13,15 @@ from shapely.ops import unary_union
 from shapely.strtree import STRtree
 
 from geo import ORIGIN_LAT, ORIGIN_LON, hash01
-from network import CLASS_ORDER, ROAD_CLASSES
+from network import CLASS_ORDER, ROAD_CLASSES, edge_width
 
 SECTOR = 256.0
 LOD_TILE = 1024.0
 MAP_M_PER_PX = 4.0
 Q = 10.0  # Koordinaten in Dezimetern (Ganzzahlen) -> kompaktes JSON
 
-AREA_KINDS = ["water", "forest", "park", "zoo", "garden", "cemetery", "sports", "rail", "plaza", "industry_yard", "field", "urban"]
+AREA_KINDS = ["water", "forest", "park", "zoo", "garden", "cemetery", "sports", "rail", "plaza", "industry_yard", "field", "urban",
+    "parking"]
 SLAB_KINDS = {"urban", "plaza", "park", "zoo", "garden", "cemetery", "sports", "industry_yard"}
 PROP_KINDS = ["lamp", "tree", "bench", "bin", "bike", "bollard", "car"]
 
@@ -58,7 +59,8 @@ def split_holes(poly: Polygon, depth: int = 0) -> list:
 
 
 # --------------------------------------------------------------------------- Props
-def make_props(nodes, edges, blocks, buildings, areas):
+def make_props(nodes, edges, blocks, buildings, areas, trees=None):
+    """trees: Einzelbaum-Standorte (OSM); dann keine generierten Straßenbäume."""
     slabs = [b["poly"] for b in blocks if b["kind"] in ("urban", "plaza")]
     stree = STRtree(slabs)
 
@@ -81,7 +83,7 @@ def make_props(nodes, edges, blocks, buildings, areas):
         dx, dz = (pb[0] - pa[0]) / L, (pb[1] - pa[1]) / L
         nx, nz = -dz, dx
         yaw = math.atan2(-dx, -dz)
-        w2 = rc["width"] * 0.5
+        w2 = edge_width(edges[ei]) * 0.5
         if cls == "pedestrian":
             t = 8.0
             k = 0
@@ -111,7 +113,7 @@ def make_props(nodes, edges, blocks, buildings, areas):
             k += 1
         # Straßenbäume an Haupt- und Alleestraßen
         name_is_allee = False
-        if cls in ("primary", "secondary") or name_is_allee:
+        if trees is None and (cls in ("primary", "secondary") or name_is_allee):
             t = 10.0
             while t < L - 8:
                 for side in (1, -1):
@@ -126,6 +128,55 @@ def make_props(nodes, edges, blocks, buildings, areas):
             t = 14.0 + max(0.0, L - 28.0) * hash01(ei, "cp")
             p = (pa[0] + dx * t + nx * (w2 - 1.0), pa[1] + dz * t + nz * (w2 - 1.0))
             props["car"].append((p[0], p[1], yaw, int(hash01(ei, "cv") * 100)))
+    # Einzelbäume aus Geodaten (nicht auf Fahrbahnen)
+    if trees:
+        road_buf = [LineString([nodes[e[0]], nodes[e[1]]]).buffer(edge_width(e) * 0.5 + 0.8) for e in edges
+            if ROAD_CLASSES[CLASS_ORDER[e[2]]]["drivable"]]
+        rt = STRtree(road_buf)
+        for k, (x, z) in enumerate(trees):
+            pt = Point(x, z)
+            if any(road_buf[i].contains(pt) for i in rt.query(pt)):
+                continue
+            props["tree"].append((x, z, 0.0, 0 if hash01("t", k) < 0.8 else 2))
+    # Parkplätze: Autoreihen (Stellplätze 2,6 x 5 m, Fahrgasse 6 m), deterministisch zu ~55 % belegt
+    for bl in blocks:
+        if bl["kind"] != "parking":
+            continue
+        inner = bl["poly"].buffer(-1.2, join_style=2)
+        if inner.is_empty or inner.area < 60:
+            continue
+        mrr = inner.minimum_rotated_rectangle
+        cs = list(mrr.exterior.coords)
+        if len(cs) < 5:
+            continue
+        e0 = (cs[1][0] - cs[0][0], cs[1][1] - cs[0][1])
+        e1 = (cs[2][0] - cs[1][0], cs[2][1] - cs[1][1])
+        u = e0 if math.hypot(*e0) >= math.hypot(*e1) else e1     # Reihenrichtung (lange Seite)
+        lu = math.hypot(*u) or 1.0
+        u = (u[0] / lu, u[1] / lu)
+        v = (-u[1], u[0])
+        c = inner.centroid
+        # lokale Ausdehnung
+        pts = [((px - c.x) * u[0] + (pz - c.y) * u[1], (px - c.x) * v[0] + (pz - c.y) * v[1]) for px, pz in cs]
+        a0, a1 = min(p[0] for p in pts), max(p[0] for p in pts)
+        b0, b1 = min(p[1] for p in pts), max(p[1] for p in pts)
+        row = b0 + 2.6
+        ri = 0
+        while row < b1 - 2.4:
+            t = a0 + 1.5
+            k = 0
+            while t < a1 - 1.3:
+                x, z = c.x + u[0] * t + v[0] * row, c.y + u[1] * t + v[1] * row
+                fp = Polygon([(x + u[0] * dx + v[0] * dz, z + u[1] * dx + v[1] * dz) for dx, dz in
+                    ((-1.1, -2.4), (1.1, -2.4), (1.1, 2.4), (-1.1, 2.4))])
+                if inner.contains(fp) and hash01("pk", round(x), round(z)) < 0.55:
+                    facing = 1 if ri % 2 == 0 else -1
+                    yaw = math.atan2(-v[0] * facing, -v[1] * facing)
+                    props["car"].append((x, z, yaw, int(hash01("pv", round(x), round(z)) * 100)))
+                t += 2.6
+                k += 1
+            row += 5.0 if ri % 2 == 0 else 11.0   # Doppelreihe, dann Fahrgasse
+            ri += 1
     # Plätze: Bänke und Bäume am Rand
     for bl in blocks:
         if bl["kind"] != "plaza":
@@ -222,7 +273,8 @@ def sector_of(x, z, bounds):
 
 
 def export_world(out_dir, meta, nodes, edges, names, blocks, buildings, props, areas, waterways, railways, landmarks, pois,
-        labels, districts, walk, bounds):
+        labels, districts, walk, bounds, extra=None):
+    """extra: zusätzliche Felder für world.json (z. B. signals, transit)."""
     os.makedirs(os.path.join(out_dir, "sectors"), exist_ok=True)
     sectors = defaultdict(lambda: {"a": [], "k": [], "b": [], "e": [], "n": [], "p": {k: [] for k in PROP_KINDS}, "r": [], "lm": []})
 
@@ -252,7 +304,7 @@ def export_world(out_dir, meta, nodes, edges, names, blocks, buildings, props, a
 
     # Bodenflächen (Wasser, Wald, Parks, ...) und Flussläufe
     for a in areas:
-        add_poly_clipped("a", AREA_KINDS.index(a["kind"]), Polygon(a["poly"]).buffer(0))
+        add_poly_clipped("a", AREA_KINDS.index(a["kind"]), Polygon(a["poly"], a.get("holes") or []).buffer(0))
     for w in waterways:
         add_poly_clipped("a", AREA_KINDS.index("water"), LineString(w["pts"]).buffer(w["width"] * 0.5))
     # Blockplatten (Bordstein)
@@ -281,13 +333,23 @@ def export_world(out_dir, meta, nodes, edges, names, blocks, buildings, props, a
         for x, z, yaw, var in lst:
             sectors[sector_of(x, z, bounds)]["p"][kind] += [qi(x), qi(z), int(round(yaw * 1000)), int(var)]
     # Bahnstrecken (geclippt)
+    # Art: 0 = Eisenbahn (Schotterbett), 1 = Straßenbahn auf eigenem Gleiskörper, 2 = Straßenbahn in der Fahrbahn/Fußgängerzone
+    road_polys = [LineString([nodes[e[0]], nodes[e[1]]]).buffer(edge_width(e) * 0.5) for e in edges]
+    rp_tree = STRtree(road_polys)
     for r in railways:
+        if r.get("tunnel"):
+            continue
         line = LineString(r["pts"])
+        tram = r.get("kind", "rail") in ("tram", "light_rail")
         for ij, sq in boxes_for(line):
             part = line.intersection(sq)
             for g in getattr(part, "geoms", [part]):
                 if isinstance(g, LineString) and g.length > 1:
-                    sectors[ij]["r"].append([int(r.get("tracks", 2)), flat(list(g.coords))])
+                    kind = 0
+                    if tram:
+                        mid = g.interpolate(0.5, normalized=True)
+                        kind = 2 if any(road_polys[i].contains(mid) for i in rp_tree.query(mid)) else 1
+                    sectors[ij]["r"].append([int(r.get("tracks", 2)), flat(list(g.coords)), kind])
     for li, lm in enumerate(landmarks):
         sectors[sector_of(lm["pos"][0], lm["pos"][1], bounds)]["lm"].append(li)
 
@@ -336,8 +398,10 @@ def export_world(out_dir, meta, nodes, edges, names, blocks, buildings, props, a
         "districts": [{"id": d["id"], "name": d["name"], "style": d["style"], "poly": flat(Polygon(d["poly"]).simplify(5).exterior.coords[:-1])}
             for d in districts],
         "walk": {"loops": [flat(lp) for lp in walk[0]], "cross": [v for c in walk[1] for v in c], "wander": [v for w in walk[2] for v in w]},
-        "rail": [{"name": r["name"], "tracks": r.get("tracks", 2), "pts": flat(r["pts"])} for r in railways],
+        "rail": [{"name": r["name"], "tracks": r.get("tracks", 2), "kind": r.get("kind", "rail"), "tunnel": bool(r.get("tunnel")),
+            "pts": flat(r["pts"])} for r in railways],
         "map": {"image": "map.webp", "m_per_px": MAP_M_PER_PX},
+        **(extra or {}),
     }
     wz = gzip.compress(json.dumps(world, separators=(",", ":"), ensure_ascii=False).encode(), 9)
     with open(os.path.join(out_dir, "world.json.gz"), "wb") as fh:
@@ -351,7 +415,7 @@ MAP_COLORS = {
     "bg": (58, 66, 54), "field": (74, 84, 60), "forest": (38, 62, 42), "park": (62, 96, 58), "zoo": (70, 102, 62),
     "garden": (70, 108, 70), "cemetery": (58, 84, 60), "sports": (70, 104, 64), "water": (54, 92, 128), "rail": (84, 80, 78),
     "plaza": (150, 138, 116), "industry_yard": (92, 90, 88), "urban": (96, 94, 96), "building": (142, 128, 118),
-    "building_mod": (128, 132, 140), "rail_line": (58, 56, 60),
+    "building_mod": (128, 132, 140), "rail_line": (58, 56, 60), "parking": (104, 104, 108),
 }
 ROAD_COLORS = {"motorway": (232, 170, 90), "trunk": (228, 196, 120), "primary": (236, 222, 180), "secondary": (224, 220, 208),
     "tertiary": (206, 204, 198), "residential": (184, 182, 178), "service": (160, 158, 154), "pedestrian": (186, 164, 136)}
@@ -367,7 +431,7 @@ def render_map(path, bounds, nodes, edges, blocks, buildings, areas, waterways, 
     def P(p):
         return ((p[0] - x0) / MAP_M_PER_PX, (p[1] - z0) / MAP_M_PER_PX)
 
-    order = ["field", "forest", "park", "cemetery", "sports", "garden", "zoo", "rail", "industry_yard", "water", "plaza"]
+    order = ["field", "forest", "park", "cemetery", "sports", "garden", "zoo", "rail", "industry_yard", "water", "plaza", "parking"]
     for kind in order:
         for a in areas:
             if a["kind"] == kind:
@@ -380,12 +444,13 @@ def render_map(path, bounds, nodes, edges, blocks, buildings, areas, waterways, 
     for b in buildings:
         dr.polygon([P(p) for p in b["p"]], fill=MAP_COLORS["building_mod" if b["s"] in (1, 3, 4, 5) else "building"])
     for r in railways:
-        dr.line([P(p) for p in r["pts"]], fill=MAP_COLORS["rail_line"], width=3)
+        if not r.get("tunnel"):
+            dr.line([P(p) for p in r["pts"]], fill=MAP_COLORS["rail_line"], width=3 if r.get("kind", "rail") == "rail" else 2)
     for cls in reversed(CLASS_ORDER):
         col = ROAD_COLORS[cls]
-        wpx = max(1, int(round(ROAD_CLASSES[cls]["width"] / MAP_M_PER_PX)))
         for e in edges:
             if CLASS_ORDER[e[2]] == cls:
+                wpx = max(1, int(round(edge_width(e) / MAP_M_PER_PX)))
                 dr.line([P(nodes[e[0]]), P(nodes[e[1]])], fill=col, width=wpx)
     img.save(path, "WEBP", quality=88, method=6)
     return (W, H)

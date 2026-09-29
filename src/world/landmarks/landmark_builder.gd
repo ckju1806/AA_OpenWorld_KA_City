@@ -18,7 +18,8 @@ static func build_one(d: Dictionary, slab_h: float) -> Node3D:
 	var pos: Vector2 = Vector2(float(d.pos[0]), float(d.pos[1]))
 	var rot: float = deg_to_rad(float(d.get("rot", 0.0)))
 	var kit := MeshKit.new()
-	CityMaterials.apply(kit, ["facade", "roof", "stone", "flat", "water", "glass_dark", "lamp_glow"] as Array[String])
+	CityMaterials.apply(kit, ["facade", "roof", "stone", "flat", "water", "glass_dark", "lamp_glow", "glass", "turf", "vertex_metal"]
+		as Array[String])
 	var node := Node3D.new()
 	node.name = "LM_" + str(d.get("type", "x"))
 	var body := StaticBody3D.new()
@@ -45,6 +46,20 @@ static func build_one(d: Dictionary, slab_h: float) -> Node3D:
 			_pavillon(kit, body, node, pos, slab_h)
 		"haltestelle":
 			_haltestelle(kit, body, node, pos, rot, slab_h)
+		"hauptbahnhof":
+			LandmarksExtra.hauptbahnhof(kit, body, pos, rot, 0.0)
+		"zoo":
+			LandmarksExtra.zoo(kit, body, pos, rot, slab_h)
+		"stadion":
+			LandmarksExtra.stadion(kit, body, pos, rot, 0.0)
+		"gewaechshaus":
+			LandmarksExtra.gewaechshaus(kit, body, pos, rot, slab_h)
+		"hafenkran":
+			LandmarksExtra.hafenkran(kit, body, pos, rot, 0.0)
+		"turmberg":
+			LandmarksExtra.turmberg(kit, body, node, pos, rot, slab_h)
+		"staatstheater":
+			LandmarksExtra.staatstheater(kit, body, pos, rot, slab_h)
 		_:
 			_placeholder(kit, body, node, d, pos, rot, slab_h)
 	var mi := MeshInstance3D.new()
