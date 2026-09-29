@@ -97,6 +97,8 @@ func _ready() -> void:
 		var tour := ScreenshotTour.new()
 		tour.game = self
 		add_child(tour)
+	if App.has_arg("--boot-check"):
+		_boot_check.call_deferred()
 
 
 func _build_world() -> void:
@@ -872,3 +874,16 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		camera_rig._target_distance = 140.0
 		camera_rig.snap()
 	, 40)
+
+
+## Starttest für Build-Skripte (`-- --autostart --boot-check`): Welt, Graph, Missionen und ÖPNV geladen? Exit-Code 0/1.
+func _boot_check() -> void:
+	for i: int in 30:
+		await get_tree().physics_frame
+	var cw: CityWorld = get_city()
+	var ok: bool = cw != null and cw.graph != null and cw.graph.node_count() > 100 and missions != null \
+		and missions.definitions.size() >= 15 and transit != null and player != null
+	print("[boot] %s: Knoten %d, Aufträge %d, ÖPNV-Linien %d, Quelle %s" % ["OK" if ok else "FEHLER",
+		cw.graph.node_count() if cw != null and cw.graph != null else 0, missions.definitions.size() if missions != null else 0,
+		transit.lines.size() if transit != null else 0, str(cw.world.meta.get("source", "?")) if cw != null and cw.world != null else "?"])
+	get_tree().quit(0 if ok else 1)

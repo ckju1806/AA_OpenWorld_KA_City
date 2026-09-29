@@ -314,3 +314,7 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   docs/KARTE_KARLSRUHE, INHALTSVERZEICHNIS; Hauptmenü zeigt die Quelle der Kartendaten. Version 0.2.0.
 - **Prüfung:** Gesamtsuite **137 Tests, 0 fehlgeschlagen** (587,7 s, vor den letzten kleinen Änderungen); danach Unit 52/52,
   Speichern/Laden 6/6, Verkehr inkl. Umfahren, Fächer-Runde 3/3, Ereignisse 5/5, ÖPNV 4/4 grün; Hauptmenü per Screenshot geprüft.
+- **Build-Fehler gefunden und behoben (release-kritisch):** Der Export-Filter enthielt nur `data/*.json`; die gzip-Weltdaten
+  (`world.json.gz`, Sektoren, LOD) fehlten im PCK → das exportierte Spiel startete ohne Welt. Filter um `data/*.gz` ergänzt.
+  `build_windows.sh` prüft jetzt den PCK-Inhalt und startet das Paket headless mit `--boot-check` (Exit-Code ≠ 0 bricht den
+  Build ab). Ergebnis: `[boot] OK: Knoten 14981, Aufträge 15, ÖPNV-Linien 6, Quelle authored`; Screenshot-Tour aus der PCK geprüft.
