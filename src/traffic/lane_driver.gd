@@ -248,7 +248,7 @@ func _opposite_lane_clear(v: Vehicle) -> bool:
 	fwd = fwd.normalized()
 	var left: Vector3 = Vector3(fwd.z, 0.0, -fwd.x)
 	var box := BoxShape3D.new()
-	box.size = Vector3(2.6, 1.6, 55.0)
+	box.size = Vector3(2.2, 1.6, 55.0)   # Fahrzeugbreite + Rand; parkende Autos am Gegen-Fahrbahnrand liegen außerhalb
 	var q := PhysicsShapeQueryParameters3D.new()
 	q.shape = box
 	q.transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), v.global_position + fwd * 24.0 + left * (2.0 * graph.lane_offset(e)) + Vector3.UP)

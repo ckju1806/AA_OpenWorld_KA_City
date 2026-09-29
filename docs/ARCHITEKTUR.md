@@ -56,7 +56,7 @@ main_menu.tscn (MainMenu) ──Neues Spiel / Fortsetzen──▶ game.tscn (Gam
 
 ## Welt-Pipeline (`tools/worldgen/`, Python)
 ```
-Quelle: ka_authored.py (1:1-Näherung)  oder  OSM (fetch_osm.py → ~/osm_cache → source_osm.py)
+Quelle: OSM (fetch_osm.py → ~/osm_cache → source_osm.py; im Build)  oder  ka_authored.py (1:1-Näherung, Rückfall)
    → network.py (Graph: Vereinfachung, Teilung ≤ 60 m, Kontakte, Inseln)   → blocks.py (Blöcke, Flächen, Gebäude-Füllung)
    → transit.py (Linien, Haltestellen, Tunnelbereiche)                      → export.py (Sektoren, LOD, Props, world.json.gz, map.webp)
    → validate_world.py (Gebäude/Autos nicht in Fahrspuren, Landmarken frei)

@@ -311,13 +311,11 @@ func _visible(pos: Vector3) -> bool:
 ## Spawn auf einer Fahrspur 110–240 m vom Spieler entfernt, außerhalb der Sicht.
 func _try_spawn(ppos: Vector3) -> bool:
 	var dmin: float = 90.0 if wanted.level >= 3 else 110.0
-	var near: PackedInt32Array = graph.edges_near(Vector2(ppos.x, ppos.z), 240.0)
+	var near: PackedInt32Array = graph.edges_near_where(Vector2(ppos.x, ppos.z), 240.0, false, 25.0)
 	if near.is_empty():
 		return false
-	for attempt: int in 12:
+	for attempt: int in 16:
 		var e: int = near[_rng.randi() % near.size()]
-		if not graph.is_drivable(e) or graph.edge_length(e) < 25.0:
-			continue
 		var a: int = graph.edge_a[e]
 		var b: int = graph.edge_b[e]
 		if _rng.randf() < 0.5:

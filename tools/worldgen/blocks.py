@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 
 from shapely import affinity
-from shapely.geometry import LineString, MultiLineString, Point, Polygon
+from shapely.geometry import LineString, MultiLineString, Point, Polygon, box
 from shapely.ops import polygonize, unary_union
 from shapely.strtree import STRtree
 
@@ -45,6 +45,28 @@ def _safe_inter_area(a, b) -> float:
         return a.buffer(0).intersection(b.buffer(0)).area
 
 
+def _tile_large(faces, tile: float):
+    """Sehr große Flächen (z. B. alles außerhalb des geschlossenen Straßennetzes) in Kacheln zerlegen, damit
+    Verschneidungen lokal bleiben (sonst wird jede Fläche/jedes Gebäude mit einem Riesenpolygon geschnitten)."""
+    out = []
+    for f in faces:
+        if f.area <= tile * tile:
+            out.append(f)
+            continue
+        bx0, bz0, bx1, bz1 = f.bounds
+        gx = bx0
+        while gx < bx1:
+            gz = bz0
+            while gz < bz1:
+                part = f.intersection(box(gx, gz, gx + tile, gz + tile))
+                for q in getattr(part, "geoms", [part]):
+                    if isinstance(q, Polygon) and q.area >= 80:
+                        out.append(q)
+                gz += tile
+            gx += tile
+    return out
+
+
 def make_blocks(nodes, edges, bounds, districts, areas, urban=None):
     """Flächen zwischen Straßen -> Blöcke mit Bordsteinpolygon. Rückgabe: Liste {poly, kind, district, style}.
     urban: optionale Geometrie bebauter Flächen (OSM: Wohn-/Gewerbegebiete + Gebäude); ohne sie gilt „in einem Viertel“."""
@@ -54,6 +76,8 @@ def make_blocks(nodes, edges, bounds, districts, areas, urban=None):
     x0, z0, x1, z1 = bounds
     frame = LineString([(x0, z0), (x1, z0), (x1, z1), (x0, z1), (x0, z0)])
     faces = list(polygonize(unary_union(lines + [frame])))
+    if urban is not None:   # nur OSM-Quelle (Näherung bleibt unverändert reproduzierbar)
+        faces = _tile_large(faces, 1000.0)
     tree = STRtree(lines)
     dpolys = [(d, Polygon(d["poly"]).buffer(0)) for d in districts]
     apolys = [(a, Polygon(a["poly"], a.get("holes") or []).buffer(0)) for a in areas]

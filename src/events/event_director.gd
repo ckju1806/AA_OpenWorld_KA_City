@@ -227,13 +227,11 @@ func dispatch_police(p: Vector3, duration: float) -> void:
 
 ## Zwei Startplätze für ein Rennen auf einer Verkehrskante 110–220 m entfernt, außer Sicht.
 func race_start(near: Vector3) -> Array:
-	var cand: PackedInt32Array = graph.edges_near(Vector2(near.x, near.z), 220.0)
-	for attempt: int in 20:
+	var cand: PackedInt32Array = graph.edges_near_where(Vector2(near.x, near.z), 220.0, true, 40.0, 7.0)
+	for attempt: int in 30:
 		if cand.is_empty():
 			break
 		var e: int = cand[_rng.randi() % cand.size()]
-		if not graph.is_traffic(e) or graph.edge_length(e) < 40.0 or graph.edge_width(e) < 7.0:
-			continue
 		var a: int = graph.edge_a[e]
 		var b: int = graph.edge_b[e]
 		if not graph.is_oneway(e) and _rng.randf() < 0.5:
@@ -259,13 +257,11 @@ func race_start(near: Vector3) -> Array:
 
 ## Parkposition am Fahrbahnrand (rechts) nahe p.
 func curb_spot(near: Vector3) -> Dictionary:
-	var cand: PackedInt32Array = graph.edges_near(Vector2(near.x, near.z), 160.0)
-	for attempt: int in 20:
+	var cand: PackedInt32Array = graph.edges_near_where(Vector2(near.x, near.z), 160.0, false, 30.0, 8.0)
+	for attempt: int in 30:
 		if cand.is_empty():
 			break
 		var e: int = cand[_rng.randi() % cand.size()]
-		if not graph.is_drivable(e) or graph.edge_length(e) < 30.0 or graph.edge_width(e) < 8.0:
-			continue
 		var pa: Vector2 = graph.node_pos[graph.edge_a[e]]
 		var pb: Vector2 = graph.node_pos[graph.edge_b[e]]
 		var dir: Vector2 = (pb - pa).normalized()

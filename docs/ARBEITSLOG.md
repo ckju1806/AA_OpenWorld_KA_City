@@ -325,3 +325,23 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   Stadtkirche 111 m, Hauptbahnhof 137 m (Drehung 21,2°), Gewächshäuser 145 m, Staatstheater 1 m verschoben; Stadion, Zoo,
   Turmberg, Hafenkräne warten auf Flächen-/Punktdaten. Parkplatz-Autos halten ≥ 4,5 m Abstand zu Fahrbahnachsen.
   POIs rasten auf die echte Straße ein (bis 2,7 km Versatz bei grob geschätzten Näherungsorten).
+
+## 2026-09-29 – W2 abgeschlossen: Welt aus OpenStreetMap (vollständiger Abruf)
+
+- **Restore-Punkt:** Commit `cab652f` (Welt aus der 1:1-Näherung). Rückweg: `git checkout cab652f -- data/world/ka` bzw.
+  `build_world.py --source authored`. Der saubere Näherungs-Build bleibt reproduzierbar (Generator unverändert nutzbar).
+- **Datenabruf:** Overpass in 240 Kacheln (Linien, Flächen, Gebäude, Punkte) + ÖPNV-Relationen getrennt nach Bahn/Bus
+  (`fetch_osm.py --routes-only`), Rohdaten ≈ 460 MB im Cache außerhalb des Repos. Geofabrik blieb gesperrt; die alte
+  Wiederholschleife (`fetch_geofabrik.sh`, ≈ 1 300 erfolglose Versuche) wurde beendet.
+- **Aufbereitung für Befahrbarkeit** (Regeln in `docs/KARTE_KARLSRUHE.md`): Mindestbreiten je Straßenklasse, Gebäudeschnitt
+  mit runden Kappen + morphologischer Öffnung, 278 Sackgassen-Stummel an Gebäuden entfernt, Landmarken an OSM-Objekten
+  verankert, Nebenstraßen unter Landmarken entfernt, POI-Regel für Fußgängerzonen, Objekte/Ampelmasten neben der Fahrbahn.
+- **Leistung Generator:** Riesige Außenflächen (bis 92 km²) machten die Blockbildung langsam (26 min) → Flächen > 1 km² werden
+  gekachelt; GEOS-Topologiefehler abgefangen (buffer(0), sichere Schnittmenge). Vollbau jetzt ≈ 6,5 min.
+- **Ergebnis:** 42 236 Knoten, 45 609 Kanten, ≈ 96 500 Gebäude, 2 988 Sektoren, ≈ 11,5 MB Weltdaten (Budget ≤ 40 MB);
+  Validierung 0 Gebäude/0 Autos/0 Objekte auf Fahrbahnen.
+- **Spiel-/Testanpassungen:** Rennstart/Polizei-Spawn wählen Straßen mit `edges_near_where` (keine Fußwege), Verkehr
+  umfährt auch bei OSM-Kreuzungsdichte korrekt, Ampelmasten mit Abstand, Stadtbahn-Bremskurve; Tests auf echte Geometrie
+  umgestellt (Fächerstraßen per Straßennamen, Zusammenhang > 97 %, Verkehrsketten nur auf Hauptstraßen ≥ 8 m); die
+  Fächer-Runde ist real 13,9 km lang → Zeitlimit 18 min.
+- **Doku:** README, KNOWN_ISSUES, ASSET_LICENSES (ODbL gilt jetzt für `data/world/ka/`), ARCHITEKTUR, KARTE_KARLSRUHE.

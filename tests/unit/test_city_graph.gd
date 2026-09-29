@@ -33,6 +33,9 @@ func test_no_crossing_edges() -> void:
 				continue
 			if g.edge_a[j] == g.edge_a[i] or g.edge_a[j] == g.edge_b[i] or g.edge_b[j] == g.edge_a[i] or g.edge_b[j] == g.edge_b[i]:
 				continue
+			# Brücken/Tunnel kreuzen andere Wege planmäßig ohne gemeinsamen Knoten (OSM)
+			if g.is_bridge(i) or g.is_bridge(j) or g.is_tunnel(i) or g.is_tunnel(j):
+				continue
 			var ip: Variant = Geometry2D.segment_intersects_segment(a1, b1, g.node_pos[g.edge_a[j]], g.node_pos[g.edge_b[j]])
 			if ip != null:
 				crossings += 1
@@ -56,8 +59,14 @@ func test_spatial_index_matches_brute_force() -> void:
 
 func test_drive_network_connected() -> void:
 	var g: CityGraph = _graph()
-	assert_eq(g.component_count("drive"), 1, "Befahrbares Netz zusammenhängend")
-	assert_lt(float(g.component_count("traffic")), 4.5, "Verkehrsnetz (fast) zusammenhängend")
+	# Echte Kartendaten: Randgebiete hängen teils nur außerhalb des Kartenausschnitts zusammen. Gefordert ist daher,
+	# dass (nahezu) das gesamte Netz eine Komponente bildet und alle Spielorte darin liegen (siehe test_paths_between_pois).
+	for mode: String in ["drive", "traffic"]:
+		var sizes: Array[int] = g.component_sizes(mode)
+		var total: int = 0
+		for sz: int in sizes:
+			total += sz
+		assert_gt(float(sizes[0]) / float(maxi(total, 1)), 0.97, "%s-Netz: größte Komponente %d von %d Knoten (%d Komponenten)" % [mode, sizes[0], total, sizes.size()])
 
 
 func test_few_dead_ends_for_traffic() -> void:
@@ -71,12 +80,26 @@ func test_few_dead_ends_for_traffic() -> void:
 
 func test_fan_streets_start_at_zirkel() -> void:
 	var g: CityGraph = _graph()
-	# Jeder der 9 Fächerstrahlen beginnt am Zirkel (r = 240 m um den Schlossturm) an einer Einmündung
-	for ang: float in [-45.0, -33.75, -22.5, -11.25, 0.0, 11.25, 22.5, 33.75, 45.0]:
-		var p: Vector2 = PolyUtil.polar(Vector2.ZERO, 240.0, ang)
-		var n: int = g.nearest_node(p, "all")
-		assert_lt(g.node_pos[n].distance_to(p), 3.0, "Knoten am Zirkel für Winkel %.2f" % ang)
-		assert_true(g.degree(n, "all") >= 3, "Einmündung am Zirkel (Winkel %.2f)" % ang)
+	# Jede der neun Fächerstraßen hat einen gemeinsamen Knoten mit dem Zirkel (Einmündung) – quellenunabhängig über Namen
+	var zirkel: Dictionary = {}
+	for e: int in g.edge_count():
+		if g.edge_name(e) == "Zirkel":
+			zirkel[g.edge_a[e]] = true
+			zirkel[g.edge_b[e]] = true
+	assert_gt(float(zirkel.size()), 5.0, "Zirkel im Netz")
+	for street: String in ["Waldstraße", "Herrenstraße", "Ritterstraße", "Lammstraße", "Karl-Friedrich-Straße", "Kreuzstraße",
+			"Adlerstraße", "Kronenstraße", "Waldhornstraße"]:
+		var joins: bool = false
+		var exists: bool = false
+		for e2: int in g.edge_count():
+			if g.edge_name(e2) != street:
+				continue
+			exists = true
+			if zirkel.has(g.edge_a[e2]) or zirkel.has(g.edge_b[e2]):
+				var n: int = g.edge_a[e2] if zirkel.has(g.edge_a[e2]) else g.edge_b[e2]
+				joins = joins or g.node_pos[n].length() < 400.0
+		assert_true(exists, "%s im Netz" % street)
+		assert_true(joins, "%s mündet in den Zirkel" % street)
 
 
 func test_landmark_positions_real_scale() -> void:

@@ -150,6 +150,10 @@ def _area_kind(tags: dict) -> str | None:
 
 
 # --------------------------------------------------------------------------- Straßen
+MIN_WIDTH = {"motorway": 12.0, "trunk": 10.0, "primary": 8.0, "secondary": 7.5, "tertiary": 7.0, "residential": 5.5, "service": 3.5}
+MIN_WIDTH_ONEWAY = {"motorway": 8.0, "trunk": 7.0, "primary": 5.0, "secondary": 4.5, "tertiary": 4.0, "residential": 3.5, "service": 3.0}
+
+
 def _road_attrs(tags: dict):
     hw = tags.get("highway")
     if hw not in HIGHWAY:
@@ -178,6 +182,10 @@ def _road_attrs(tags: dict):
             width = max(7.0, lanes * 3.3 + 2.0)
         else:
             width = w_default
+    # Mindestbreiten je Klasse (OSM-„width“ beschreibt teils nur einen Fahrstreifen): zwei Fahrzeuge müssen sich
+    # begegnen können, Einbahnstraßen einen Streifen plus Rand haben
+    mins = MIN_WIDTH_ONEWAY if oneway else MIN_WIDTH
+    width = max(width, mins.get(cls, 0.0))
     width = round(width * 2.0) / 2.0
     bridge = tags.get("bridge") not in (None, "no") or _num(tags.get("layer"), 0) > 0
     name = tags.get("name") or tags.get("ref") or ""
@@ -258,6 +266,80 @@ def _build_graph(ways, bounds):
     edges = _drop_non_drivable_fragments(edges)
     nodes, edges = net._compact(nodes, edges)
     return nodes, edges, names
+
+
+def _drop_building_stubs(graph, blds):
+    """Befahrbare Sackgassen-Stummel entfernen, deren freies Ende in oder bis 2 m an einem Gebäude liegt
+    (Ladehof-/Garageneinfahrten): für das Spiel ohne Nutzen, sonst ragen Gebäudeecken in die Fahrspur."""
+    import network as net
+    nodes, edges, names = graph
+    polys = []
+    for el in blds:
+        polys += _polys_of(el)
+    tree = STRtree(polys)
+    removed = 0
+    for _round in range(4):
+        deg = defaultdict(int)
+        for e in edges:
+            if net.ROAD_CLASSES[net.CLASS_ORDER[e[2]]]["drivable"]:
+                deg[e[0]] += 1
+                deg[e[1]] += 1
+        keep = []
+        n0 = removed
+        for e in edges:
+            cls = net.CLASS_ORDER[e[2]]
+            if cls in ("service", "residential") and (deg[e[0]] == 1 or deg[e[1]] == 1):
+                end = e[0] if deg[e[0]] == 1 else e[1]
+                pt = Point(nodes[end])
+                if any(polys[i].distance(pt) < 2.0 for i in tree.query(pt.buffer(2.0))):
+                    removed += 1
+                    continue
+            keep.append(e)
+        edges = keep
+        if removed == n0:
+            break
+    if removed == 0:
+        return graph
+    edges = net._drop_islands(edges, min_nodes=60)
+    edges = _drop_non_drivable_fragments(edges)
+    nodes, edges = net._compact(nodes, edges)
+    print(f"[osm] {removed} Sackgassen-Stummel an Gebäuden entfernt")
+    return nodes, edges, names
+
+
+def _clear_landmark_roads(graph, landmarks):
+    """Landmarken-Grundrisse haben Vorrang vor Nebenstraßen: Wohn-/Erschließungskanten, deren Fahrspur den Kollisions-
+    quader einer Landmarke schneidet, werden entfernt (danach Inseln bereinigt). Hauptstraßen bleiben (Prüfung meldet sie)."""
+    import network as net
+    from validate_world import PLACEHOLDER_SIZES
+    nodes, edges, names = graph
+    feet = []
+    for lm in landmarks:
+        size = PLACEHOLDER_SIZES.get(lm["type"])
+        if size is None:
+            continue
+        x, z = lm["pos"]
+        feet.append(affinity.rotate(Polygon([(x - size[0] / 2, z - size[1] / 2), (x + size[0] / 2, z - size[1] / 2),
+            (x + size[0] / 2, z + size[1] / 2), (x - size[0] / 2, z + size[1] / 2)]), -lm.get("rot", 0.0), origin=(x, z)))
+    if not feet:
+        return graph
+    minor = {net.CLASS_ORDER.index(c) for c in ("residential", "service")}
+    keep = []
+    removed = 0
+    for e in edges:
+        if e[2] in minor:
+            lane = LineString([nodes[e[0]], nodes[e[1]]]).buffer(min(2.6, net.edge_width(e) * 0.25) + 0.8, cap_style=2)
+            if any(lane.intersection(f).area > 0.5 for f in feet if f.distance(lane) < 1.0):
+                removed += 1
+                continue
+        keep.append(e)
+    if removed == 0:
+        return graph
+    keep = net._drop_islands(keep, min_nodes=60)
+    keep = _drop_non_drivable_fragments(keep)
+    nodes, keep = net._compact(nodes, keep)
+    print(f"[osm] {removed} Nebenstraßen-Kanten unter Landmarken entfernt")
+    return nodes, keep, names
 
 
 def _drop_non_drivable_fragments(edges):
@@ -348,8 +430,11 @@ def _buildings(els, graph, district_polys, reserves, clear_zones, shops):
         # Fahrbahnen freihalten (OSM-Straßenbreiten sind Schätzungen; Passagen unter Gebäuden bleiben befahrbar)
         near = [i for i in rtree.query(poly.buffer(20)) if drive[i]]
         if near:
-            cut = unary_union([road_lines[i].buffer(road_w[i] * 0.5 + 0.2, cap_style=2) for i in near])
+            cut = unary_union([road_lines[i].buffer(road_w[i] * 0.5 + 0.2, cap_style=1) for i in near])   # rund: keine Keillücken an Knicken
             poly = poly.difference(cut)
+            # Nadeln/Splitter vom Zuschnitt entfernen (morphologisches Öffnen; sonst feste Kollisionswände in der Fahrbahn)
+            poly = poly.buffer(-0.35, join_style=2).buffer(0.35, join_style=2)
+            poly = poly.intersection(poly.envelope).difference(cut)
         if any(r.intersects(poly) for r in reserves) or any(c.intersects(poly) for c in clear_zones):
             continue
         for part in getattr(poly, "geoms", [poly]):
@@ -455,16 +540,20 @@ def _edge_codes(buildings, road_lines, road_w, rtree):
 # Typ -> Suchregeln (Tag-Bedingungen, Name als regulärer Ausdruck, Suchradius um die Näherungsposition in m).
 # Treffer: nächstgelegenes passendes Element; Position = Schwerpunkt (bei mehreren Treffern im Cluster: Mittel).
 ANCHORS = {
-    "pyramide": [{"name": r"^Pyramide$", "r": 400}],
+    "schloss": [{"name": r"^Schlossturm$", "r": 300}],
+    "pyramide": [{"name": r"^Pyramide$", "tags": {"historic": "tomb"}, "r": 400}, {"name": r"^Pyramide$", "r": 150}],
+    "brunnen": [{"name": r"^Europaplatz$", "tags": {"place": "square"}, "r": 400}],
     "rathaus": [{"tags": {"amenity": "townhall"}, "name": r"^Rathaus$", "r": 400}],
     "stadtkirche": [{"name": r"Evangelische Stadtkirche", "tags": {"building": "church"}, "r": 400}],
-    "saeule": [{"name": r"Verfassungssäule|Obelisk", "r": 300}],
+    "saeule": [{"name": r"Verfassungssäule|Obelisk", "r": 300},
+               {"name": r"^Rondellplatz$", "tags": {"place": "square"}, "r": 400}],
     "hauptbahnhof": [{"name": r"^Karlsruhe Hauptbahnhof$", "tags": {"building": "train_station"}, "r": 600, "orient": True},
                      {"name": r"^Karlsruhe Hauptbahnhof$", "r": 600, "orient": True}],
     "gewaechshaus": [{"tags": {"building": "greenhouse"}, "r": 450, "cluster": 120}],
     "stadion": [{"tags": {"leisure": "stadium"}, "name": r"Wildpark", "r": 900, "orient": True},
                 {"tags": {"leisure": "stadium"}, "r": 700, "orient": True}],
-    "turmberg": [{"name": r"^Turmberg$", "tags": {"natural": "peak"}, "r": 900},
+    "turmberg": [{"tags": {"man_made": "tower", "tower:type": "defensive"}, "r": 900},
+                 {"name": r"^Turmberg$", "tags": {"natural": "peak"}, "r": 900},
                  {"name": r"Turmberg", "tags": {"man_made": "tower"}, "r": 900},
                  {"name": r"Turmberg", "tags": {"historic": None}, "r": 900}],
     "zoo": [{"tags": {"tourism": "zoo"}, "name": r"Zoo|Stadtgarten", "r": 700}],
@@ -546,7 +635,35 @@ def _anchor_landmarks(landmarks: list, elements: list) -> list:
         else:
             print(f"[osm] Landmarke {lm['type']}: kein OSM-Objekt gefunden – Näherungsposition bleibt")
         out.append(lm)
+    _align_to_axis(out)
     return out
+
+
+# Landmarken, deren Ausrichtung der Stadtachse folgt (Schloss – Karl-Friedrich-Straße – Marktplatz)
+AXIS_ALIGNED = ("schloss", "rathaus", "stadtkirche", "pyramide")
+
+
+def _align_to_axis(lms: list) -> None:
+    """Die Karlsruher Hauptachse (Schlossturm → Pyramide) ist real um einige Grad gegen Nord gedreht. Die Näherungs-
+    Landmarken sind achsparallel modelliert; bei verankertem Turm und Pyramide wird die Drehung übernommen."""
+    by = {lm["type"]: lm for lm in lms}
+    s, p = by.get("schloss"), by.get("pyramide")
+    if s is None or p is None or "anchored" not in s or "anchored" not in p:
+        return
+    dx, dz = p["pos"][0] - s["pos"][0], p["pos"][1] - s["pos"][1]
+    axis = math.degrees(math.atan2(dx, dz))
+    if abs(axis) > 15.0:
+        print(f"[osm] Stadtachse unplausibel ({axis:.1f}°) – keine Drehung")
+        return
+    for t in AXIS_ALIGNED:
+        lm = by.get(t)
+        if lm is None:
+            continue
+        lm["rot"] = round(float(lm.get("rot", 0.0)) + axis, 1)
+        if "reserve" in lm:
+            res = affinity.rotate(Polygon(lm["reserve"]), -axis, origin=tuple(lm["pos"]))
+            lm["reserve"] = [tuple(c) for c in res.exterior.coords[:-1]]
+    print(f"[osm] Stadtachse {axis:.1f}° – übernommen für {', '.join(AXIS_ALIGNED)}")
 
 
 # --------------------------------------------------------------------------- Laden
@@ -568,6 +685,8 @@ def load(cache: str):
     frame = Polygon([(x0, z0), (x1, z0), (x1, z1), (x0, z1)])
     # Straßengraph
     s.GRAPH = _build_graph([w for w in lines if w["type"] == "way" and "highway" in w.get("tags", {})], BOUNDS)
+    s.GRAPH = _clear_landmark_roads(s.GRAPH, lms)
+    s.GRAPH = _drop_building_stubs(s.GRAPH, blds)
     print(f"[osm] Graph: {len(s.GRAPH[0])} Knoten, {len(s.GRAPH[1])} Kanten")
     s.ROADS = []
     # Flächen

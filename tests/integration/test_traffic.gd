@@ -45,11 +45,16 @@ func test_traffic_spawns_and_drives() -> void:
 func test_stops_at_red_light() -> void:
 	await start_city_game(false)
 	var g: CityGraph = city().graph
-	# Signalisierte Kreuzung Kriegsstraße/Karlstraße (Karlstor), Zufahrt über die Karlstraße von Norden
-	var node: int = g.nearest_node(Vector2(-520, 905), "drive")
+	# Ampelkreuzung nahe der Innenstadt mit gerader Zufahrt (≥ 45 m) – quellenunabhängig gesucht
+	var pick: Array = _signal_approach(g)
+	assert_false(pick.is_empty(), "Ampelkreuzung mit Zufahrt gefunden")
+	if pick.is_empty():
+		return
+	var node: int = pick[0]
+	var from_node: int = pick[1]
 	load_at(g.pos3(node))
+	load_at(g.pos3(from_node))
 	assert_true(game.lights.is_signalized(node), "Kreuzung ist ampelgeregelt")
-	var from_node: int = neighbor_on(node, "Karlstraße")
 	var e: int = g.find_edge(from_node, node)
 	assert_gt(float(e), -1.0, "Zufahrtskante vorhanden")
 	# Ampel für diese Zufahrt auf Rot stellen (Zeit so wählen, dass die Gruppe ~20 s rot bleibt)
@@ -60,7 +65,7 @@ func test_stops_at_red_light() -> void:
 	assert_eq(game.lights.light_for(node, e), TrafficLights.Light.RED, "Ampel rot")
 	var dir: Vector2 = (g.node_pos[node] - g.node_pos[from_node]).normalized()
 	var back: float = minf(55.0, g.node_pos[node].distance_to(g.node_pos[from_node]) - 3.0)
-	var start: Vector2 = g.node_pos[node] - dir * back + Vector2(-dir.y, dir.x) * LaneDriver.LANE_OFFSET
+	var start: Vector2 = g.node_pos[node] - dir * back + Vector2(-dir.y, dir.x) * g.lane_offset(e)
 	var v: Vehicle = game.spawn_vehicle("kompakt", Vector3(start.x, 0, start.y), atan2(-dir.x, -dir.y))
 	var drv := TrafficDriver.new(5)
 	drv.setup(g, game.lights, [from_node, node] as Array[int])
@@ -71,6 +76,23 @@ func test_stops_at_red_light() -> void:
 	assert_lt(v.linear_velocity.length(), 1.0, "Fahrzeug steht an der roten Ampel")
 	assert_gt(dist, g.node_radius(node, "all") + 0.5, "Fahrzeug hält vor der Kreuzung (%.1f m)" % dist)
 	assert_lt(dist, g.node_radius(node, "all") + 12.0, "Fahrzeug ist bis zur Haltelinie vorgefahren")
+
+
+## [Kreuzungsknoten, Vorgängerknoten] der ampelgeregelten Kreuzung, die dem Schloss am nächsten liegt und eine gerade,
+## befahrbare Zufahrt von mindestens 45 m hat.
+func _signal_approach(g: CityGraph) -> Array:
+	var best: Array = []
+	var best_d: float = INF
+	for n: int in g.node_count():
+		if not game.lights.is_signalized(n) or g.node_pos[n].length() > 3500.0 or g.node_pos[n].length() >= best_d:
+			continue
+		for e: int in g.node_edges_mode(n, "traffic"):
+			var o: int = g.other_node(e, n)
+			if g.edge_length(e) >= 45.0 and g.can_leave(e, o) and not g.is_bridge(e):
+				best = [n, o]
+				best_d = g.node_pos[n].length()
+				break
+	return best
 
 
 func _red_for(node: int, e: int, seconds: float) -> bool:
@@ -90,23 +112,23 @@ func _red_for(node: int, e: int, seconds: float) -> bool:
 func test_keeps_distance_to_obstacle() -> void:
 	await start_city_game(false)
 	var g: CityGraph = city().graph
-	# Gerade Strecke auf der Kaiserallee (Hauptstraße ohne Nebenstraßen-Einmündungen): Hindernis auf der Spur
-	var a: int = g.nearest_node(Vector2(-1450, 308), "drive")
-	var b: int = -1
-	for e0: int in g.node_edges[a]:
-		var o: int = g.other_node(e0, a)
-		if g.edge_name(e0) == "Kaiserallee" and g.node_pos[o].x < g.node_pos[a].x:
-			b = o
-	assert_gt(float(b), -1.0, "Nachbarknoten auf der Kaiserallee")
-	load_at(g.pos3(a))
-	var dir: Vector2 = (g.node_pos[b] - g.node_pos[a]).normalized()
+	# Gerade Strecke ohne Einmündungen (quellenunabhängig gesucht): Hindernis auf der Spur
+	var chain: Array[int] = _straight_chain(g, 120.0)
+	assert_gt(float(chain.size()), 1.0, "Gerade Strecke gefunden")
+	if chain.size() < 2:
+		return
+	var a: int = chain[0]
+	for n: int in chain:
+		load_at(g.pos3(n))
+	var dir: Vector2 = (g.node_pos[chain[chain.size() - 1]] - g.node_pos[a]).normalized()
 	var right: Vector2 = Vector2(-dir.y, dir.x)
-	var obst2: Vector2 = g.node_pos[a] + dir * 80.0 + right * LaneDriver.LANE_OFFSET
+	var off: float = g.lane_offset(g.find_edge(chain[0], chain[1]))
+	var obst2: Vector2 = g.node_pos[a] + dir * 80.0 + right * off
 	var obstacle: Vehicle = game.spawn_vehicle("transporter", Vector3(obst2.x, 0, obst2.y), atan2(-dir.x, -dir.y))
-	var start2: Vector2 = g.node_pos[a] + dir * 12.0 + right * LaneDriver.LANE_OFFSET
+	var start2: Vector2 = g.node_pos[a] + dir * 12.0 + right * off
 	var v: Vehicle = game.spawn_vehicle("kompakt", Vector3(start2.x, 0, start2.y), atan2(-dir.x, -dir.y))
 	var drv := TrafficDriver.new(9)
-	drv.setup(g, game.lights, [a, b] as Array[int])
+	drv.setup(g, game.lights, chain)
 	v.ai_controller = drv
 	v.driver = Vehicle.Driver.AI
 	var h0: float = v.health
@@ -166,7 +188,7 @@ func _straight_chain(g: CityGraph, min_len: float) -> Array[int]:
 	var best: Array[int] = []
 	var best_d: float = INF
 	for e: int in g.edge_a.size():
-		if not g.is_drivable(e) or g.is_oneway(e):
+		if not g.is_traffic(e) or g.is_oneway(e) or g.edge_width(e) < 8.0 or g.is_bridge(e):
 			continue
 		var a: int = g.edge_a[e]
 		var chain: Array[int] = [a, g.edge_b[e]]
@@ -179,7 +201,7 @@ func _straight_chain(g: CityGraph, min_len: float) -> Array[int]:
 			var nxt: int = -1
 			for e2: int in g.node_edges[cur]:
 				var o: int = g.other_node(e2, cur)
-				if o != chain[chain.size() - 2] and g.is_drivable(e2) and not g.is_oneway(e2) \
+				if o != chain[chain.size() - 2] and g.is_traffic(e2) and not g.is_oneway(e2) and g.edge_width(e2) >= 8.0 \
 						and (g.node_pos[o] - g.node_pos[cur]).normalized().dot(d0) > 0.995:
 					nxt = o
 					total += g.edge_length(e2)

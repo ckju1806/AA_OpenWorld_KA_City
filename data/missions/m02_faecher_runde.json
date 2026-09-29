@@ -39,7 +39,7 @@
         ],
         [
           "Toni",
-          "Mein Fächer GT steht hier an der Durlacher Allee. Schaffst du die Runde in acht Minuten, gehört die Prämie dir."
+          "Mein Fächer GT steht hier an der Durlacher Allee. Schaffst du die Runde in achtzehn Minuten, gehört die Prämie dir."
         ],
         [
           "Toni",
@@ -69,7 +69,7 @@
       "type": "checkpoints",
       "vehicle": "gt",
       "radius": 12.0,
-      "time_limit": 660.0,
+      "time_limit": 1080.0,
       "text": "Fahr die Fächer-Runde: alle Kontrollpunkte in Reihenfolge.",
       "points": [
         "m2_cp01",

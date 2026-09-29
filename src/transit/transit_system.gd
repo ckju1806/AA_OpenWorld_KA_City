@@ -26,6 +26,7 @@ var root: Node3D
 var track_offset: float = 0.0          ## seitlicher Versatz je Fahrtrichtung (Bahnen auf gemeinsamer Achse)
 var tunnel_root: Node3D
 var _stop_nodes: Dictionary = {}       ## stop_i -> Node3D
+var _by_body: Dictionary = {}          ## instance_id eines Wagenteils -> Fahrzeug-Dictionary
 var _waiting: Dictionary = {}          ## stop_i -> Array[EventActor] (wartende Fahrgäste an sichtbaren Haltestellen)
 var _board_point: TransitBoardPoint
 var ride: Dictionary = {}              ## aktuelle Fahrt des Spielers: {veh, board_stop, want_exit}
@@ -225,6 +226,15 @@ func _advance(vh: Dictionary, delta: float) -> void:
 		vh.blocked = _obstacle_ahead(vh)
 	vh.check_t = float(vh.get("check_t", 0.0)) - delta
 	var brake: float = 2.5
+	if float(vh.get("ignore_transit", 0.0)) > 0.0:
+		vh.ignore_transit = float(vh.ignore_transit) - delta
+	if float(vh.blocked) > 0.0 and float(vh.v) < 0.3:
+		vh.stuck_t = float(vh.get("stuck_t", 0.0)) + delta
+		if float(vh.stuck_t) > 10.0 and bool(vh.get("blocked_by_transit", false)):
+			vh.ignore_transit = 6.0
+			vh.stuck_t = 0.0
+	else:
+		vh.stuck_t = 0.0
 	if float(vh.blocked) > 0.0:
 		# Bremskurve bis 5 m vor das Hindernis (Betriebsbremsung, notfalls stärker)
 		target_v = minf(target_v, sqrt(maxf(0.0, 2.0 * 2.2 * (float(vh.blocked) - 5.0))))
@@ -267,11 +277,21 @@ func _obstacle_ahead(vh: Dictionary) -> float:
 		var c: Node3D = h.collider as Node3D
 		if c == null:
 			continue
-		if c.is_in_group("transit") and int(c.get_meta("line", -1)) != int(vh.line):
-			continue
+		if c.is_in_group("transit"):
+			# Gleiches Verkehrsmittel auf gemeinsamen Gleisen/Spuren: hintereinander warten. Nicht bei anderem
+			# Verkehrsmittel, nicht hinter einem an der Endhaltestelle wendenden Wagen und nicht während der
+			# Deadlock-Auflösung (zwei Bahnen, die sich an einer Einmündung gegenseitig „sehen“).
+			var other: Dictionary = _by_body.get(c.get_instance_id(), {})
+			if other.is_empty() or float(vh.get("ignore_transit", 0.0)) > 0.0:
+				continue
+			if lines[int(other.line)].mode != lines[int(vh.line)].mode:
+				continue
+			if float(other.dwell) > 0.0 and int(other.stop_k) >= (lines[int(other.line)].stops as Array).size() - 1:
+				continue
 		var d: float = (c.global_position - front.global_position).dot(fwd) - TransitModels.TRAM_SEG * 0.5
 		if d > 0.0 and (best == 0.0 or d < best):
 			best = d
+			vh.blocked_by_transit = c.is_in_group("transit")
 	if best > 0.0 and best < 12.0 and float(vh.get("bell_t", 0.0)) <= 0.0:
 		vh.bell_t = 4.0
 		AudioManager.play_3d("horn", front.global_position, -8.0, 1.6)
@@ -311,6 +331,7 @@ func _make_node(vh: Dictionary) -> void:
 			body.add_child(lbl)
 		node.add_child(body)
 		segs.append(body)
+		_by_body[body.get_instance_id()] = vh
 	vh.node = node
 	vh.segs = segs
 
@@ -321,6 +342,9 @@ func _dest_name(ln: Dictionary) -> String:
 
 
 func _free_node(vh: Dictionary) -> void:
+	for sg: Variant in vh.segs:
+		if is_instance_valid(sg):
+			_by_body.erase((sg as Node).get_instance_id())
 	if vh.node != null and is_instance_valid(vh.node):
 		(vh.node as Node).queue_free()
 	vh.node = null

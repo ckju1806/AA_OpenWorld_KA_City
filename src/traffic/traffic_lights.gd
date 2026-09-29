@@ -109,7 +109,7 @@ func _build_visual(n: int) -> Node3D:
 		# Mast neben der Fahrbahn platzieren; an spitzwinkligen Kreuzungen weiter zurücksetzen
 		var base: Vector2 = Vector2.INF
 		for extra: float in [2.5, 5.0, 8.0, 12.0, 16.0]:
-			var cand: Vector2 = g.node_pos[n] + d3 * (r + extra) + right * (w * 0.5 + 0.7)
+			var cand: Vector2 = g.node_pos[n] + d3 * (r + extra) + right * (w * 0.5 + 1.5)
 			if not _on_road(g, cand):
 				base = cand
 				break
@@ -156,7 +156,7 @@ static func _on_road(g: CityGraph, p: Vector2) -> bool:
 		if not g.is_drivable(e):
 			continue
 		var d: float = PolyUtil.dist_point_segment(p, g.node_pos[g.edge_a[e]], g.node_pos[g.edge_b[e]])
-		if d < g.edge_width(e) * 0.5 + 0.4:
+		if d < g.edge_width(e) * 0.5 + 1.2:   # Abstand zur Fahrbahnkante (Kurvenschnitt abbiegender Fahrzeuge)
 			return true
 	return false
 

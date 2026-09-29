@@ -73,13 +73,13 @@ func test_m02_full_race_best_time_and_repeat() -> void:
 	var reached: Array[int] = [0]
 	var ok: bool = await follow_until(gt, pts, 20.0, func() -> bool:
 		reached[0] = maxi(reached[0], int(ms._st.get("idx", reached[0])) if ms.active != null else reached[0])
-		return ms.active == null or ms.awaiting_retry, 700.0)
+		return ms.active == null or ms.awaiting_retry, 1150.0)
 	assert_true(ok, "Runde beendet (erreicht: %d Kontrollpunkte)" % reached[0])
 	assert_false(ms.awaiting_retry, "Kein Fehlschlag (%s)" % ms.fail_reason)
 	assert_true(await wait_until(func() -> bool: return ms.active == null, 20.0), "Abschlussdialog beendet")
 	var best: float = GameState.get_best_time("faecher_runde")
 	assert_gt(best, 30.0, "Bestzeit gespeichert (%.1f s)" % best)
-	assert_lt(best, 660.0, "Bestzeit innerhalb des Zeitlimits")
+	assert_lt(best, 1080.0, "Bestzeit innerhalb des Zeitlimits")
 	assert_eq(GameState.money, money0 + 400, "Belohnung 400 € beim ersten Abschluss")
 	assert_true(GameState.is_mission_completed(M2), "Als abgeschlossen gespeichert")
 	print("        Fächer-Runde per Autopilot: %.1f s" % best)
@@ -115,7 +115,7 @@ func test_m02_time_limit_fail_and_retry() -> void:
 	assert_true(await _start_via_giver(), "Gestartet")
 	for round_i: int in 2:
 		await _to_race_start()
-		ms._st["time"] = 659.5
+		ms._st["time"] = 1079.5
 		assert_true(await wait_until(func() -> bool: return ms.awaiting_retry, 3.0), "Zeitlimit überschritten (Runde %d)" % round_i)
 		assert_true(ms.fail_reason.contains("Zeit"), "Grund: Zeit")
 		await wait_physics(5)

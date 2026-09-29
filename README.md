@@ -9,8 +9,9 @@ anderen Spielen. Alle Figuren, Firmen und Gruppen sind erfunden.
 
 ## Inhalt
 
-- **Karte 1:1** über den gesamten Ausschnitt (≈ 17 × 10 km: Neureut bis Rüppurr, Rheinhafen bis Durlach), gestreamt in
-  256-m-Sektoren mit Fernsicht-LOD. Kartengrundlage und Quellen: [docs/KARTE_KARLSRUHE.md](docs/KARTE_KARLSRUHE.md).
+- **Karte 1:1 aus OpenStreetMap** über den gesamten Ausschnitt (≈ 17,5 × 10,4 km: Neureut bis Rüppurr, Rheinhafen bis
+  Durlach) – ≈ 45 600 Straßenkanten, ≈ 96 500 Gebäudegrundrisse, Gewässer, Grünflächen, Gleise, gestreamt in 256-m-Sektoren
+  mit Fernsicht-LOD. Kartengrundlage und Quellen: [docs/KARTE_KARLSRUHE.md](docs/KARTE_KARLSRUHE.md).
 - **Prioritätsorte:** Schloss, Zirkel/Fächer, Marktplatz mit Pyramide, Kaiserstraße, Europaplatz, Kronenplatz, Durlacher und
   Ettlinger Tor, Hauptbahnhof, Zoo, Botanischer Garten, Stadion, Rheinhafen mit Kränen, Durlach mit Turmberg, Staatstheater.
 - **Grafik:** Tag/Nacht mit Sonne und Mond, Wetter (klar, bewölkt, Regen mit nassen Straßen, Nebel), Fassaden-/Asphalt-/
@@ -63,7 +64,7 @@ Voraussetzung: **Godot 4.7.2-stable** (Standard, nicht .NET), für die Welt-Pipe
 | Windows-Build + ZIP | `scripts/linux/build_windows.sh` | `scripts\windows\build_windows.bat` |
 | Release-Dateien (ZIP, Installer mit Prüfsumme, SHA256SUMS) | `scripts/linux/package_release.sh` | – |
 | Screenshot-Tour | `scripts/linux/screenshot_tour.sh <Ordner> [city] [B] [H] [nur=teil1,teil2]` | – |
-| Weltdaten erzeugen | `python3 tools/worldgen/build_world.py --source authored` bzw. `--source osm` (nach `fetch_osm.py`) | – |
+| Weltdaten erzeugen | `python3 tools/worldgen/fetch_osm.py` → `python3 tools/worldgen/build_world.py --source osm` (≈ 7 min); Rückfall ohne Netz: `--source authored` | – |
 | Speicherbudget prüfen | `python3 tools/check_repo_budget.py --staged` | – |
 
 **Releases:** Builds liegen nie im Repository (Speicherbudget), sondern als Anhang eines GitHub-Releases. Der Workflow
@@ -94,5 +95,5 @@ Das Projekt benötigt **keine** Zugangsdaten, Tokens oder Online-Dienste. Es gib
 
 ## Lizenz
 
-Code: MIT ([LICENSE](LICENSE)). Assets selbst erstellt – siehe [ASSET_LICENSES.md](ASSET_LICENSES.md). Bei Weltdaten aus
-OpenStreetMap: © OpenStreetMap-Mitwirkende, ODbL 1.0.
+Code: MIT ([LICENSE](LICENSE)). Assets selbst erstellt – siehe [ASSET_LICENSES.md](ASSET_LICENSES.md). Kartendaten
+(`data/world/ka/`): © OpenStreetMap-Mitwirkende, ODbL 1.0.

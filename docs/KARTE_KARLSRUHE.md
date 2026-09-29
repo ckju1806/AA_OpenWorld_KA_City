@@ -9,16 +9,31 @@
 
 | Quelle | Datei | Inhalt | Genauigkeit | Status |
 |---|---|---|---|---|
-| **Handgezeichnete 1:1-Näherung** | `tools/worldgen/ka_authored.py` | Hauptachsen, Ringe, Fächer, Kaiserstraße, Ausfallstraßen, Autobahn-/Bundesstraßen angedeutet, Rhein/Alb/Hafenbecken, Wälder/Parks/Zoo, Bahnstrecken, Viertel mit typischem Straßenraster, ÖPNV-Näherung (Linie 1/2, Bus 62, U-Strab Kaiserstraße + Südabzweig) | typ. ± 50–150 m; Nebenstraßen als plausibles Raster, nicht real | **implementiert, getestet** (aktueller Stand im Repo) |
-| **OpenStreetMap** | `tools/worldgen/fetch_osm.py` → `~/osm_cache` → `source_osm.py` | echte Straßen (Breite, Einbahn, Brücken), Gebäudegrundrisse mit Höhen/Dachform, Flächen, Gewässer, Gleise, Ampeln, Bäume, Haltestellen, Linienverläufe | Geodaten (ODbL) | **teilweise** – Pipeline mit Teildaten erfolgreich getestet; vollständiger Abruf durch Auslastung der Overpass-API verzögert (siehe ARBEITSLOG) |
+| **OpenStreetMap** (im Build verwendet) | `tools/worldgen/fetch_osm.py` → `~/osm_cache` → `source_osm.py` | echte Straßen (Breite, Einbahn, Brücken), 96 513 Gebäudegrundrisse mit Höhen/Dachform, 17 500 Flächen, Gewässer, Gleise, 559 Ampelkreuzungen, 30 000 Einzelbäume, 573 Haltestellen, 177 ÖPNV-Linienverläufe (63 Bahn, 87 Bus, Rest Zug) mit U-Strab-Tunnel | Geodaten (ODbL), Stand des Abrufs 2026-09-29 | **implementiert, getestet** |
+| Handgezeichnete 1:1-Näherung (Rückfall) | `tools/worldgen/ka_authored.py` | Hauptachsen, Ringe, Fächer, Viertel mit typischem Raster, Landmarken, POIs, ÖPNV-Näherung | typ. ± 50–150 m | implementiert, getestet (nicht mehr im Build) |
 
 Beide Quellen liefern dasselbe Zwischenformat; `tools/worldgen/build_world.py` erzeugt daraus Straßengraph, 256-m-Sektoren,
-LOD-Kacheln, Übersichtskarte und ÖPNV-Daten. Welche Quelle im Build steckt, zeigen `world.json.gz` (`source`, `note`),
-das Startprotokoll („Quelle: authored|osm“) und das Hauptmenü.
+LOD-Kacheln, Übersichtskarte und ÖPNV-Daten (OSM: ≈ 11,5 MB, ≈ 6 min). Welche Quelle im Build steckt, zeigen `world.json.gz`
+(`source`, `note`), das Startprotokoll („Quelle: osm“) und das Hauptmenü (Namensnennung).
 
-**Lizenz bei OSM-Nutzung:** Kartendaten © OpenStreetMap-Mitwirkende, Open Database License 1.0. Die abgeleiteten Weltdaten
-stehen dann unter ODbL; der Programmcode bleibt MIT. Die Namensnennung erscheint im Hauptmenü und in `ASSET_LICENSES.md`.
-Rohdaten werden nicht versioniert (Speicherbudget).
+**Lizenz:** Kartendaten © OpenStreetMap-Mitwirkende, Open Database License 1.0. Die abgeleiteten Weltdaten in
+`data/world/ka/` stehen unter ODbL; der Programmcode bleibt MIT. Rohdaten (≈ 460 MB Overpass-Kacheln) werden nicht versioniert.
+
+### Aufbereitung der OSM-Daten für ein befahrbares Spiel (Regeln in `source_osm.py`, `blocks.py`, `export.py`)
+- **Mindestbreiten** je Straßenklasse (OSM-`width` beschreibt teils nur einen Fahrstreifen), z. B. zweispurige Tertiärstraße
+  ≥ 7 m, Wohnstraße ≥ 5,5 m, Einbahnstraße ≥ 4 m.
+- **Gebäude** werden an Fahrbahnen (halbe Breite + 0,2 m, runde Kappen) zugeschnitten und morphologisch geöffnet (keine Nadeln).
+- **Sackgassen-Stummel**, die an Gebäuden enden (Ladehof-/Garageneinfahrten), werden entfernt (278); Straßentunnel ausgelassen.
+- **Landmarken** werden an realen OSM-Objekten verankert (Name/Tags, Ausrichtung aus dem Grundriss); Nebenstraßen unter
+  Landmarken-Grundrissen entfallen. Das Schloss sitzt am realen Schlossturm (Mittelpunkt des Fächers); Schloss, Pyramide,
+  Rathaus und Stadtkirche folgen der realen Stadtachse (Schlossturm → Pyramide, ≈ 4° gegen Nord gedreht). Rathaus
+  (≈ 62 × 76 m) und Stadtkirche (≈ 61 × 31 m, Portikus nach Westen) haben die Maße ihrer OSM-Grundrisse.
+- **Auftragsorte (POIs)** rasten auf die benannte Straße ein; Fahrzeugziele an Fußgängerzonen auf die Fahrbahn daneben
+  (z. B. Ladezone Kanzlei → Adlerstraße).
+- **Objekte mit Kollision** (Laternen, Bäume, Poller, Bänke) und parkende Autos nie auf Fahrbahnen; Ampelmasten ≥ 1,2 m neben
+  der Fahrbahnkante.
+- **Validierung** (`validate_world.py`): Gebäude (Fläche und Eindringtiefe), parkende Autos, Objekte und die Grundrisse aller
+  Landmarken (Detail- und Platzhaltermodelle) gegen alle Fahrbahnen – der Build bricht bei Verstößen ab.
 
 ## 2. Koordinaten
 Ursprung = Schlossturm (49,013480 N, 8,404440 E), x = Osten, z = Süden (Norden = −Z), 1 Einheit = 1 m, lokale
@@ -32,14 +47,14 @@ Rheinhafen (Becken, Kräne), Durlach mit Turmberg, U-Strab (Tunnel, U-Stationen,
 
 ## 4. ÖPNV-Daten
 Aus OSM: `route=tram|light_rail|bus|train`-Relationen (je Richtung eine Linie), Haltepositionen, Tunnelabschnitte aus
-`tunnel=yes`-Gleisen. Näherung: Linie 1 (Mühlburger Tor – Kaiserstraße-Tunnel – Durlach), Linie 2 (Hauptbahnhof –
-Südabzweig-Tunnel – Marktplatz), Bus 62 (Kaiserplatz – Hauptbahnhof). Liniennummern/-farben dienen der Orientierung;
-Takt und Fahrzeiten sind spielerisch, **kein** realer Fahrplan.
+`tunnel=yes`-Gleisen (U-Strab Kaiserstraße und Südabzweig mit unterirdischen Haltestellen). Linien mit passender Gegenrichtung
+pendeln, andere starten nach der Endhaltestelle neu. Liniennummern/-farben dienen der Orientierung; Takt und Fahrzeiten sind
+spielerisch, **kein** realer Fahrplan. Rückfall ohne OSM: Linie 1, Linie 2, Bus 62 (Näherung).
 
 ## 5. Bewusste Abweichungen
 | Abweichung | Grund |
 |---|---|
-| Nebenstraßen der Näherung als Raster | ohne Geodaten nicht exakt möglich; OSM ersetzt sie |
+| Mindestbreiten, entfernte Stummel, zugeschnittene Gebäude | Befahrbarkeit und Kollisionsfreiheit im Spiel |
 | Straßentunnel (Kriegsstraße) ausgelassen | Spielbarkeit/Streaming; Oberfläche bleibt befahrbar |
 | Rampen der U-Strab als überdachte Bauwerke | Straßenoberfläche wird nicht ausgeschnitten |
 | Gebäude generisch (Fassaden-Shader nach Viertel/Epoche) | nur Landmarken sind individuell modelliert |

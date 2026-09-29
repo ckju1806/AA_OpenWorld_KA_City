@@ -300,6 +300,16 @@ func edges_near(p: Vector2, radius: float) -> PackedInt32Array:
 
 
 ## Kürzester Weg (Knotenfolge) über A*. mode: drive | traffic | police
+## Kanten im Umkreis mit Mindestanforderungen (befahrbar/Verkehr, Länge, Breite) – für Zufallsauswahl ohne
+## Fehlversuche an Fuß- und Radwegen (in OSM-Daten die Mehrheit der Kanten in der Innenstadt).
+func edges_near_where(p: Vector2, radius: float, traffic_only: bool, min_len: float = 0.0, min_width: float = 0.0) -> PackedInt32Array:
+	var out: PackedInt32Array = PackedInt32Array()
+	for e: int in edges_near(p, radius):
+		if (is_traffic(e) if traffic_only else is_drivable(e)) and edge_length(e) >= min_len and edge_width(e) >= min_width:
+			out.append(e)
+	return out
+
+
 func find_path(from_node: int, to_node: int, mode: String = "drive") -> PackedInt32Array:
 	var astar: AStar2D = _get_astar(mode)
 	if astar == null or not astar.has_point(from_node) or not astar.has_point(to_node):
@@ -433,22 +443,31 @@ func _build_astar(mode: String, ped_weight: float) -> AStar2D:
 
 ## Anzahl zusammenhängender Komponenten im Modus (für Tests: befahrbares Netz = 1).
 func component_count(mode: String) -> int:
+	return component_sizes(mode).size()
+
+
+## Knotenzahl je zusammenhängender Komponente (absteigend sortiert).
+func component_sizes(mode: String) -> Array[int]:
 	var seen: Dictionary = {}
-	var comps: int = 0
+	var sizes: Array[int] = []
 	for n: int in node_count():
 		if seen.has(n) or degree(n, mode) == 0:
 			continue
-		comps += 1
+		var size: int = 0
 		var stack: Array[int] = [n]
 		seen[n] = true
 		while not stack.is_empty():
 			var cur: int = stack.pop_back()
+			size += 1
 			for e: int in node_edges_mode(cur, mode):
 				var o: int = other_node(e, cur)
 				if not seen.has(o):
 					seen[o] = true
 					stack.append(o)
-	return comps
+		sizes.append(size)
+	sizes.sort()
+	sizes.reverse()
+	return sizes
 
 
 # ------------------------------------------------------------ Layout-Zugriff

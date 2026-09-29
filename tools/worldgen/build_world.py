@@ -39,20 +39,40 @@ def resolve_pois(pois, nodes, edges, names):
             out.append(p)
             continue
         px_, pz_ = p["pos"]
-        best = None
-        for e in edges:
-            if names[e[3]] != road:
-                continue
-            a, b = nodes[e[0]], nodes[e[1]]
-            dx, dz = b[0] - a[0], b[1] - a[1]
-            L2 = dx * dx + dz * dz
-            if L2 < 1e-6:
-                continue
-            t = max(0.0, min(1.0, ((px_ - a[0]) * dx + (pz_ - a[1]) * dz) / L2))
-            q = (a[0] + dx * t, a[1] + dz * t)
-            d = math.dist(q, (px_, pz_))
-            if best is None or d < best[0]:
-                best = (d, e, q)
+        # Fahrzeugziele (Bordstein/Spur/Mitte) nur auf befahrbaren Abschnitten (reale Straßen sind teils Fußgängerzone)
+        need_drive = side in ("curb", "lane", "center")
+
+        def _nearest(ref, ok):
+            bst = None
+            for e in edges:
+                if not ok(e):
+                    continue
+                a, b = nodes[e[0]], nodes[e[1]]
+                dx, dz = b[0] - a[0], b[1] - a[1]
+                L2 = dx * dx + dz * dz
+                if L2 < 1e-6:
+                    continue
+                t = max(0.0, min(1.0, ((ref[0] - a[0]) * dx + (ref[1] - a[1]) * dz) / L2))
+                q = (a[0] + dx * t, a[1] + dz * t)
+                d = math.dist(q, ref)
+                if bst is None or d < bst[0]:
+                    bst = (d, e, q)
+            return bst
+
+        def _drivable(e):
+            return net.ROAD_CLASSES[net.CLASS_ORDER[e[2]]]["drivable"]
+
+        # 1) nächster Punkt der benannten Straße (beliebige Klasse)
+        best = _nearest((px_, pz_), lambda e: names[e[3]] == road)
+        if best is not None and need_drive and not _drivable(best[1]):
+            # 2) befahrbarer Teil derselben Straße in der Nähe? sonst nächste Fahrbahn an genau dieser Stelle
+            anchor = best[2]
+            same = _nearest(anchor, lambda e: names[e[3]] == road and _drivable(e))
+            if same is not None and same[0] <= 60.0:
+                best = same
+            else:
+                best = _nearest(anchor, _drivable)
+                print(f"[welt] POI {p['id']}: '{road}' hier Fußgängerzone – Fahrbahn '{names[best[1][3]]}' daneben verwendet")
         if best is None:
             raise SystemExit(f"POI {p['id']}: Straße '{road}' nicht im Netz")
         _, e, q = best

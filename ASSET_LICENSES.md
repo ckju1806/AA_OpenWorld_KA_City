@@ -6,7 +6,7 @@ insbesondere keine Inhalte, Namen, Menüs oder Cheat-Codes der GTA-Reihe. Keine 
 
 | Asset | Ort | Herkunft | Lizenz |
 |---|---|---|---|
-| Weltdaten Karlsruhe (Straßengraph, Sektoren, LOD, Übersichtskarte, ÖPNV) | `data/world/ka/` | erzeugt mit `tools/worldgen/` aus eigener 1:1-Näherung (`ka_authored.py`) **oder** aus OpenStreetMap (siehe unten) | MIT (Näherung) bzw. **ODbL 1.0** (bei OSM-Quelle) |
+| Weltdaten Karlsruhe (Straßengraph, Sektoren, LOD, Übersichtskarte, ÖPNV) | `data/world/ka/` | erzeugt mit `tools/worldgen/` aus **OpenStreetMap** (siehe unten); Rückfall: eigene 1:1-Näherung (`ka_authored.py`) | **ODbL 1.0** (aktueller Stand, OSM-Quelle); MIT nur bei Näherung |
 | 3D-Stadt (Straßen, Gebäude, Flächen, Landmarken, Bäume, Laternen, Möblierung, Gleise, Tunnel) | zur Laufzeit erzeugt durch `src/world/*`, `src/transit/*` | eigener Code | MIT |
 | Figuren (Spieler, Passanten, Auftraggeber, Ereignis-Beteiligte) | `src/player/humanoid_rig.gd` | eigener prozeduraler Entwurf | MIT |
 | Tiere (Zoo, Parks, Stadt) | `src/animals/*`, `data/animals/species.json` | eigener prozeduraler Entwurf | MIT |
@@ -20,9 +20,10 @@ insbesondere keine Inhalte, Namen, Menüs oder Cheat-Codes der GTA-Reihe. Keine 
 | Engine | Godot Engine 4.7.2-stable | godotengine.org | MIT bzw. Drittlizenzen laut Godot `COPYRIGHT.txt` |
 
 ## OpenStreetMap
-Wird die Welt mit `build_world.py --source osm` erzeugt, gilt für die Kartendaten:
+Die ausgelieferte Welt ist mit `build_world.py --source osm` erzeugt (Abruf 2026-09-29). Für die Kartendaten gilt:
 **© OpenStreetMap-Mitwirkende**, verfügbar unter der **Open Database License 1.0** (https://www.openstreetmap.org/copyright).
-Die abgeleiteten Weltdaten in `data/world/ka/` stehen dann ebenfalls unter ODbL; der Programmcode bleibt MIT.
+Die abgeleiteten Weltdaten in `data/world/ka/` stehen ebenfalls unter ODbL (Weitergabe unter gleicher Lizenz, Namensnennung;
+Erzeugung reproduzierbar mit `tools/worldgen/fetch_osm.py` + `build_world.py`); der Programmcode bleibt MIT.
 Die Namensnennung erscheint im Hauptmenü (Quelle der Weltdaten). Welche Quelle aktuell verwendet wird, steht in
 `docs/KARTE_KARLSRUHE.md` und im Feld `source` von `data/world/ka/world.json.gz`.
 

@@ -13,17 +13,19 @@ Status-Begriffe wie in [TEST_REPORT.md](TEST_REPORT.md): **implementiert**, **te
 - Echte Flucht vor Polizei und echte Verfolgungsfahrten sind nicht automatisiert getestet (Tests versetzen das Fahrzeug).
 
 ## Karte und Welt
-- **Kartengrundlage:** Ohne vollständige OSM-Daten wird die handgezeichnete 1:1-Näherung (`tools/worldgen/ka_authored.py`)
-  verwendet – Hauptachsen, Ringe, Landmarken an realer Position, Viertel mit typischem Raster, aber **nicht jede Straße real**.
-  Der OSM-Weg (`fetch_osm.py` → `build_world.py --source osm`) ist vorbereitet; welche Quelle im Build steckt, steht in
-  `docs/KARTE_KARLSRUHE.md` und im Startprotokoll („Quelle: …“).
+- **Kartengrundlage:** Die Welt wird aus **OpenStreetMap** erzeugt (Abruf 2026-09-29, ODbL): reale Straßen, Gebäudegrundrisse,
+  Flächen, Gewässer, Gleise und ÖPNV-Linien. Für die Befahrbarkeit weicht sie bewusst ab (Mindestbreiten, entfernte
+  Sackgassen-Stummel, an Fahrbahnen zugeschnittene Gebäude) – Details in `docs/KARTE_KARLSRUHE.md`. Die handgezeichnete
+  Näherung (`ka_authored.py`) bleibt als Rückfall ohne Netzzugang erhalten.
+- OSM-Daten spiegeln den Datenstand, nicht zwingend die Wirklichkeit (fehlende Gebäudehöhen → typische Höhe je Nutzung).
 - Gebäude sind prozedural aus Grundrissen erzeugt (Fassaden-Shader); nur die Prioritäts-Landmarken sind einzeln modelliert.
 - Keine Innenräume; Brücken/Unterführungen vereinfacht; Straßentunnel sind ausgelassen.
 
 ## ÖPNV
 - Fahrzeuge fern vom Spieler fahren „virtuell“ (ohne Physik); nur in Spielernähe gibt es Kollisionskörper.
 - Bahnen und Busse beachten keine Ampeln (Vorrang), bremsen aber vor Hindernissen auf dem Gleis bzw. der Spur.
-- In der Kartennäherung teilen sich Stadtbahn und Autos teils die Fahrbahn (Gleis auf der Straßenachse, je Richtung versetzt).
+- Stadtbahn und Autos teilen sich teils die Fahrbahn (straßenbündige Gleise wie in der Innenstadt); Autos weichen
+  haltenden Bahnen über die Gegenspur aus, sofern frei.
 - Rampen zur U-Strab sind als überdachte Rampenbauwerke mit Portal dargestellt (die Straßenoberfläche wird nicht ausgeschnitten).
 - An Endhaltestellen im Tunnel (Linie 2, Marktplatz) können sich zwei Wagen kurz überlappen.
 - Ein-/Aussteigen der Fahrgäste ist kosmetisch (Figuren gehen zur Tür und werden ausgeblendet).

@@ -139,8 +139,15 @@ func test_landmarks_present() -> void:
 		found[n.name.trim_prefix("LM_")] = true
 	for id: String in ["schloss", "pyramide", "rathaus", "stadtkirche", "saeule"]:
 		assert_true(found.has(id), "Landmarke vorhanden: " + id)
-	# Schlossturm ist hoch und kollidierbar
-	var q := PhysicsRayQueryParameters3D.create(Vector3(0, 80, -3), Vector3(0, 0, -3), Layers.WORLD)
+	# Schlossturm (lokal 3 m hinter dem Landmarkenpunkt) ist hoch und kollidierbar
+	var tower: Vector2 = Vector2(0, -3)
+	for lm: Variant in cw.graph.layout.landmarks:
+		if str(lm.type) == "schloss":
+			var r: float = deg_to_rad(float(lm.get("rot", 0.0)))
+			tower = Vector2(float(lm.pos[0]), float(lm.pos[1])) + Vector2(-3.0 * sin(r), -3.0 * cos(r))
+	cw.ensure_loaded(Vector3(tower.x, 0, tower.y))
+	await wait_physics(2)
+	var q := PhysicsRayQueryParameters3D.create(Vector3(tower.x, 80, tower.y), Vector3(tower.x, 0, tower.y), Layers.WORLD)
 	var hit: Dictionary = _space().intersect_ray(q)
 	assert_false(hit.is_empty(), "Schlossturm getroffen")
 	if not hit.is_empty():

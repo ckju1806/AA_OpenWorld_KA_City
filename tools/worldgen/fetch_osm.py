@@ -96,6 +96,7 @@ def main():
     ap.add_argument("--cache", default=os.path.expanduser("~/osm_cache"))
     ap.add_argument("--tiles", default="10x6")
     ap.add_argument("--layers", default=",".join(LAYERS))
+    ap.add_argument("--routes-only", action="store_true", help="nur ÖPNV-Relationen abrufen")
     args = ap.parse_args()
     nx, nz = (int(v) for v in args.tiles.split("x"))
     os.makedirs(args.cache, exist_ok=True)
@@ -106,7 +107,7 @@ def main():
     z1 += MARGIN
     sx, sz = (x1 - x0) / nx, (z1 - z0) / nz
     failed = []
-    for layer in args.layers.split(","):
+    for layer in ([] if args.routes_only else args.layers.split(",")):
         for i in range(nx):
             for j in range(nz):
                 out = os.path.join(args.cache, f"ka_{layer}_{i}_{j}.json")
@@ -121,16 +122,31 @@ def main():
                     failed.append(out)
                     print("[osm]   FEHLGESCHLAGEN", flush=True)
                 time.sleep(2)
-    # ÖPNV-Linien (Relationen) für den ganzen Ausschnitt
+    # ÖPNV-Linien (Relationen) für den ganzen Ausschnitt – getrennt nach Schiene und Bus (kleinere Antworten),
+    # danach zu ka_routes.json zusammengeführt
     out = os.path.join(args.cache, "ka_routes.json")
     if not os.path.exists(out):
         bb = ll_bbox(x0, z0, x1, z1)
-        print("[osm] ÖPNV-Linien ...", flush=True)
-        body = f'relation["route"~"^(tram|light_rail|bus|train)$"]({bb});'
-        data_ok = query(body, out)
-        print("[osm]   ok" if data_ok else "[osm]   FEHLGESCHLAGEN", flush=True)
-        if not data_ok:
-            failed.append(out)
+        parts = []
+        for tag, rx in (("rail", "tram|light_rail|train"), ("bus", "bus")):
+            po = os.path.join(args.cache, f"ka_routes_{tag}.json")
+            if not os.path.exists(po):
+                print(f"[osm] ÖPNV-Linien ({tag}) ...", flush=True)
+                ok = query(f'relation["route"~"^({rx})$"]({bb});', po)
+                print("[osm]   ok" if ok else "[osm]   FEHLGESCHLAGEN", flush=True)
+                if not ok:
+                    failed.append(po)
+                    continue
+            parts.append(po)
+        if len(parts) == 2:
+            els = []
+            for po in parts:
+                with open(po) as fh:
+                    els += json.load(fh).get("elements", [])
+            with open(out + ".part", "w") as fh:
+                json.dump({"elements": els}, fh)
+            os.replace(out + ".part", out)
+            print(f"[osm] ÖPNV-Linien zusammengeführt: {len(els)} Relationen", flush=True)
     print(f"[osm] fertig, fehlgeschlagen: {len(failed)}")
     sys.exit(1 if failed else 0)
 

@@ -68,6 +68,7 @@ def make_props(nodes, edges, blocks, buildings, areas, trees=None):
         pt = Point(p)
         return any(slabs[i].contains(pt) for i in stree.query(pt))
 
+    roadside_cars = []
     deg = defaultdict(int)
     for e in edges:
         deg[e[0]] += 1
@@ -127,7 +128,7 @@ def make_props(nodes, edges, blocks, buildings, areas, trees=None):
         if cls in ("tertiary", "secondary") and L > 32 and w2 * 2 >= 11.4 and hash01(ei, "car") < 0.45:
             t = 14.0 + max(0.0, L - 28.0) * hash01(ei, "cp")
             p = (pa[0] + dx * t + nx * (w2 - 1.0), pa[1] + dz * t + nz * (w2 - 1.0))
-            props["car"].append((p[0], p[1], yaw, int(hash01(ei, "cv") * 100)))
+            roadside_cars.append((p[0], p[1], yaw, int(hash01(ei, "cv") * 100)))
     # Einzelbäume aus Geodaten (nicht auf Fahrbahnen)
     if trees:
         road_buf = [LineString([nodes[e[0]], nodes[e[1]]]).buffer(edge_width(e) * 0.5 + 0.8) for e in edges
@@ -149,6 +150,9 @@ def make_props(nodes, edges, blocks, buildings, areas, trees=None):
         pt = Point(x, z)
         return all(drive_center[i].distance(pt) >= 4.5 for i in dct.query(pt.buffer(4.5)))
 
+    for car in roadside_cars:
+        if _clear_of_lanes(car[0], car[1]):
+            props["car"].append(car)
     for bl in blocks:
         if bl["kind"] != "parking":
             continue
@@ -218,16 +222,37 @@ def make_props(nodes, edges, blocks, buildings, areas, trees=None):
     # Poller an Übergängen Fußgängerzone -> Fahrbahn
     ped = [i for i, e in enumerate(edges) if CLASS_ORDER[e[2]] == "pedestrian"]
     drive_nodes = {e[0] for e in edges if ROAD_CLASSES[CLASS_ORDER[e[2]]]["drivable"]} | {e[1] for e in edges if ROAD_CLASSES[CLASS_ORDER[e[2]]]["drivable"]}
+    # Nie auf einer Fahrbahn (OSM: Fußgängerkanten verlaufen teils neben/über befahrbaren Straßen)
+    drv_e = [e for e in edges if ROAD_CLASSES[CLASS_ORDER[e[2]]]["drivable"]]
+    drv_l = [LineString([nodes[e[0]], nodes[e[1]]]) for e in drv_e]
+    drv_t = STRtree(drv_l) if drv_l else None
+
+    def _off_carriageway(x, z):
+        if drv_t is None:
+            return True
+        pt = Point(x, z)
+        return all(drv_l[j].distance(pt) >= edge_width(drv_e[j]) * 0.5 + 0.6 for j in drv_t.query(pt.buffer(12.0)))
+
     for i in ped:
         a, b = edges[i][0], edges[i][1]
+        if math.dist(nodes[a], nodes[b]) < 16.0:
+            continue
         for n, o in ((a, b), (b, a)):
             if n in drive_nodes:
                 pa, pb = nodes[n], nodes[o]
                 L = math.dist(pa, pb) or 1.0
                 dx, dz = (pb[0] - pa[0]) / L, (pb[1] - pa[1]) / L
                 nx, nz = -dz, dx
-                for s in (-4.5, -1.5, 1.5, 4.5):
-                    props["bollard"].append((pa[0] + dx * 12 + nx * s, pa[1] + dz * 12 + nz * s, 0.0, 0))
+                row = [(pa[0] + dx * 12 + nx * s, pa[1] + dz * 12 + nz * s) for s in (-4.5, -1.5, 1.5, 4.5)]
+                if all(_off_carriageway(x, z) for x, z in row):
+                    for x, z in row:
+                        props["bollard"].append((x, z, 0.0, 0))
+    # Abschlussfilter: Objekte mit Kollision nie auf einer Fahrbahn (Kreuzungsbereiche, schmale OSM-Straßen)
+    for kind in ("lamp", "tree", "bench", "bin", "bike"):
+        before = len(props[kind])
+        props[kind] = [pr for pr in props[kind] if _off_carriageway(pr[0], pr[1])]
+        if before - len(props[kind]) > 0:
+            print(f"[welt] {before - len(props[kind])} {kind} auf Fahrbahnen entfernt")
     return props
 
 

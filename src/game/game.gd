@@ -582,8 +582,14 @@ func _weather_station(tour: ScreenshotTour, station_name: String, player_pos: Ve
 ## Station relativ zu einer Landmarke aus den Weltdaten (lokaler Versatz vor Drehung), Blick auf die Landmarke.
 func _lm_station(tour: ScreenshotTour, station_name: String, lm_type: String, offset: Vector2, y: float, pitch: float,
 		look_at_local: Vector2 = Vector2.ZERO) -> void:
-	var cw: CityWorld = get_city()
-	for lm: Variant in cw.graph.layout.landmarks:
+	var v: Dictionary = _lm_view(lm_type, offset, look_at_local)
+	if not v.is_empty():
+		_cam_station(tour, station_name, Vector3(v.pos.x, y, v.pos.y), v.yaw, pitch)
+
+
+## Kamerastandpunkt relativ zu einer Landmarke: { pos: Vector2, yaw: Grad } oder leer.
+func _lm_view(lm_type: String, offset: Vector2, look_at_local: Vector2 = Vector2.ZERO) -> Dictionary:
+	for lm: Variant in get_city().graph.layout.landmarks:
 		if str(lm.type) != lm_type:
 			continue
 		var c: Vector2 = Vector2(float(lm.pos[0]), float(lm.pos[1]))
@@ -591,9 +597,72 @@ func _lm_station(tour: ScreenshotTour, station_name: String, lm_type: String, of
 		var o: Vector2 = Vector2(offset.x * cos(rot) + offset.y * sin(rot), -offset.x * sin(rot) + offset.y * cos(rot))
 		var pp: Vector2 = c + o
 		var t: Vector2 = c + Vector2(look_at_local.x * cos(rot) + look_at_local.y * sin(rot), -look_at_local.x * sin(rot) + look_at_local.y * cos(rot))
-		var yaw: float = rad_to_deg(atan2(-(t.x - pp.x), -(t.y - pp.y)))
-		_cam_station(tour, station_name, Vector3(pp.x, y, pp.y), yaw, pitch)
-		return
+		return {"pos": pp, "yaw": rad_to_deg(atan2(-(t.x - pp.x), -(t.y - pp.y)))}
+	return {}
+
+
+## Kamerastandpunkt am Rand der benannten Straße (nächster Abschnitt zu „near“), Blick entlang der Straße Richtung „face“.
+func _street_view(street: String, near: Vector2, face: Vector2) -> Dictionary:
+	var g: CityGraph = get_city().graph
+	var best_e: int = -1
+	var best_q: Vector2 = near
+	var best_d: float = INF
+	for e: int in g.edge_a.size():
+		if g.edge_name(e) != street:
+			continue
+		var q: Vector2 = PolyUtil.closest_on_segment(near, g.node_pos[g.edge_a[e]], g.node_pos[g.edge_b[e]])
+		if q.distance_to(near) < best_d:
+			best_d = q.distance_to(near)
+			best_e = e
+			best_q = q
+	if best_e < 0:
+		print("[screenshot] Straße nicht gefunden: %s" % street)
+		return {}
+	var dir: Vector2 = (g.node_pos[g.edge_b[best_e]] - g.node_pos[g.edge_a[best_e]]).normalized()
+	if dir.dot(face) < 0.0:
+		dir = -dir
+	var pp: Vector2 = best_q + Vector2(-dir.y, dir.x) * (g.edge_width(best_e) * 0.5 + 1.5)
+	return {"pos": pp, "yaw": rad_to_deg(atan2(-dir.x, -dir.y))}
+
+
+## Fahrweg für Tour-Fahrten: Spurpunkte über das Verkehrsnetz ab der Straße „street“ (nahe „near“) Richtung „face“.
+func _tour_route(street: String, near: Vector2, face: Vector2, dist: float) -> PackedVector3Array:
+	var v: Dictionary = _street_view(street, near, face)
+	if v.is_empty():
+		return PackedVector3Array()
+	var g: CityGraph = get_city().graph
+	var yaw: float = deg_to_rad(float(v.yaw))
+	var dir: Vector2 = Vector2(-sin(yaw), -cos(yaw))
+	var a: int = g.nearest_node(v.pos, "traffic")
+	var b: int = g.nearest_node(v.pos + dir * dist, "traffic")
+	if a < 0 or b < 0 or a == b:
+		return PackedVector3Array()
+	return g.lane_path(g.find_path(a, b, "traffic"), 2.6)
+
+
+## Nächste Ampelkreuzung (oder -1).
+func _signal_node_near(p: Vector2) -> int:
+	var best: int = -1
+	var best_d: float = INF
+	if lights == null:
+		return -1
+	for n: Variant in lights.signals:
+		var d: float = get_city().graph.node_pos[int(n)].distance_to(p)
+		if d < best_d:
+			best_d = d
+			best = int(n)
+	return best
+
+
+func _view_station(tour: ScreenshotTour, station_name: String, v: Dictionary, y: float, pitch: float) -> void:
+	if not v.is_empty():
+		_cam_station(tour, station_name, Vector3(v.pos.x, y, v.pos.y), v.yaw, pitch)
+
+
+func _view_weather(tour: ScreenshotTour, station_name: String, v: Dictionary, y: float, pitch: float, hour: float,
+		weather: String) -> void:
+	if not v.is_empty():
+		_weather_station(tour, station_name, Vector3(v.pos.x, y, v.pos.y), v.yaw, pitch, hour, weather)
 
 
 ## ÖPNV-Stationen: Bahn an der Haltestelle, Rampenportal, Mitfahrt in U-Station und Tunnel, Bus.
@@ -675,17 +744,22 @@ func _transit_stations(tour: ScreenshotTour, y: float) -> void:
 func _register_city_stations(tour: ScreenshotTour) -> void:
 	var cw: CityWorld = get_city()
 	var y: float = cw.slab_h + 0.05
-	var kz: Callable = func(x: float) -> float: return 318.0 + (x + 1290.0) * (150.0 / 2320.0)
+	# Standpunkte aus den Weltdaten (Landmarken, Straßennamen) – gültig für OSM- und Näherungswelt
+	var v_pyr: Dictionary = _lm_view("pyramide", Vector2(6, 42))
+	var v_kaiser: Dictionary = _street_view("Kaiserstraße", Vector2(-300, 430), Vector2(1, 0))
+	var v_krieg: Dictionary = _street_view("Kriegsstraße", Vector2(-300, 890), Vector2(-1, 0))
+	var v_schloss: Dictionary = _lm_view("schloss", Vector2(0, 190))
 	_cam_station(tour, "start_marktplatz_blick_schloss", cw.get_spawn().origin, 0.0, -0.12)
-	_cam_station(tour, "marktplatz_pyramide", Vector3(0, y, 520), 0.0, -0.05)
-	_cam_station(tour, "rathaus", Vector3(-20, y, 470), 90.0, -0.08)
-	_cam_station(tour, "stadtkirche", Vector3(20, y, 470), 270.0, -0.08)
-	_cam_station(tour, "schlossplatz", Vector3(0, y, 200), 0.0, -0.08)
-	_cam_station(tour, "kaiserstrasse", Vector3(-300, y, kz.call(-300.0)), 90.0, -0.08)
-	_cam_station(tour, "faecherstrasse_zirkel", Vector3(-150, y, 330), 150.0, -0.1)
-	_cam_station(tour, "europaplatz", Vector3(-660, y, kz.call(-660.0) + 4.0), 90.0, -0.08)
-	_cam_station(tour, "durlacher_tor", Vector3(980, y, kz.call(980.0) + 6.0), -80.0, -0.1)
-	_cam_station(tour, "kriegsstrasse", Vector3(-300, y, 912), -90.0, -0.06)
+	_view_station(tour, "marktplatz_pyramide", v_pyr, y, -0.05)
+	_lm_station(tour, "rathaus", "rathaus", Vector2(8, 70), y, -0.08)
+	_lm_station(tour, "stadtkirche", "stadtkirche", Vector2(-8, 62), y, -0.08)
+	_view_station(tour, "schlossplatz", v_schloss, y, -0.08)
+	_view_station(tour, "kaiserstrasse", v_kaiser, y, -0.08)
+	_view_station(tour, "faecherstrasse_zirkel", _street_view("Karl-Friedrich-Straße", Vector2(-30, 330), Vector2(0, -1)), y, -0.06)
+	_view_station(tour, "zirkel", _street_view("Zirkel", Vector2(-220, 190), Vector2(1, 0)), y, -0.08)
+	_lm_station(tour, "europaplatz", "brunnen", Vector2(36, 10), y, -0.08)
+	_lm_station(tour, "durlacher_tor", "torbogen", Vector2(-28, 30), y, -0.1)
+	_view_station(tour, "kriegsstrasse", v_krieg, y, -0.06)
 	_lm_station(tour, "hauptbahnhof", "hauptbahnhof", Vector2(-40, -95), y, -0.02)
 	_lm_station(tour, "zoo_eingang", "zoo", Vector2(10, 300), y, -0.06)
 	_lm_station(tour, "zoo_gehege", "zoo", Vector2(-60, 40), y, -0.3, Vector2(-60, 140))
@@ -694,7 +768,7 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 	_lm_station(tour, "hafenkraene", "hafenkran", Vector2(-20, 70), y, 0.12)
 	_lm_station(tour, "turmberg", "turmberg", Vector2(-25, -40), y, 0.15)
 	_cam_station(tour, "weststadt", Vector3(-1900, y, 300), 90.0, -0.08)
-	_cam_station(tour, "durlach", Vector3(5190, y, 1640), -80.0, -0.08)
+	_view_station(tour, "durlach", _street_view("Pfinztalstraße", Vector2(5250, 1650), Vector2(1, 0)), y, -0.08)
 	_cam_station(tour, "rheinhafen", Vector3(-5600, y, 330), 90.0, -0.12)
 	_transit_stations(tour, y)
 	tour.add_station("fahrzeuge_modelle", func() -> void:
@@ -709,10 +783,10 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		camera_rig.pitch = -0.22
 		camera_rig.snap()
 	, 60)
-	_weather_station(tour, "tageslicht_mittag", Vector3(0, y, 520), 0.0, -0.05, 13.0, "klar")
-	_weather_station(tour, "nacht_kaiserstrasse", Vector3(-300, y, kz.call(-300.0)), 90.0, -0.06, 23.0, "klar")
-	_weather_station(tour, "regen_nasse_strasse", Vector3(-300, y, 912), -90.0, -0.1, 15.0, "regen")
-	_weather_station(tour, "nebel_morgen", Vector3(0, y, 200), 0.0, -0.04, 7.5, "nebel")
+	_view_weather(tour, "tageslicht_mittag", v_pyr, y, -0.05, 13.0, "klar")
+	_view_weather(tour, "nacht_kaiserstrasse", v_kaiser, y, -0.06, 23.0, "klar")
+	_view_weather(tour, "regen_nasse_strasse", v_krieg, y, -0.1, 15.0, "regen")
+	_view_weather(tour, "nebel_morgen", v_schloss, y, -0.04, 7.5, "nebel")
 	tour.add_station("mission_dialog", func() -> void:
 		WorldClock.set_time(19.5)
 		WorldClock.set_weather("klar", true)
@@ -736,29 +810,35 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 			camera_rig.pitch = -0.25
 			camera_rig.snap()
 	, 50)
+	var r_van: PackedVector3Array = _tour_route("Kriegsstraße", Vector2(-450, 890), Vector2(1, 0), 450.0)
 	tour.add_station("hud_fahrt_mit_ziel", func() -> void:
 		var van: Vehicle = missions.mission_vehicle("van")
-		if van == null:
+		if van == null or r_van.size() < 3:
 			return
-		(world as CityWorld).ensure_loaded(Vector3(-400, 0, 608))
-		van.teleport_to(Vector3(-400, 0, 608), -PI * 0.5)
+		var p0: Vector3 = Vector3(r_van[0].x, 0.0, r_van[0].z)
+		var hd: float = atan2(-(r_van[1].x - p0.x), -(r_van[1].z - p0.z))
+		(world as CityWorld).ensure_loaded(p0)
+		van.teleport_to(p0, hd)
 		player.global_position = van.global_position + Vector3(0, 0, -3)
 		await get_tree().physics_frame
 		van.enter(player)
 		van.set_lights(true)
 		var ap := Autopilot.new()
-		ap.set_path(PackedVector3Array([Vector3(-250, 0, 609), Vector3(-60, 0, 612)]), 13.0)
+		ap.set_path(r_van.slice(1), 13.0)
 		van.ai_controller = ap
 		van.driver = Vehicle.Driver.AI
-		camera_rig.yaw = -PI * 0.5
+		camera_rig.yaw = hd
 	, 120)
+	var jn: int = _signal_node_near(Vector2(-535, 900))
 	tour.add_station("verkehr_kreuzung", func() -> void:
 		if missions.active != null:
 			missions.fail("Tour")
 			missions.abort()
-		(world as CityWorld).ensure_loaded(Vector3(-535, y, 930))
-		player.force_leave_vehicle(Vector3(-535, y, 930))
-		camera_rig.yaw = deg_to_rad(-135.0)
+		var jp: Vector2 = cw.graph.node_pos[jn] if jn >= 0 else Vector2(-535, 900)
+		var sp: Vector3 = Vector3(jp.x + cw.graph.node_radius(maxi(jn, 0)) + 6.0, y, jp.y + cw.graph.node_radius(maxi(jn, 0)) + 6.0)
+		(world as CityWorld).ensure_loaded(sp)
+		player.force_leave_vehicle(sp)
+		camera_rig.yaw = atan2(-(jp.x - sp.x), -(jp.y - sp.z))
 		camera_rig.pitch = -0.28
 		camera_rig._target_distance = 9.0
 		camera_rig.snap()
@@ -766,18 +846,24 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 			await get_tree().physics_frame
 	, 30)
 	tour.add_station("passanten_kaiserstrasse", func() -> void:
+		if v_kaiser.is_empty():
+			return
 		camera_rig._target_distance = 4.2
-		(world as CityWorld).ensure_loaded(Vector3(-300, y, kz.call(-300.0)))
-		player.global_position = Vector3(-300, y, kz.call(-300.0))
-		camera_rig.yaw = deg_to_rad(90.0)
+		(world as CityWorld).ensure_loaded(Vector3(v_kaiser.pos.x, y, v_kaiser.pos.y))
+		player.global_position = Vector3(v_kaiser.pos.x, y, v_kaiser.pos.y)
+		camera_rig.yaw = deg_to_rad(float(v_kaiser.yaw))
 		camera_rig.pitch = -0.12
 		camera_rig.snap()
 		for i: int in 180:
 			await get_tree().physics_frame
 	, 30)
+	var r_chase: PackedVector3Array = _tour_route("Kriegsstraße", Vector2(-800, 890), Vector2(-1, 0), 300.0)
 	tour.add_station("verfolgung_polizei", func() -> void:
-		(world as CityWorld).ensure_loaded(Vector3(-800, 0.1, 897))
-		var v: Vehicle = spawn_vehicle("sport", Vector3(-800, 0.1, 897), -PI * 0.5)
+		if r_chase.size() < 2:
+			return
+		var c0: Vector3 = Vector3(r_chase[0].x, 0.1, r_chase[0].z)
+		(world as CityWorld).ensure_loaded(c0)
+		var v: Vehicle = spawn_vehicle("sport", c0, atan2(-(r_chase[1].x - c0.x), -(r_chase[1].z - c0.z)))
 		await get_tree().physics_frame
 		player.global_position = v.global_position + Vector3(0, 0, -3)
 		v.enter(player)
@@ -794,6 +880,7 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		for i2: int in 60:
 			await get_tree().physics_frame
 	, 30)
+	var r_m2: PackedVector3Array = _tour_route("Durlacher Allee", Vector2(1500, 540), Vector2(1, 0), 500.0)
 	tour.add_station("m2_zeitfahren_kontrollpunkt", func() -> void:
 		reset_wanted()
 		police.enabled = false
@@ -814,14 +901,18 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 		gt.enter(player)
 		for i2: int in 260:
 			await get_tree().physics_frame
-		(world as CityWorld).ensure_loaded(Vector3(1500, 0.1, 518))
-		gt.teleport_to(Vector3(1500, 0.1, 518), -PI * 0.5 + 0.05)
+		if r_m2.size() < 3:
+			return
+		var g0: Vector3 = Vector3(r_m2[0].x, 0.1, r_m2[0].z)
+		var gh: float = atan2(-(r_m2[1].x - g0.x), -(r_m2[1].z - g0.z))
+		(world as CityWorld).ensure_loaded(g0)
+		gt.teleport_to(g0, gh)
 		gt.set_lights(true)
 		var ap := Autopilot.new()
-		ap.set_path(PackedVector3Array([Vector3(1700, 0, 530), Vector3(2000, 0, 562)]), 18.0)
+		ap.set_path(r_m2.slice(1), 18.0)
 		gt.ai_controller = ap
 		gt.driver = Vehicle.Driver.AI
-		camera_rig.yaw = -PI * 0.5
+		camera_rig.yaw = gh
 		camera_rig.pitch = -0.16
 		camera_rig.snap()
 	, 100)

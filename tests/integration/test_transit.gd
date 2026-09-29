@@ -22,7 +22,7 @@ func _line_with_stop(name_part: String, mode: String = "tram") -> Array:
 	var tr: TransitSystem = _tr()
 	for li: int in tr.lines.size():
 		var ln: Dictionary = tr.lines[li]
-		if ln.mode != mode:
+		if ln.mode != mode or int(ln.get("next", -1)) < 0:
 			continue
 		for k: int in (ln.stops as Array).size():
 			if str(tr.stops[int(ln.stops[k])].name).contains(name_part) and k < (ln.stops as Array).size() - 1:
@@ -54,10 +54,14 @@ func test_lines_stops_and_tunnel_loaded() -> void:
 	assert_true(tr != null and tr.has_lines(), "ÖPNV-Linien geladen")
 	var modes: Dictionary = {}
 	var tunnels: int = 0
+	var paired: int = 0
 	for ln: Dictionary in tr.lines:
 		modes[ln.mode] = true
 		tunnels += (ln.tun as Array).size()
-		assert_true(int(ln.get("next", -1)) >= 0, "Linie %s hat Gegenrichtung (Pendelbetrieb)" % ln.name)
+		if int(ln.get("next", -1)) >= 0:
+			paired += 1
+	# Echte Linien: Ring-/Schleifenlinien und am Kartenrand abgeschnittene Verläufe haben keine passende Gegenrichtung
+	assert_gt(float(paired) / float(tr.lines.size()), 0.7, "Linien mit Gegenrichtung (Pendelbetrieb): %d von %d" % [paired, tr.lines.size()])
 	assert_true(modes.has("tram") and modes.has("bus"), "Stadtbahn und Bus vorhanden")
 	assert_gt(float(tunnels), 0.0, "Tunnelabschnitte (U-Strab)")
 	var under: int = 0
@@ -146,7 +150,10 @@ func test_ride_through_tunnel_and_alight() -> void:
 
 func test_tram_brakes_for_obstacle() -> void:
 	var tr: TransitSystem = _tr()
-	var found: Array = _line_with_stop("Durlacher Tor")
+	var found: Array = _surface_stop()
+	assert_false(found.is_empty(), "Oberirdischer Halt mit freier Strecke danach")
+	if found.is_empty():
+		return
 	var li: int = found[0]
 	var k: int = found[1]
 	var ln: Dictionary = tr.lines[li]
@@ -170,3 +177,24 @@ func test_tram_brakes_for_obstacle() -> void:
 	car.queue_free()
 	await wait_seconds(8.0)
 	assert_gt(float(vh.v), 1.0, "Fährt nach Freigabe weiter")
+
+
+## Stadtbahnlinie und Halt k, nach dem mindestens 200 m oberirdisch folgen (für Hindernisse auf dem Gleis).
+func _surface_stop() -> Array:
+	var tr: TransitSystem = _tr()
+	for li: int in tr.lines.size():
+		var ln: Dictionary = tr.lines[li]
+		if ln.mode != "tram":
+			continue
+		for k: int in (ln.stops as Array).size() - 1:
+			var s0: float = float(ln.s[k])
+			if float(ln.s[k + 1]) - s0 < 220.0:
+				continue
+			var ok: bool = true
+			for sx: int in range(0, 200, 10):
+				if tr.height_at(ln, s0 + float(sx)) < -0.2:
+					ok = false
+					break
+			if ok:
+				return [li, k]
+	return []
