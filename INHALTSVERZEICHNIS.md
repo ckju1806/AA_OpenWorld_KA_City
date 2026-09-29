@@ -23,6 +23,7 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 | [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md) | Module, Datenfluss, Welt-Pipeline, ÖPNV, Physik-Layer, Speicherformat, Tests |
 | [docs/KARTE_KARLSRUHE.md](docs/KARTE_KARLSRUHE.md) | Kartengrundlage 1:1: Näherung vs. OpenStreetMap, Koordinaten, Prioritätsorte, ÖPNV, Abweichungen |
 | [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md) | Entwicklungsübersicht und nächste Schritte |
+| [docs/community/FORENPOST_TESTER_GESUCHT.md](docs/community/FORENPOST_TESTER_GESUCHT.md) | Vorlagen für Forenposts (Karlsruhe-/Gamer-Foren, Kurzfassung) zur Tester- und Ideensuche, Tester-Fragebogen |
 
 ## Spielprojekt
 | Ordner | Inhalt |
