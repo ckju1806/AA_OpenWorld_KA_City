@@ -1,5 +1,6 @@
 extends GameTestCase
-## Straßenverkehr: Obergrenze, Stabilität, Spurtreue, Ampeln, Abstandhalten, begrenzte Objektmenge.
+## Straßenverkehr: Obergrenze, Stabilität, Spurtreue, Ampeln, Abstandhalten, Umfahren stehender Hindernisse,
+## begrenzte Objektmenge.
 
 
 func after_each() -> void:
@@ -109,11 +110,88 @@ func test_keeps_distance_to_obstacle() -> void:
 	v.ai_controller = drv
 	v.driver = Vehicle.Driver.AI
 	var h0: float = v.health
-	await wait_seconds(12.0)
+	# bis zum Stillstand hinter dem Hindernis (danach darf es nach einigen Sekunden vorbeifahren, siehe unten)
+	var t: float = 0.0
+	while t < 15.0 and not (v.linear_velocity.length() < 1.0 and v.global_position.distance_to(obstacle.global_position) < 16.0):
+		await wait_seconds(0.25)
+		t += 0.25
 	var gap: float = v.global_position.distance_to(obstacle.global_position)
 	assert_lt(v.linear_velocity.length(), 1.0, "Fahrzeug hält hinter dem Hindernis")
 	assert_gt(gap, 5.5, "Sicherheitsabstand (%.1f m)" % gap)
 	assert_near(v.health, h0, 0.1, "Kein Auffahrunfall")
+
+
+## W11: Stehendes Hindernis (abgestelltes Fahrzeug) auf einer Straße mit Gegenverkehrsspur wird links umfahren.
+func test_bypasses_parked_obstacle() -> void:
+	await start_city_game(false)
+	var g: CityGraph = city().graph
+	var chain: Array[int] = _straight_chain(g, 190.0)
+	assert_gt(float(chain.size()), 2.0, "Gerade Zweirichtungsstrecke ≥ 190 m gefunden")
+	if chain.size() < 3:
+		return
+	var a: int = chain[0]
+	var b: int = chain[1]
+	for n: int in chain:
+		load_at(g.pos3(n))
+	var dir: Vector2 = (g.node_pos[chain[chain.size() - 1]] - g.node_pos[a]).normalized()
+	var right: Vector2 = Vector2(-dir.y, dir.x)
+	var off: float = g.lane_offset(g.find_edge(a, b))
+	var obst2: Vector2 = g.node_pos[a] + dir * 90.0 + right * off
+	var obstacle: Vehicle = game.spawn_vehicle("transporter", Vector3(obst2.x, 0, obst2.y), atan2(-dir.x, -dir.y))
+	var start2: Vector2 = g.node_pos[a] + dir * 30.0 + right * off
+	var v: Vehicle = game.spawn_vehicle("kompakt", Vector3(start2.x, 0, start2.y), atan2(-dir.x, -dir.y))
+	var drv := TrafficDriver.new(9)
+	drv.setup(g, game.lights, chain)
+	v.ai_controller = drv
+	v.driver = Vehicle.Driver.AI
+	var h0: float = v.health
+	var o0: Vector3 = obstacle.global_position
+	var passed: bool = false
+	var t: float = 0.0
+	while t < 40.0 and not passed:
+		await wait_seconds(0.5)
+		t += 0.5
+		var along: float = Vector2(v.global_position.x, v.global_position.z).dot(dir) - obst2.dot(dir)
+		passed = along > 12.0
+	assert_true(passed, "Hindernis umfahren (%.0f s)" % t)
+	assert_near(v.health, h0, 0.1, "Ohne Zusammenstoß")
+	assert_lt(obstacle.global_position.distance_to(o0), 0.5, "Hindernis nicht verschoben")
+	await wait_seconds(4.0)
+	var lat: float = (Vector2(v.global_position.x, v.global_position.z) - g.node_pos[a]).dot(right)
+	assert_gt(lat, 0.0, "Zurück auf der rechten Spur (%.1f m)" % lat)
+
+
+## Knotenfolge einer geraden, zweispurig befahrbaren Strecke ohne Einmündungen (Knoten mit Grad 2), nahe der Innenstadt.
+func _straight_chain(g: CityGraph, min_len: float) -> Array[int]:
+	var best: Array[int] = []
+	var best_d: float = INF
+	for e: int in g.edge_a.size():
+		if not g.is_drivable(e) or g.is_oneway(e):
+			continue
+		var a: int = g.edge_a[e]
+		var chain: Array[int] = [a, g.edge_b[e]]
+		var total: float = g.edge_length(e)
+		var d0: Vector2 = (g.node_pos[chain[1]] - g.node_pos[a]).normalized()
+		while total < min_len:
+			var cur: int = chain[chain.size() - 1]
+			if g.degree(cur, "drive") != 2:
+				break
+			var nxt: int = -1
+			for e2: int in g.node_edges[cur]:
+				var o: int = g.other_node(e2, cur)
+				if o != chain[chain.size() - 2] and g.is_drivable(e2) and not g.is_oneway(e2) \
+						and (g.node_pos[o] - g.node_pos[cur]).normalized().dot(d0) > 0.995:
+					nxt = o
+					total += g.edge_length(e2)
+			if nxt < 0:
+				break
+			chain.append(nxt)
+		if total >= min_len and g.degree(a, "drive") <= 2:
+			var m: Vector2 = g.node_pos[a]
+			if m.length() < best_d:
+				best_d = m.length()
+				best = chain
+	return best
 
 
 func test_object_count_bounded_after_teleports() -> void:

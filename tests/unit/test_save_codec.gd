@@ -38,6 +38,14 @@ func test_missing_fields_use_defaults() -> void:
 	assert_true((res.warnings as Array).size() >= 1, "Warnung für fehlende Daten")
 
 
+func test_far_position_on_big_map_kept() -> void:
+	# Durlach (≈ 5,2 km östlich des Schlosses) und Rheinhafen (≈ 5,6 km westlich) liegen auf der 1:1-Karte
+	for p: Vector3 in [Vector3(5190, 0.5, 1640), Vector3(-5600, 0.5, 330)]:
+		var text: String = SaveCodec.encode({}, {"position": SaveCodec.vec3_to_array(p), "yaw": 0.0, "health": 100.0})
+		var res: Dictionary = SaveCodec.decode(text)
+		assert_true((res.data.player as Dictionary).has("position"), "Position %s bleibt erhalten" % str(p))
+
+
 func test_invalid_position_dropped() -> void:
 	var text: String = SaveCodec.encode({}, {"position": [99999.0, 0.0, 0.0], "yaw": 0.0, "health": 100.0})
 	var res: Dictionary = SaveCodec.decode(text)

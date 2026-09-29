@@ -7,6 +7,7 @@ extends GameTestCase
 func before_each() -> void:
 	await start_city_game()
 	game.police.patrol_enabled = false
+	game.transit.enabled = true   # ohne Umgebungsleben sonst abgeschaltet
 
 
 func after_each() -> void:

@@ -254,6 +254,7 @@ static func _npc_drive(ms: MissionSystem, v: Vehicle, dest_poi: String, speed: f
 	var ap := Autopilot.new()
 	ap.set_path(pts, speed)
 	ap.arrive_radius = 5.0
+	ap.avoid_obstacles = true
 	v.ai_controller = ap
 	v.driver = Vehicle.Driver.AI
 	v.locked = true

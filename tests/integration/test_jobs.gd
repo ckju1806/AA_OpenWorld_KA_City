@@ -18,7 +18,10 @@ func _finish_current(max_t: float = 200.0) -> bool:
 		var s: Dictionary = ms._step
 		match t:
 			"enter_vehicle":
-				await enter(ms.mission_vehicle(str(s.tag)))
+				var jv: Vehicle = ms.mission_vehicle(str(s.tag))
+				if game.player.current_vehicle != jv:
+					await enter(jv)
+				await wait_physics(3)
 			"goto", "wait_zone":
 				var p: Vector3 = ms._step_pos(s)
 				load_at(p)

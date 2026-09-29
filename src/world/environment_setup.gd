@@ -7,6 +7,7 @@ extends Node3D
 const LAMP_LIGHTS: int = 18
 
 var sun: DirectionalLight3D
+var _last_wind: float = -1.0
 var underground: float = 0.0   ## 0 = oberirdisch, 1 = Kamera im Tunnel (Sonne/Himmelslicht gedämpft, kein Regen)
 var fill: DirectionalLight3D
 var world_env: WorldEnvironment
@@ -227,6 +228,11 @@ func update_environment(force: bool) -> void:
 	if force or absf(WorldClock.wetness - _last_wet) > 0.02:
 		_last_wet = WorldClock.wetness
 		CityMaterials.set_wetness(WorldClock.wetness)
+	# Wind in den Baumkronen: leicht bei klarem Wetter, stärker bei Wolken/Regen
+	var wind: float = 0.25 + cloud * 0.25 + WorldClock.rain * 0.4
+	if force or absf(wind - _last_wind) > 0.03:
+		_last_wind = wind
+		CityMaterials.set_wind(wind)
 
 
 func _update_lamp_pool(cam: Camera3D) -> void:

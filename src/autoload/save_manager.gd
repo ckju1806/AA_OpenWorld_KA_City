@@ -21,7 +21,7 @@ func has_save() -> bool:
 
 func save_game(player_data: Dictionary) -> bool:
 	var text: String = SaveCodec.encode(GameState.to_dict(), player_data,
-		str(ProjectSettings.get_setting("application/config/version", "0.1.0")))
+		str(ProjectSettings.get_setting("application/config/version", "0.2.0")))
 	var f: FileAccess = FileAccess.open(tmp_path, FileAccess.WRITE)
 	if f == null:
 		var msg: String = "Speichern fehlgeschlagen: %s" % error_string(FileAccess.get_open_error())

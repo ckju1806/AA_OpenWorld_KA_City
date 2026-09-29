@@ -292,3 +292,25 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
 - **Bekannte Einschränkungen:** Fahrzeuge fern vom Spieler fahren ohne Physik (keine Kollisionen); Bahnen beachten keine
   Ampeln (Vorrang, bremsen aber vor Hindernissen); an Endhaltestellen im Tunnel (Linie 2, Marktplatz) können sich Wagen
   kurz überlappen; Straßenbelag über Rampen wird vom Rampenbauwerk verdeckt statt ausgespart.
+
+## 2026-09-29 – W11/W12-Zwischenstand (KI, Release-Weg, Doku v0.2, Version 0.2.0)
+
+- **Restore-Punkt:** Commit `08c055f` (vorheriger Stand).
+- **W11 KI:** Verkehr umfährt stehende Hindernisse (abgestellte/zerstörte Fahrzeuge, haltende Busse/Bahnen) über die freie
+  Gegenspur, nicht vor Kreuzungen, danach zurück auf die eigene Spur; Autopilot optional mit Hindernisbremsung (NPC-Fahrzeuge
+  in Aufträgen); wartende Fahrgäste an Haltestellen steigen ein. ÖPNV fährt nur mit „Umgebungsleben“ (Tests reproduzierbar).
+- **W4:** Wind in Baumkronen (Shader `foliage.gdshader`, Stärke nach Wetter). Rückblick-Kamera (C) umgesetzt (war nur belegt).
+- **Fehler behoben:** Spielstand verwarf Positionen jenseits ±1 500 m (Altlast der kleinen Karte) → Grenze ±12 km + Test;
+  Steuerungsübersicht im Pausenmenü jetzt aus der aktuellen Tastenbelegung; Auftragsliste: „Wiederholen“ für abgeschlossene,
+  wiederholbare Aufträge (der Auftraggeber zeigt zuerst offene Kampagnenaufträge).
+- **Welt-Pipeline (OSM):** Probebau mit Teildaten (Linien + Gebäude) erfolgreich: 84 237 Gebäude, 2 049 Sektoren, 7,3 MB;
+  ungültige OSM-Polygone werden bereinigt, Validierung nutzt Kantenbreiten aus den Flags → 0 Gebäude in Fahrspuren.
+  Overpass setzt Verbindungen häufig zurück (Proxy-Status „tunnel closed“); Abruf läuft weiter (111/240 Kacheln).
+- **Release-Weg:** Kein Werkzeug zum direkten Anlegen von GitHub-Releases verfügbar → Workflow
+  `.github/workflows/windows-release.yml` (Godot-Setup mit SHA512-Prüfung, Unit-Tests, Windows-Export, Paket mit Installer
+  und Prüfsummen, `gh release create`); Auslöser manuell oder Commit mit `[release]`. `scripts/linux/package_release.sh`,
+  `tools/release/installer_template.bat`, `release/RELEASE_NOTES.md`.
+- **Doku v0.2:** README, ANLEITUNG, CONTROLS, KNOWN_ISSUES, ASSET_LICENSES (inkl. ODbL-Hinweis), docs/ARCHITEKTUR,
+  docs/KARTE_KARLSRUHE, INHALTSVERZEICHNIS; Hauptmenü zeigt die Quelle der Kartendaten. Version 0.2.0.
+- **Prüfung:** Gesamtsuite **137 Tests, 0 fehlgeschlagen** (587,7 s, vor den letzten kleinen Änderungen); danach Unit 52/52,
+  Speichern/Laden 6/6, Verkehr inkl. Umfahren, Fächer-Runde 3/3, Ereignisse 5/5, ÖPNV 4/4 grün; Hauptmenü per Screenshot geprüft.

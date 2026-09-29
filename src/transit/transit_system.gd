@@ -17,6 +17,8 @@ const DWELL: float = 14.0
 
 var game: Node
 var city: CityWorld
+## Fahrzeuge fahren nur mit Umgebungsleben (wie Verkehr/Passanten); Linien/Haltestellen/Tunnel bleiben bestehen.
+var enabled: bool = true
 var lines: Array[Dictionary] = []      ## {ref, name, mode, colour, pts: PackedVector2Array, cum: PackedFloat32Array, len, stops: [stop_i], s: [..], tun: [[s0, s1]]}
 var stops: Array[Dictionary] = []      ## {name, pos: Vector2, modes, underground}
 var vehicles: Array[Dictionary] = []   ## virtuell: {line, s, v, dwell, stop_k, node, segs: [], id}
@@ -24,6 +26,7 @@ var root: Node3D
 var track_offset: float = 0.0          ## seitlicher Versatz je Fahrtrichtung (Bahnen auf gemeinsamer Achse)
 var tunnel_root: Node3D
 var _stop_nodes: Dictionary = {}       ## stop_i -> Node3D
+var _waiting: Dictionary = {}          ## stop_i -> Array[EventActor] (wartende Fahrgäste an sichtbaren Haltestellen)
 var _board_point: TransitBoardPoint
 var ride: Dictionary = {}              ## aktuelle Fahrt des Spielers: {veh, board_stop, want_exit}
 var ride_log: Array[Dictionary] = []   ## {from, to} abgeschlossene Fahrten
@@ -35,6 +38,7 @@ var _next_id: int = 0
 func setup(p_game: Node, p_city: CityWorld) -> void:
 	game = p_game
 	city = p_city
+	enabled = bool(game.get("ambient_life"))
 	_rng.seed = 3131
 	root = Node3D.new()
 	root.name = "OePNV"
@@ -167,6 +171,14 @@ func _process(delta: float) -> void:
 	_t += delta
 	var cam: Camera3D = get_viewport().get_camera_3d()
 	var cp: Vector3 = cam.global_position if cam != null else Vector3.ZERO
+	if city.env != null:
+		city.env.set_underground((-cp.y - 1.5) / 2.5)
+	if not enabled:
+		for vh0: Dictionary in vehicles:
+			if vh0.node != null:
+				_free_node(vh0)
+		_update_stops(cp)
+		return
 	for vh: Dictionary in vehicles:
 		_advance(vh, delta)
 		var ln: Dictionary = lines[int(vh.line)]
@@ -181,8 +193,6 @@ func _process(delta: float) -> void:
 			_place_node(vh)
 	_update_stops(cp)
 	_update_ride(delta)
-	if city.env != null:
-		city.env.set_underground((-cp.y - 1.5) / 2.5)
 
 
 func _advance(vh: Dictionary, delta: float) -> void:
@@ -662,9 +672,34 @@ func _update_stops(cp: Vector3) -> void:
 			n.global_position = Vector3(p2.x, city.ground_y(p2), p2.y)
 			n.rotation.y = atan2(side.x, side.y)
 			_stop_nodes[si] = n
+			_spawn_waiting(si, n, 1 + _rng.randi() % 3)
 		elif d > STOP_SHOW_DIST + 60.0 and has:
 			(_stop_nodes[si] as Node).queue_free()
 			_stop_nodes.erase(si)
+			for a: Variant in _waiting.get(si, []):
+				if is_instance_valid(a):
+					(a as Node).queue_free()
+			_waiting.erase(si)
+		elif has and d < 90.0 and (_waiting.get(si, []) as Array).is_empty() and _rng.randf() < 0.004:
+			_spawn_waiting(si, _stop_nodes[si], 1 + _rng.randi() % 2)   # neue Fahrgäste kommen nach
+
+
+## Wartende Fahrgäste am Wartehäuschen (bzw. am Abgang der U-Haltestelle).
+func _spawn_waiting(si: int, shelter: Node3D, n: int) -> void:
+	if game.get("peds") == null or not bool(game.get("ambient_life")) or Settings.max_pedestrians() <= 0:
+		return
+	var arr: Array = []
+	for i: int in n:
+		var a := EventActor.new()
+		root.add_child(a)
+		a.setup(city, _rng.randi(), EventActor.look_for(_rng))
+		a.remove_from_group("event_actors")   # Fahrgäste gehören zu keinem Ereignis
+		a.add_to_group("transit_passengers")
+		var off: Vector3 = shelter.global_basis.x * _rng.randf_range(-1.6, 1.6) + shelter.global_basis.z * _rng.randf_range(0.6, 1.8)
+		a.place(shelter.global_position + off)
+		a.rotation.y = shelter.rotation.y + PI + _rng.randf_range(-0.6, 0.6)
+		arr.append(a)
+	_waiting[si] = arr
 
 
 ## Seite (rechts der ersten Linie, die hier hält) für das Wartehäuschen.
@@ -694,12 +729,20 @@ func _on_arrive(vh: Dictionary, si: int) -> void:
 			var a := EventActor.new()
 			root.add_child(a)
 			a.setup(city, _rng.randi(), EventActor.look_for(_rng))
+			a.remove_from_group("event_actors")
+			a.add_to_group("transit_passengers")
 			var door: Vector3 = (vh.segs[0] as Node3D).global_position + (vh.segs[0] as Node3D).global_basis.x * 2.0
 			a.place(door)
 			a.go_to(door + Vector3(_rng.randf_range(-12, 12), 0, _rng.randf_range(-12, 12)), 1.4)
 			get_tree().create_timer(14.0).timeout.connect(a.queue_free)
-		# Wartende Passanten in der Nähe steigen ein (gehen zur Tür und verschwinden; der Manager ersetzt sie später)
+		# Wartende Fahrgäste und Passanten in der Nähe steigen ein (gehen zur Tür und verschwinden)
 		var door2: Vector3 = (vh.segs[0] as Node3D).global_position + (vh.segs[0] as Node3D).global_basis.x * 1.6
+		for w: Variant in _waiting.get(si, []):
+			if is_instance_valid(w):
+				var wa: EventActor = w
+				wa.go_to(door2 + Vector3(_rng.randf_range(-1, 1), 0, _rng.randf_range(-1, 1)), 1.5)
+				get_tree().create_timer(DWELL * 0.7).timeout.connect(wa.queue_free)
+		_waiting[si] = []
 		var boarded: int = 0
 		for p: Node in get_tree().get_nodes_in_group("pedestrians"):
 			var ped: Node3D = p as Node3D

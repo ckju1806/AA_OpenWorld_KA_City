@@ -1,31 +1,53 @@
-# Bekannte Probleme und Einschränkungen (v0.1.0)
+# Bekannte Probleme und Einschränkungen (v0.2.0)
+
+Status-Begriffe wie in [TEST_REPORT.md](TEST_REPORT.md): **implementiert**, **teilweise**, **getestet**, **ungetestet**, **blockiert**.
 
 ## Nicht verifiziert
-- **Windows-Start ungetestet:** Der Windows-x64-Build wurde erzeugt und formal geprüft (PE-Header x86_64, PCK-Kennung,
-  Bootstest und Screenshot-Tour der PCK unter Linux – siehe TEST_REPORT.md), aber **nicht auf echtem Windows gestartet**.
-  Ein Rauchtest unter Wine war blockiert (Wine 9.0 startet bereits das unveränderte offizielle Godot-Template nicht).
-- **Leistung auf echter Hardware unbekannt:** Alle grafischen Prüfungen liefen mit Software-Rendering (Xvfb + Mesa lavapipe,
-  ca. 4 FPS). Diese Werte sind nicht aussagekräftig. Ziel 60 FPS auf Mittelklasse-Hardware ist **nicht gemessen**.
-- **Fahrgefühl** ist nur über messbare Kriterien getestet (Beschleunigung, Lenkung, Bremsen, kein Überschlag), nicht subjektiv.
-- **Echte Flucht vor der Polizei-KI** ist nicht automatisiert getestet; der Test „Fahndung abschütteln“ versetzt das Fahrzeug
-  außer Sicht und prüft dann die echte Such- und Abbaulogik.
-- **Windows-Skripte** (`scripts/windows/*.bat`, `*.ps1`) wurden mangels Windows nicht ausgeführt.
+- **Windows-Start ungetestet:** Der Windows-x64-Build wird unter Linux erzeugt und formal geprüft (PE-Header, PCK-Kennung),
+  aber **nicht auf echtem Windows gestartet** (kein Windows in der Entwicklungsumgebung). Windows-Skripte ebenfalls ungetestet.
+- **Leistung auf echter Hardware unbekannt:** Grafikprüfungen laufen mit Software-Rendering (Xvfb + lavapipe, wenige FPS);
+  diese Werte sind nicht aussagekräftig. Die Stadt ist ≈ 17 × 11 km groß und wird gestreamt – Ziel 60 FPS auf Mittelklasse-
+  Hardware ist **nicht gemessen**. Bei Ruckeln: Qualität „Niedrig“, Sichtweite und Dichten verringern.
+- **Fahrgefühl, Balance, Spaß** sind nicht subjektiv geprüft; Missionen werden per Autopilot/Test-Löser durchlaufen
+  (Beleg für Abschließbarkeit, nicht für Schwierigkeit).
+- Echte Flucht vor Polizei und echte Verfolgungsfahrten sind nicht automatisiert getestet (Tests versetzen das Fahrzeug).
+
+## Karte und Welt
+- **Kartengrundlage:** Ohne vollständige OSM-Daten wird die handgezeichnete 1:1-Näherung (`tools/worldgen/ka_authored.py`)
+  verwendet – Hauptachsen, Ringe, Landmarken an realer Position, Viertel mit typischem Raster, aber **nicht jede Straße real**.
+  Der OSM-Weg (`fetch_osm.py` → `build_world.py --source osm`) ist vorbereitet; welche Quelle im Build steckt, steht in
+  `docs/KARTE_KARLSRUHE.md` und im Startprotokoll („Quelle: …“).
+- Gebäude sind prozedural aus Grundrissen erzeugt (Fassaden-Shader); nur die Prioritäts-Landmarken sind einzeln modelliert.
+- Keine Innenräume; Brücken/Unterführungen vereinfacht; Straßentunnel sind ausgelassen.
+
+## ÖPNV
+- Fahrzeuge fern vom Spieler fahren „virtuell“ (ohne Physik); nur in Spielernähe gibt es Kollisionskörper.
+- Bahnen und Busse beachten keine Ampeln (Vorrang), bremsen aber vor Hindernissen auf dem Gleis bzw. der Spur.
+- In der Kartennäherung teilen sich Stadtbahn und Autos teils die Fahrbahn (Gleis auf der Straßenachse, je Richtung versetzt).
+- Rampen zur U-Strab sind als überdachte Rampenbauwerke mit Portal dargestellt (die Straßenoberfläche wird nicht ausgeschnitten).
+- An Endhaltestellen im Tunnel (Linie 2, Marktplatz) können sich zwei Wagen kurz überlappen.
+- Ein-/Aussteigen der Fahrgäste ist kosmetisch (Figuren gehen zur Tür und werden ausgeblendet).
+- Ohne „Umgebungsleben“ (Startoption `--no-ambient`) fahren keine ÖPNV-Fahrzeuge.
+
+## KI
+- Verkehr: Einbahnstraßen, Spurversatz je Straße, Ampeln aus Daten, Abstandhalten, **Umfahren stehender Hindernisse** über die
+  Gegenspur; **keine** Spurwechsel auf mehrspurigen Straßen, keine Kreuzungsreservierung (vereinfachtes „rechts vor links“).
+- Autopilot-Fahrzeuge in Missionen bremsen vor Hindernissen, weichen aber nicht aus.
+- Passanten: einfache Zustandsmaschine, keine Ragdoll-Physik; Tiere: Wandern/Flucht/Auffliegen, keine Animationen mit Skelett.
+- Polizei: Einsätze zu Ereignissen, Sperren ab Stufe 3, Suche am letzten bekannten Ort; kein Abschneiden von Fluchtwegen.
+- Rangeleien sind Umstoßen/Schubsen – **kein Waffensystem** (bewusste Einschränkung).
 
 ## Spielerische Einschränkungen
 - Nur Tastatur + Maus, nur Deutsch, kein Gamepad.
-- KI-Verkehr: vereinfachte Vorfahrt an ungeregelten Kreuzungen, keine Spurwechsel, keine Überholmanöver. Festgefahrene
-  Fahrzeuge setzen zurück und werden außer Sicht entfernt.
-- Passanten: einfache Zustandsmaschine (Gehen, Warten, Ausweichen, Flucht, Umgestoßen), keine Ragdoll-Physik.
-- Polizei fährt über das Straßennetz (A*) und bei Sichtkontakt direkt auf den Spieler zu; keine Straßensperren, keine Fußstreifen.
-- Fahrzeuge werden nicht gespeichert; nach dem Laden steht die Spielfigur zu Fuß am gespeicherten sicheren Punkt.
-- Laufende Aufträge werden nicht mitten im Ablauf gespeichert, sondern beginnen nach dem Laden beim Auftraggeber neu.
-- Änderungen an „Qualität“ und „Verkehrsdichte“ wirken vollständig erst beim nächsten Spielstart.
-- Symbolzeichen auf Karte/HUD (◆ ● ▲ ♥) hängen vom Font-Fallback des Systems ab und könnten auf manchen Systemen
-  als Kästchen erscheinen (unter Linux korrekt dargestellt; unter Windows nicht geprüft).
-- Die Stadt ist verdichtet und vereinfacht (Straßenverläufe gerade/als Bögen, fiktive Nebenstraßen, Gebäude generisch).
+- Fahrzeuge werden nicht gespeichert; laufende Aufträge beginnen nach dem Laden beim Auftraggeber neu.
+- Ein Auftraggeber zeigt zuerst seinen nächsten offenen Kampagnenauftrag; bereits abgeschlossene, wiederholbare Aufträge
+  (z. B. „Die Fächer-Runde“) lassen sich jederzeit über die Auftragsliste (J → „Wiederholen“) starten.
+- Einige Grafikoptionen (Qualitätsstufe, Dichten) wirken vollständig erst nach dem Neuladen der Umgebung/Spielstart.
+- Symbolzeichen auf Karte/HUD (◆ ✔ 🔒 ✚) hängen vom Font-Fallback des Systems ab (unter Windows nicht geprüft).
 
 ## Technik
-- Das Programm ist nicht code-signiert; Windows SmartScreen kann warnen.
-- In Testläufen erscheinen beim Beenden Hinweise „ObjectDB instances were leaked at exit“ bzw. „resources still in use“ –
-  sie betreffen das Herunterfahren des Test-Runners, nicht den Spielablauf (Ursache nicht weiter untersucht).
-- Screenshots der Dokumentation stammen aus Software-Rendering; Farben/Schatten können auf echter GPU leicht abweichen.
+- Nicht code-signiert; Windows SmartScreen kann warnen.
+- In Testläufen erscheinen beim Beenden gelegentlich „resources still in use at exit“ – betrifft das Herunterfahren des
+  Test-Runners (noch laufende Timer), nicht den Spielablauf.
+- Screenshots der Dokumentation stammen aus Software-Rendering; Farben/Schatten können auf echter GPU abweichen.
+- Die OSM-Rohdaten werden nicht versioniert (Speicherbudget); nur die daraus erzeugten, kompakten Weltdaten liegen im Repo.

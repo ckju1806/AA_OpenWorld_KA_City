@@ -30,7 +30,8 @@ def validate(out_dir: str) -> int:
     for i in range(0, len(ef), 5):
         c = w["classes"][w["class_order"][ef[i + 2]]]
         if c["drivable"]:
-            lane = min(2.6, c["width"] * 0.25) + 0.8
+            fw = (ef[i + 4] >> 8) & 0xFF   # Kantenbreite aus den Flags (OSM), sonst Klassenbreite
+            lane = min(2.6, (fw * 0.5 if fw > 0 else c["width"]) * 0.25) + 0.8
             lanes.append(LineString([nodes[ef[i]], nodes[ef[i + 1]]]).buffer(lane, cap_style=2))
     tree = STRtree(lanes)
     bad = 0
@@ -38,6 +39,8 @@ def validate(out_dir: str) -> int:
         for b in json.load(gzip.open(f)).get("b", []):
             fl = b[0]
             pg = Polygon([(fl[i] / q, fl[i + 1] / q) for i in range(0, len(fl), 2)])
+            if not pg.is_valid:
+                pg = pg.buffer(0)
             for j in tree.query(pg):
                 if lanes[j].intersection(pg).area > 0.5:
                     bad += 1

@@ -11,6 +11,10 @@ var arrive_radius: float = 5.0
 var finished: bool = false
 var loop: bool = false
 var corner_slowdown: bool = true
+## Vor Fahrzeugen/Personen auf dem Weg bremsen (NPC-Fahrzeuge in Missionen); Tests und Verfolger fahren ohne.
+var avoid_obstacles: bool = false
+var _obst_t: int = 0
+var _obst_d: float = INF
 # Wendemanöver (Dreipunktwende): Phase 0 = aus, 1 = rückwärts, 2 = vorwärts mit Gegeneinschlag
 var _turn_phase: int = 0
 var _turn_t: float = 0.0
@@ -77,6 +81,13 @@ func update(v: Vehicle, _delta: float) -> void:
 		desired = minf(desired, maxf(3.0, dl * 0.6))
 	# Starker Einschlag -> langsamer
 	desired = minf(desired, lerpf(desired, 5.0, clampf(absf(ang) / 1.2, 0.0, 1.0)))
+	if avoid_obstacles:
+		_obst_t -= 1
+		if _obst_t <= 0:
+			_obst_t = 5
+			_obst_d = _scan(v, fwd)
+		if _obst_d < INF:
+			desired = minf(desired, sqrt(2.0 * 4.0 * maxf(_obst_d - 4.0, 0.0)))
 	var spd: float = v.get_forward_speed()
 	var throttle: float = 0.0
 	var brake: float = 0.0
@@ -97,7 +108,7 @@ func update(v: Vehicle, _delta: float) -> void:
 		_recover_t -= _delta
 		v.set_controls(0.0, 0.7 if v.get_forward_speed() < 0.5 else 1.0, -steer, false)
 		return
-	if desired > 2.0 and absf(spd) < 0.4:
+	if desired > 2.0 and absf(spd) < 0.4 and _obst_d > 6.0:
 		_stall_t += _delta
 		if _stall_t > 1.5:
 			_stall_t = 0.0
@@ -109,6 +120,25 @@ func update(v: Vehicle, _delta: float) -> void:
 	elif spd > desired + 1.0:
 		brake = clampf((spd - desired) * 0.35, 0.0, 1.0)
 	v.set_controls(throttle, brake, steer, false)
+
+
+## Abstand zum nächsten Hindernis voraus (Fahrzeuge, ÖPNV, Spieler, Passanten); INF = frei.
+func _scan(v: Vehicle, fwd: Vector3) -> float:
+	var length: float = clampf(absf(v.get_forward_speed()) * 2.5, 12.0, 40.0)
+	var box := BoxShape3D.new()
+	box.size = Vector3(2.2, 1.6, length)
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = box
+	q.transform = Transform3D(Basis.looking_at(fwd, Vector3.UP), v.global_position + fwd * (v.spec.length * 0.5 + length * 0.5) + Vector3.UP)
+	q.collision_mask = Layers.VEHICLE | Layers.PLAYER | Layers.NPC
+	q.collide_with_areas = true
+	q.exclude = [v.get_rid()]
+	var best: float = INF
+	for h: Dictionary in v.get_world_3d().direct_space_state.intersect_shape(q, 6):
+		var c: Node3D = h.collider as Node3D
+		if c != null:
+			best = minf(best, maxf(0.0, (c.global_position - v.global_position).dot(fwd) - v.spec.length * 0.5 - 1.0))
+	return best
 
 
 func _lookahead_point(pos: Vector3, speed: float) -> Vector3:

@@ -141,7 +141,12 @@ func _process(delta: float) -> void:
 		var t: float = Time.get_ticks_msec() * 0.05
 		jitter = Vector3(sin(t * 1.7), sin(t * 2.3), cos(t * 1.9)) * _shake * 0.18
 	global_position = _pos + _offset + jitter
-	rotation = Vector3(0, yaw, 0)
+	var view_yaw: float = yaw
+	if vehicle_mode and Input.is_action_pressed("look_behind"):
+		# Rückblick (Taste C): solange gedrückt, Blick entgegen der Fahrtrichtung
+		var fwd_b: Vector3 = -target.global_transform.basis.z
+		view_yaw = atan2(-fwd_b.x, -fwd_b.z) + PI
+	rotation = Vector3(0, view_yaw, 0)
 	_pitch_node.rotation = Vector3(pitch, 0, 0)
 	_arm.spring_length = _distance + clampf(speed * 0.04, 0.0, 1.6)
 	camera.fov = lerpf(camera.fov, Settings.fov + clampf(speed * 0.35, 0.0, 12.0), clampf(delta * 3.0, 0.0, 1.0))

@@ -23,6 +23,8 @@ static func _create(key: String) -> Material:
 			return MatLib.shader_material("asphalt", "res://assets/shaders/asphalt.gdshader")
 		"grass":
 			return MatLib.shader_material("grass", "res://assets/shaders/grass.gdshader")
+		"foliage":
+			return MatLib.shader_material("foliage", "res://assets/shaders/foliage.gdshader")
 		"sidewalk":
 			return MatLib.shader_material("sidewalk", "res://assets/shaders/paving.gdshader",
 				{"base_color": Color(0.6, 0.59, 0.56), "grout_color": Color(0.44, 0.43, 0.42), "tile": Vector2(0.9, 0.9), "variation": 0.05})
@@ -82,9 +84,14 @@ static func set_night(night: float) -> void:
 
 ## Nässe der Straßen und Wege (Asphalt, Pflaster), Regen auf dem Wasser.
 static func set_wetness(wet: float) -> void:
-	for k: String in ["asphalt", "sidewalk", "plaza", "yard"]:
+	for k: String in ["asphalt", "sidewalk", "plaza", "yard", "foliage"]:
 		(get_mat(k) as ShaderMaterial).set_shader_parameter("wetness", clampf(wet, 0.0, 1.0))
 	(get_mat("water") as ShaderMaterial).set_shader_parameter("rain", 1.0 if WorldClock.rain > 0.3 else 0.0)
+
+
+## Windstärke für Baumkronen (0..1).
+static func set_wind(w: float) -> void:
+	(get_mat("foliage") as ShaderMaterial).set_shader_parameter("wind", clampf(w, 0.0, 1.0))
 
 
 ## Material-Schlüssel eines MeshKits mit den Stadtmaterialien belegen.

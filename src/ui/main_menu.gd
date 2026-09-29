@@ -50,11 +50,11 @@ func _ready() -> void:
 		b_new.grab_focus())
 	col.add_child(_settings)
 	_build_confirm(col)
-	var foot: Label = UiStyle.label("Fiktives Spiel in einer künstlerisch verdichteten Karlsruher Innenstadt · Alle Figuren und Firmen sind erfunden · v%s" %
-		str(ProjectSettings.get_setting("application/config/version", "0.1.0")), 16, UiStyle.TEXT_DIM)
+	var foot: Label = UiStyle.label("Fiktives Spiel in Karlsruhe (Karte 1:1) · Alle Figuren, Firmen und Gruppen sind erfunden · v%s\n%s" %
+		[str(ProjectSettings.get_setting("application/config/version", "0.2.0")), map_credit()], 16, UiStyle.TEXT_DIM)
 	foot.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	foot.offset_left = 110
-	foot.offset_top = -52
+	foot.offset_top = -76
 	foot.offset_bottom = -24
 	add_child(foot)
 	_refresh_save_info()
@@ -134,3 +134,13 @@ func _on_continue() -> void:
 func _on_settings() -> void:
 	_menu.visible = false
 	_settings.open()
+
+
+## Quellenangabe der Weltdaten (Pflicht bei OpenStreetMap: „© OpenStreetMap-Mitwirkende, ODbL“).
+static func map_credit() -> String:
+	var d: Variant = WorldData.read_gz_json("res://data/world/ka/world.json.gz")
+	if not d is Dictionary:
+		return ""
+	if str((d as Dictionary).get("source", "")) == "osm":
+		return "Kartendaten © OpenStreetMap-Mitwirkende, verfügbar unter der Open Database License (ODbL)"
+	return "Kartendaten: eigene 1:1-Näherung nach Referenzkarte (ohne Geodaten)"

@@ -129,7 +129,10 @@ def main():
     if args.source == "osm":
         buildings = src.build_buildings((nodes, edges, names), poi_clear)
         print(f"[welt] Gebäude (OSM): {len(buildings)} ({time.time() - t0:.1f} s)")
-        urban = list(src.URBAN) + [Polygon(b["p"]) for b in buildings]
+        urban = []
+        for g in list(src.URBAN) + [Polygon(b["p"]) for b in buildings]:
+            g = g if g.is_valid else g.buffer(0)   # Selbstüberschneidungen nach Rundung/Zuschnitt bereinigen
+            urban += [q for q in getattr(g, "geoms", [g]) if isinstance(q, Polygon) and not q.is_empty]
         blocks = bl.make_blocks(nodes, edges, src.BOUNDS, src.DISTRICTS, src.AREAS, urban=urban)
     else:
         blocks = bl.make_blocks(nodes, edges, src.BOUNDS, src.DISTRICTS, src.AREAS)

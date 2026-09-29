@@ -97,6 +97,15 @@ func _rebuild() -> void:
 			li.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			li.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			h.add_child(li)
+			if completed and avail and d2.repeatable:
+				var rb := Button.new()
+				rb.text = "Wiederholen"
+				rb.disabled = ms.has_active()
+				var rid: String = d2.id
+				rb.pressed.connect(func() -> void:
+					close()
+					ms.start_mission(rid))
+				h.add_child(rb)
 			if avail and ms.givers.has(d2.id):
 				var wb := Button.new()
 				wb.text = "Wegpunkt"

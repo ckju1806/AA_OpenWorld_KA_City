@@ -37,6 +37,14 @@ BLOCK_KIND_PRIORITY = ["water", "zoo", "garden", "cemetery", "sports", "rail", "
     "field"]
 
 
+def _safe_inter_area(a, b) -> float:
+    """Schnittfläche; ungültige Geometrien (z. B. OSM-Multipolygone) werden bereinigt statt abzubrechen."""
+    try:
+        return a.intersection(b).area
+    except Exception:  # GEOSException: TopologyException
+        return a.buffer(0).intersection(b.buffer(0)).area
+
+
 def make_blocks(nodes, edges, bounds, districts, areas, urban=None):
     """Flächen zwischen Straßen -> Blöcke mit Bordsteinpolygon. Rückgabe: Liste {poly, kind, district, style}.
     urban: optionale Geometrie bebauter Flächen (OSM: Wohn-/Gewerbegebiete + Gebäude); ohne sie gilt „in einem Viertel“."""
@@ -88,7 +96,7 @@ def make_blocks(nodes, edges, bounds, districts, areas, urban=None):
                 if kind0:
                     kind = kind0
                 elif utree is not None:
-                    cover = sum(urban[i].intersection(part).area for i in utree.query(part)) if part.area < 4e6 else 0.0
+                    cover = sum(_safe_inter_area(urban[i], part) for i in utree.query(part)) if part.area < 4e6 else 0.0
                     kind = "urban" if cover > part.area * 0.15 or cover > 800 else "field"
                 else:
                     kind = "urban" if district is not None else "field"

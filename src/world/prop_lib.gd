@@ -32,7 +32,7 @@ static func multimesh(parent: Node3D, n: String, mesh: Mesh, xfs: Array[Transfor
 
 static func conifer_mesh() -> ArrayMesh:
 	var kit := MeshKit.new()
-	kit.set_material("v", CityMaterials.get_mat("vertex"))
+	kit.set_material("v", CityMaterials.get_mat("foliage"))
 	kit.color = Color(0.3, 0.22, 0.16)
 	kit.add_cylinder("v", Vector3.ZERO, 0.22, 0.14, 4.0, 6)
 	for i: int in 3:
@@ -57,7 +57,7 @@ static func lamp_mesh() -> ArrayMesh:
 
 static func tree_mesh(tall: bool) -> ArrayMesh:
 	var kit := MeshKit.new()
-	kit.set_material("v", CityMaterials.get_mat("vertex"))
+	kit.set_material("v", CityMaterials.get_mat("foliage"))
 	kit.color = Color(0.33, 0.24, 0.17)
 	if tall:
 		kit.add_cylinder("v", Vector3.ZERO, 0.24, 0.16, 5.0, 7)

@@ -85,6 +85,14 @@ func test_m02_full_race_best_time_and_repeat() -> void:
 	print("        Fächer-Runde per Autopilot: %.1f s" % best)
 	# Wiederholung: Mission bleibt verfügbar, keine erneute Belohnung, schnellere Zeit ersetzt Bestzeit
 	assert_true(ms.is_available(M2), "Zeitfahren wiederholbar")
+	# Toni zeigt zuerst seine offenen Kampagnenaufträge; sind sie erledigt, bietet er wieder die Fächer-Runde an
+	var gid: String = (ms.definitions[M2] as MissionDefinition).giver_id
+	for id: String in ms.definitions:
+		var d: MissionDefinition = ms.definitions[id]
+		if id != M2 and d.giver_id == gid and not GameState.is_mission_completed(id):
+			GameState.complete_mission(id, 0)
+	ms.refresh_givers()
+	assert_true(ms.givers[M2].visible, "Toni bietet die Fächer-Runde wieder an")
 	await wait_physics(10)
 	assert_true(await _start_via_giver(), "Erneut gestartet")
 	var gt2: Vehicle = await _to_race_start()
