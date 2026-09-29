@@ -18,6 +18,7 @@ import os
 import re
 from collections import defaultdict
 
+from shapely import affinity
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 from shapely.ops import polygonize, unary_union
 from shapely.strtree import STRtree
@@ -450,6 +451,104 @@ def _edge_codes(buildings, road_lines, road_w, rtree):
         b["p"], b["e"] = coords, codes
 
 
+# --------------------------------------------------------------------------- Landmarken an OSM verankern
+# Typ -> Suchregeln (Tag-Bedingungen, Name als regulärer Ausdruck, Suchradius um die Näherungsposition in m).
+# Treffer: nächstgelegenes passendes Element; Position = Schwerpunkt (bei mehreren Treffern im Cluster: Mittel).
+ANCHORS = {
+    "pyramide": [{"name": r"^Pyramide$", "r": 400}],
+    "rathaus": [{"tags": {"amenity": "townhall"}, "name": r"^Rathaus$", "r": 400}],
+    "stadtkirche": [{"name": r"Evangelische Stadtkirche", "tags": {"building": "church"}, "r": 400}],
+    "saeule": [{"name": r"Verfassungssäule|Obelisk", "r": 300}],
+    "hauptbahnhof": [{"name": r"^Karlsruhe Hauptbahnhof$", "tags": {"building": "train_station"}, "r": 600, "orient": True},
+                     {"name": r"^Karlsruhe Hauptbahnhof$", "r": 600, "orient": True}],
+    "gewaechshaus": [{"tags": {"building": "greenhouse"}, "r": 450, "cluster": 120}],
+    "stadion": [{"tags": {"leisure": "stadium"}, "name": r"Wildpark", "r": 900, "orient": True},
+                {"tags": {"leisure": "stadium"}, "r": 700, "orient": True}],
+    "turmberg": [{"name": r"^Turmberg$", "tags": {"natural": "peak"}, "r": 900},
+                 {"name": r"Turmberg", "tags": {"man_made": "tower"}, "r": 900},
+                 {"name": r"Turmberg", "tags": {"historic": None}, "r": 900}],
+    "zoo": [{"tags": {"tourism": "zoo"}, "name": r"Zoo|Stadtgarten", "r": 700}],
+    "hafenkran": [{"tags": {"man_made": "crane"}, "r": 1500, "cluster": 250}],
+    "staatstheater": [{"name": r"^Badisches Staatstheater$", "r": 500, "orient": True}],
+}
+
+
+def _match(tags: dict, rule: dict) -> bool:
+    for k, v in rule.get("tags", {}).items():
+        if k not in tags or (v is not None and tags[k] != v):
+            return False
+    if "name" in rule and not re.search(rule["name"], tags.get("name", "")):
+        return False
+    return True
+
+
+def _long_axis_rot(g) -> float:
+    """Drehung (Grad, Godot-Konvention wie LANDMARKS.rot) der langen Seite des umschließenden Rechtecks;
+    Front (lokal −z) zeigt nach Norden (−z)."""
+    cs = list(g.minimum_rotated_rectangle.exterior.coords)
+    e = [(cs[1][0] - cs[0][0], cs[1][1] - cs[0][1]), (cs[2][0] - cs[1][0], cs[2][1] - cs[1][1])]
+    v = max(e, key=lambda t: math.hypot(*t))
+    rot = -math.degrees(math.atan2(v[1], v[0]))
+    while rot <= -90.0:
+        rot += 180.0
+    while rot > 90.0:
+        rot -= 180.0
+    return round(rot, 1)
+
+
+def _anchor_landmarks(landmarks: list, elements: list) -> list:
+    """Kopie der Landmarkenliste mit Positionen realer OSM-Objekte; Freihalte-/Reservezonen werden mitverschoben."""
+    out = []
+    for lm in landmarks:
+        lm = dict(lm)
+        rot0 = float(lm.get("rot", 0.0))
+        rules = ANCHORS.get(lm["type"], [])
+        px_, pz_ = lm["pos"]
+        hit = None
+        for rule in rules:
+            cands = []
+            for el in elements:
+                t = el.get("tags", {})
+                if not _match(t, rule):
+                    continue
+                g = None
+                if el["type"] == "node":
+                    c = ll(el["lat"], el["lon"])
+                else:
+                    ps = _polys_of(el)
+                    if not ps:
+                        continue
+                    g = max(ps, key=lambda q: q.area)
+                    c = (g.centroid.x, g.centroid.y)
+                d = math.dist(c, (px_, pz_))
+                if d <= rule["r"]:
+                    cands.append((d, c, g))
+            if cands:
+                cands.sort(key=lambda x: x[0])
+                c0 = cands[0][1]
+                if rule.get("orient") and cands[0][2] is not None:
+                    lm["rot"] = _long_axis_rot(cands[0][2])
+                if rule.get("cluster"):
+                    near = [c for _d, c, _g in cands if math.dist(c, c0) <= rule["cluster"]]
+                    c0 = (sum(c[0] for c in near) / len(near), sum(c[1] for c in near) / len(near))
+                hit = c0
+                break
+        if hit is not None:
+            dx, dz = hit[0] - px_, hit[1] - pz_
+            lm["pos"] = [round(hit[0], 1), round(hit[1], 1)]
+            if "reserve" in lm:
+                res = Polygon([(x + dx, z + dz) for x, z in lm["reserve"]])
+                if float(lm.get("rot", 0.0)) != rot0:
+                    res = affinity.rotate(res, -(float(lm["rot"]) - rot0), origin=(hit[0], hit[1]))
+                lm["reserve"] = [tuple(c) for c in res.exterior.coords[:-1]]
+            lm["anchored"] = round(math.hypot(dx, dz), 1)
+            print(f"[osm] Landmarke {lm['type']}: an OSM verankert (Versatz {math.hypot(dx, dz):.0f} m, Drehung {lm.get('rot', 0.0)}°)")
+        else:
+            print(f"[osm] Landmarke {lm['type']}: kein OSM-Objekt gefunden – Näherungsposition bleibt")
+        out.append(lm)
+    return out
+
+
 # --------------------------------------------------------------------------- Laden
 def load(cache: str):
     """Liest den Cache und liefert ein Objekt mit allen Feldern des Zwischenformats."""
@@ -463,6 +562,8 @@ def load(cache: str):
     blds = _load(cache, "buildings")
     points = _load(cache, "points")
     print(f"[osm] Rohdaten: {len(lines)} Linien, {len(areas_raw)} Flächen, {len(blds)} Gebäude, {len(points)} Punkte")
+    lms = _anchor_landmarks(LANDMARKS, blds + areas_raw + points)
+    s.LANDMARKS = lms
     x0, z0, x1, z1 = BOUNDS
     frame = Polygon([(x0, z0), (x1, z0), (x1, z1), (x0, z1)])
     # Straßengraph
@@ -549,8 +650,8 @@ def load(cache: str):
                 s.ROUTES.append({"ref": t.get("ref", ""), "name": t.get("name", ""), "route": t.get("route", ""),
                     "colour": t.get("colour", ""), "from": t.get("from", ""), "to": t.get("to", ""), "stops": stops, "ways": ways})
     # Gebäude
-    reserves = [Polygon(l["reserve"]) for l in LANDMARKS if "reserve" in l]
-    clear = [Point(l["pos"]).buffer(l["clear"]) for l in LANDMARKS if l.get("clear", 0) > 0]
+    reserves = [Polygon(l["reserve"]) for l in lms if "reserve" in l]
+    clear = [Point(l["pos"]).buffer(l["clear"]) for l in lms if l.get("clear", 0) > 0]
     district_polys = [(d, Polygon(d["poly"]).buffer(0)) for d in DISTRICTS]
     s._building_els = blds
     s._building_args = (district_polys, reserves, clear, shops)

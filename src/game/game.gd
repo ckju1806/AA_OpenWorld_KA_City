@@ -697,6 +697,18 @@ func _register_city_stations(tour: ScreenshotTour) -> void:
 	_cam_station(tour, "durlach", Vector3(5190, y, 1640), -80.0, -0.08)
 	_cam_station(tour, "rheinhafen", Vector3(-5600, y, 330), 90.0, -0.12)
 	_transit_stations(tour, y)
+	tour.add_station("fahrzeuge_modelle", func() -> void:
+		WorldClock.set_time(11.0)
+		var base: Vector3 = Vector3(-30, y, 120)
+		(world as CityWorld).ensure_loaded(base)
+		var ids: Array[String] = ["kompakt", "limousine", "sport", "transporter", "polizei"]
+		for i: int in ids.size():
+			spawn_vehicle(ids[i], base + Vector3(float(i) * 3.6, 0.3, 0), deg_to_rad(-25.0))
+		player.global_position = base + Vector3(9.0, 0, 9.0)
+		camera_rig.yaw = deg_to_rad(15.0)
+		camera_rig.pitch = -0.22
+		camera_rig.snap()
+	, 60)
 	_weather_station(tour, "tageslicht_mittag", Vector3(0, y, 520), 0.0, -0.05, 13.0, "klar")
 	_weather_station(tour, "nacht_kaiserstrasse", Vector3(-300, y, kz.call(-300.0)), 90.0, -0.06, 23.0, "klar")
 	_weather_station(tour, "regen_nasse_strasse", Vector3(-300, y, 912), -90.0, -0.1, 15.0, "regen")

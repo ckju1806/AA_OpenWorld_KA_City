@@ -291,6 +291,7 @@ landmark("stadion", (670, -780), 0, "Stadion am Wildpark", 0, reserve=rect(575, 
 landmark("turmberg", (5800, 1450), 0, "Turmberg (Aussichtsturm)", 25)
 landmark("hafenkran", (-6200, -200), 0, "Hafenkräne", 0)
 landmark("zoo", (-180, 1760), 0, "Zoologischer Stadtgarten", 0)
+landmark("staatstheater", (154, 976), 0, "Badisches Staatstheater", 0, reserve=rect(109, 941, 199, 1036))
 
 # --------------------------------------------------------------------------- Spielorte
 def poi(id_, name, pos, yaw=0.0, kind="ort", clear=0.0, **kw):

@@ -138,7 +138,17 @@ def make_props(nodes, edges, blocks, buildings, areas, trees=None):
             if any(road_buf[i].contains(pt) for i in rt.query(pt)):
                 continue
             props["tree"].append((x, z, 0.0, 0 if hash01("t", k) < 0.8 else 2))
-    # Parkplätze: Autoreihen (Stellplätze 2,6 x 5 m, Fahrgasse 6 m), deterministisch zu ~55 % belegt
+    # Parkplätze: Autoreihen (Stellplätze 2,6 x 5 m, Fahrgasse 6 m), deterministisch zu ~55 % belegt.
+    # Nie näher als 4,5 m an einer befahrbaren Mittellinie (Parkplatzzufahrten sind oft als Straße erfasst).
+    drive_center = [LineString([nodes[e[0]], nodes[e[1]]]) for e in edges if ROAD_CLASSES[CLASS_ORDER[e[2]]]["drivable"]]
+    dct = STRtree(drive_center) if drive_center else None
+
+    def _clear_of_lanes(x, z):
+        if dct is None:
+            return True
+        pt = Point(x, z)
+        return all(drive_center[i].distance(pt) >= 4.5 for i in dct.query(pt.buffer(4.5)))
+
     for bl in blocks:
         if bl["kind"] != "parking":
             continue
@@ -169,7 +179,7 @@ def make_props(nodes, edges, blocks, buildings, areas, trees=None):
                 x, z = c.x + u[0] * t + v[0] * row, c.y + u[1] * t + v[1] * row
                 fp = Polygon([(x + u[0] * dx + v[0] * dz, z + u[1] * dx + v[1] * dz) for dx, dz in
                     ((-1.1, -2.4), (1.1, -2.4), (1.1, 2.4), (-1.1, 2.4))])
-                if inner.contains(fp) and hash01("pk", round(x), round(z)) < 0.55:
+                if inner.contains(fp) and hash01("pk", round(x), round(z)) < 0.55 and _clear_of_lanes(x, z):
                     facing = 1 if ri % 2 == 0 else -1
                     yaw = math.atan2(-v[0] * facing, -v[1] * facing)
                     props["car"].append((x, z, yaw, int(hash01("pv", round(x), round(z)) * 100)))

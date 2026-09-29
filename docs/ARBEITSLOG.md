@@ -318,3 +318,10 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   (`world.json.gz`, Sektoren, LOD) fehlten im PCK → das exportierte Spiel startete ohne Welt. Filter um `data/*.gz` ergänzt.
   `build_windows.sh` prüft jetzt den PCK-Inhalt und startet das Paket headless mit `--boot-check` (Exit-Code ≠ 0 bricht den
   Build ab). Ergebnis: `[boot] OK: Knoten 14981, Aufträge 15, ÖPNV-Linien 6, Quelle authored`; Screenshot-Tour aus der PCK geprüft.
+- **W3/W4 Ergänzungen:** Staatstheater als Landmarke platziert (Modell existierte, war nicht gesetzt); Fahrzeugmodelle v2
+  (Türfugen, Griffe, Chromleiste, Schweller, Felgen mit fünf Speichen und Nabe); Tour-Station „fahrzeuge_modelle“.
+- **OSM-Vorbereitung:** Landmarken werden bei OSM-Quelle an realen Objekten verankert (Name/Tags, Suchradius, Cluster,
+  Ausrichtung aus dem Grundriss; Reserve-/Freihaltezonen wandern mit). Probe mit Teildaten: Pyramide 58 m, Rathaus 72 m,
+  Stadtkirche 111 m, Hauptbahnhof 137 m (Drehung 21,2°), Gewächshäuser 145 m, Staatstheater 1 m verschoben; Stadion, Zoo,
+  Turmberg, Hafenkräne warten auf Flächen-/Punktdaten. Parkplatz-Autos halten ≥ 4,5 m Abstand zu Fahrbahnachsen.
+  POIs rasten auf die echte Straße ein (bis 2,7 km Versatz bei grob geschätzten Näherungsorten).
