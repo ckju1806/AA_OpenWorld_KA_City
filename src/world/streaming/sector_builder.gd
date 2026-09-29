@@ -335,6 +335,24 @@ static func _props(root: Node3D, body: StaticBody3D, w: WorldData, p: Dictionary
 		root.add_child(mi)
 
 
+static func _add_blocker(poly: PackedVector2Array, blk: Array[PackedVector2Array], blk_r: Array[Rect2]) -> void:
+	if poly.size() < 3:
+		return
+	var r: Rect2 = Rect2(poly[0], Vector2.ZERO)
+	for q: Vector2 in poly:
+		r = r.expand(q)
+	blk.append(poly)
+	blk_r.append(r.grow(1.5))
+
+
+## Punkt in einer Sperrfläche (Rechteck-Vorfilter, dann Polygon; 1,5 m Rand für Baumkronen am Rand).
+static func _blocked(pt: Vector2, blk: Array[PackedVector2Array], blk_r: Array[Rect2]) -> bool:
+	for i: int in blk.size():
+		if blk_r[i].has_point(pt) and Geometry2D.is_point_in_polygon(pt, blk[i]):
+			return true
+	return false
+
+
 static func _vegetation(root: Node3D, w: WorldData, data: Dictionary, seed_base: int, quality: int) -> void:
 	var density: float = [0.45, 0.7, 1.0, 1.0][clampi(quality, 0, 3)] * Settings.vegetation_density()
 	if density <= 0.01:
@@ -342,6 +360,17 @@ static func _vegetation(root: Node3D, w: WorldData, data: Dictionary, seed_base:
 	var xfa: Array[Transform3D] = []
 	var xfb: Array[Transform3D] = []
 	var xfc: Array[Transform3D] = []
+	# Keine Bäume in Gebäuden, Gewässern und Landmarken-Grundrissen (Parks/Zoo enthalten solche Flächen)
+	var blk: Array[PackedVector2Array] = []
+	var blk_r: Array[Rect2] = []
+	for a2: Variant in data.get("a", []):
+		if w.area_kinds[int(a2[0])] == "water":
+			_add_blocker(w.pts(a2[1]), blk, blk_r)
+	for b: Variant in data.get("b", []):
+		_add_blocker(w.pts(b[0]), blk, blk_r)
+	for i: int in w.veg_block.size():
+		blk.append(w.veg_block[i])
+		blk_r.append(w.veg_block_rect[i])
 	for a: Variant in data.get("a", []):
 		var kind: String = w.area_kinds[int(a[0])]
 		if not VEG_SPACING.has(kind):
@@ -363,7 +392,7 @@ static func _vegetation(root: Node3D, w: WorldData, data: Dictionary, seed_base:
 				if kind != "forest" and h1 < 0.35:
 					continue
 				var pt: Vector2 = Vector2((float(gx) + DetRng.hash01(gx, gz, 1)) * sp, (float(gz) + DetRng.hash01(gx, gz, 2)) * sp)
-				if not Geometry2D.is_point_in_polygon(pt, poly):
+				if not Geometry2D.is_point_in_polygon(pt, poly) or _blocked(pt, blk, blk_r):
 					continue
 				var s: float = 0.75 + DetRng.hash01(gx, gz, 4) * 0.6
 				var xf: Transform3D = Transform3D(Basis(Vector3.UP, h1 * TAU).scaled(Vector3(s, s, s)), Vector3(pt.x, 0.0, pt.y))

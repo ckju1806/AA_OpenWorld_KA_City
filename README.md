@@ -10,7 +10,7 @@ anderen Spielen. Alle Figuren, Firmen und Gruppen sind erfunden.
 ## Inhalt
 
 - **Karte 1:1 aus OpenStreetMap** über den gesamten Ausschnitt (≈ 17,5 × 10,4 km: Neureut bis Rüppurr, Rheinhafen bis
-  Durlach) – ≈ 45 600 Straßenkanten, ≈ 96 500 Gebäudegrundrisse, Gewässer, Grünflächen, Gleise, gestreamt in 256-m-Sektoren
+  Durlach) – ≈ 45 600 Straßenkanten, ≈ 94 000 Gebäudegrundrisse, Gewässer, Grünflächen, Gleise, gestreamt in 256-m-Sektoren
   mit Fernsicht-LOD. Kartengrundlage und Quellen: [docs/KARTE_KARLSRUHE.md](docs/KARTE_KARLSRUHE.md).
 - **Prioritätsorte:** Schloss, Zirkel/Fächer, Marktplatz mit Pyramide, Kaiserstraße, Europaplatz, Kronenplatz, Durlacher und
   Ettlinger Tor, Hauptbahnhof, Zoo, Botanischer Garten, Stadion, Rheinhafen mit Kränen, Durlach mit Turmberg, Staatstheater.

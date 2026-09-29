@@ -44,7 +44,7 @@ Das Repository ist zugleich das Godot-Projekt (Nutzerentscheidung 2026-09-23, do
 | `.github/workflows/` | `windows-release.yml`: Windows-Build + GitHub-Release (manuell oder Commit mit `[release]`) |
 | `tools/check_repo_budget.py` | Prüft das GitHub-Speicherbudget (Repo < 300 MB, Weltdaten ≤ 40 MB, Dateien ≤ 5 MB) vor Commits |
 | `config/` | Toolchain-Versionen, keine Secrets |
-| `artifacts/` | Screenshots je Meilenstein (`screenshots/A`–`G`, `H_export_pck` = aus dem exportierten Paket); Test-Logs entstehen lokal unter `artifacts/test-logs/` (seit Phase 2 nicht mehr versioniert) |
+| `artifacts/` | Screenshots je Meilenstein (`screenshots/A`–`G`, `H_export_pck` = aus dem exportierten Paket; `v0.2/` = 29 geprüfte Bilder der OSM-Welt, JPEG ≤ 200 KB); Test-Logs entstehen lokal unter `artifacts/test-logs/` (seit Phase 2 nicht mehr versioniert) |
 | `backups/` | Dateisicherungen vor Änderungen |
 | `logs/`, `tmp/` | lokal, nicht versioniert |
 | `sensitive/` | leer – Projekt benötigt keine Zugangsdaten |

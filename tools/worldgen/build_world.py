@@ -166,6 +166,11 @@ def main():
     if args.source == "osm":
         import zoo_fit
         zoo_fit.fit(src.LANDMARKS, src.AREAS, buildings, nodes, edges)
+    # Grundrisse der Landmarken (ab 4 m², inkl. Dächern) für die Laufzeit-Vegetation: dort keine Bäume
+    import validate_world as vwf
+    for lm in src.LANDMARKS:
+        lm["foot"] = [[round(v, 1) for c in f.exterior.coords[:-1] for v in c]
+                      for f in vwf.landmark_footprints(lm, roofs=True) if f.area >= 4.0]
     trees = getattr(src, "TREES", None) or None
     props = ex.make_props(nodes, edges, blocks, buildings, src.AREAS, trees=trees)
     # Keine Objekte (Bäume, Laternen, Bänke …) in Landmarken-Grundrissen (Zoo-Gehege dürfen Bäume enthalten)

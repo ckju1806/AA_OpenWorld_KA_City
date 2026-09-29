@@ -338,7 +338,7 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
   verankert, Nebenstraßen unter Landmarken entfernt, POI-Regel für Fußgängerzonen, Objekte/Ampelmasten neben der Fahrbahn.
 - **Leistung Generator:** Riesige Außenflächen (bis 92 km²) machten die Blockbildung langsam (26 min) → Flächen > 1 km² werden
   gekachelt; GEOS-Topologiefehler abgefangen (buffer(0), sichere Schnittmenge). Vollbau jetzt ≈ 6,5 min.
-- **Ergebnis:** 42 236 Knoten, 45 609 Kanten, ≈ 96 500 Gebäude, 2 988 Sektoren, ≈ 11,5 MB Weltdaten (Budget ≤ 40 MB);
+- **Ergebnis:** 42 236 Knoten, 45 609 Kanten, 94 052 Gebäude im Ausschnitt (96 522 aufbereitet), 2 988 Sektoren, ≈ 11,5 MB Weltdaten (Budget ≤ 40 MB);
   Validierung 0 Gebäude/0 Autos/0 Objekte auf Fahrbahnen.
 - **Spiel-/Testanpassungen:** Rennstart/Polizei-Spawn wählen Straßen mit `edges_near_where` (keine Fußwege), Verkehr
   umfährt auch bei OSM-Kreuzungsdichte korrekt, Ampelmasten mit Abstand, Stadtbahn-Bremskurve; Tests auf echte Geometrie
@@ -372,3 +372,17 @@ Fortlaufender Planstand und Umsetzungsnachweis. Jeder Meilenstein endet mit eine
     Ortsbilder bei Tageslicht.
 - **Speicherbudget:** gzip ohne Zeitstempel (`mtime=0`) und `install_world.py` (übernimmt nur inhaltlich geänderte Dateien):
   ein Zoo-Neubau änderte so 1 statt 3 194 Dateien in der Git-Historie.
+
+## 2026-09-29 – W12-Abschluss: Endstand, Tests, Build, Release
+
+- **Restore-Punkt:** Commit `43686ab` (Zoo/Landmarken), davor `7b4a15d` (erste OSM-Welt).
+- **Letzte Korrekturen:** Laufzeit-Vegetation (Parks/Zoo/Wald) spart Gebäude, Gewässer und Landmarken-Grundrisse aus
+  (Grundrisse stehen jetzt als `foot` im Landmarkeneintrag); Freiräumung von Nebenstraßen nutzt dieselben Grundrisse wie die
+  Validierung (Reichardtstraße am Turmberg). Doku-Zahlen an die exportierten Daten angeglichen (94 052 Gebäude im Ausschnitt).
+- **Prüfung:** Gesamtlauf 138/138 grün (2 072 s, Exit-Code 0); Nachtest nach der Vegetationsänderung 82/82 (Unit + Stadtwelt,
+  Tiere, Spieler, Verkehr, ÖPNV, Speichern/Laden); Validierung 5 × 0; Abschluss-Tour 46 Bilder + Hauptmenü geprüft,
+  29 Bilder in `artifacts/screenshots/v0.2/` (2,5 MB); lokaler Windows-Export mit Starttest
+  `[boot] OK: Knoten 42238, Aufträge 15, ÖPNV-Linien 177, Quelle osm`, Paket 56,5 MB.
+- **Release:** Commit mit `[release]` löst `.github/workflows/windows-release.yml` aus (Tag `v0.2.0`, Vorabversion).
+- **Budget:** Git-Objekte ≈ 128 MB (Grenze 300 MB), Weltdaten 11,5 MB (≤ 40 MB), größte Datei 2,0 MB (≤ 5 MB).
+

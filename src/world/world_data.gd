@@ -18,6 +18,8 @@ var lod_tiles: Dictionary = {}      ## Vector2i -> true
 var area_kinds: PackedStringArray = PackedStringArray()
 var prop_kinds: PackedStringArray = PackedStringArray()
 var landmarks: Array = []
+var veg_block: Array[PackedVector2Array] = []   ## Landmarken-Grundrisse (dort keine Laufzeit-Vegetation)
+var veg_block_rect: Array[Rect2] = []
 var map_m_per_px: float = 4.0
 
 
@@ -43,6 +45,18 @@ static func load_world(p_dir: String = DIR) -> WorldData:
 	w.prop_kinds = PackedStringArray(d.get("prop_kinds", []))
 	w.landmarks = d.get("landmarks", [])
 	LandmarksExtra.use_zoo_layout_from(w.landmarks)
+	for lmv: Variant in w.landmarks:
+		for fv: Variant in (lmv as Dictionary).get("foot", []):
+			var fa: Array = fv
+			var poly: PackedVector2Array = PackedVector2Array()
+			for i: int in range(0, fa.size() - 1, 2):
+				poly.append(Vector2(float(fa[i]), float(fa[i + 1])))
+			if poly.size() >= 3:
+				var r: Rect2 = Rect2(poly[0], Vector2.ZERO)
+				for pv: Vector2 in poly:
+					r = r.expand(pv)
+				w.veg_block.append(poly)
+				w.veg_block_rect.append(r)
 	w.map_m_per_px = float((d.get("map", {}) as Dictionary).get("m_per_px", 4.0))
 	return w
 

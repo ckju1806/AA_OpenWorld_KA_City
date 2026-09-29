@@ -12,11 +12,11 @@ Status-Begriffe: **implementiert** (Code vorhanden), **getestet** (automatisiert
 
 | Bereich | Status |
 |---|---|
-| Automatisierte Tests (Unit + Integration, headless) | ⟨SUITE⟩ |
-| Weltdaten-Validierung (Gebäude, Autos, Objekte, Landmarken gegen Fahrbahnen) | **getestet** – ⟨VALID⟩ |
-| Visuelle Kontrolle (Screenshot-Tour, Software-Rendering) | ⟨TOUR⟩ |
-| Windows-Export + Starttest der PCK (`--boot-check`) | ⟨EXPORT⟩ |
-| GitHub-Release (Workflow) | ⟨RELEASE⟩ |
+| Automatisierte Tests (Unit + Integration, headless) | **getestet – 138 Tests, 0 fehlgeschlagen, Exit-Code 0** (Gesamtlauf auf der OSM-Welt, 2 072 s) |
+| Weltdaten-Validierung (Gebäude, Autos, Objekte, Landmarken gegen Fahrbahnen) | **getestet** – 5 Prüfungen, 0 Verstöße |
+| Visuelle Kontrolle (Screenshot-Tour, Software-Rendering) | **getestet** – 46 Bilder + Hauptmenü visuell geprüft, Auswahl in `artifacts/screenshots/v0.2/` |
+| Windows-Export + Starttest der PCK (`--boot-check`) | **getestet** (unter Linux): PCK-Inhalt geprüft, Starttest „OK“ |
+| GitHub-Release (Workflow) | siehe Abschnitt 5 |
 | Start unter echtem Windows 10/11 | **ungetestet** – kein Windows verfügbar |
 | Leistung (FPS) auf echter Hardware | **ungetestet** – keine GPU |
 | Subjektives Spielgefühl, Balance | **ungetestet** (nur messbare Kriterien) |
@@ -37,7 +37,7 @@ Status-Begriffe: **implementiert** (Code vorhanden), **getestet** (automatisiert
 | W9 Cheats (40 deutsche Codes) | implementiert, getestet | test_cheats (6) |
 | W10 Optionen A–E, Tastenbelegung | implementiert, getestet | test_settings_v2 (5), Tour Optionen |
 | W11 KI (Umfahren, Hindernisbremsung, Fahrgäste) | teilweise (keine Spurwechsel, keine Kreuzungsreservierung) | test_traffic (Umfahren, Abstand, Rot) |
-| W12 Tests, Doku, Build, Release | ⟨W12⟩ | dieser Bericht |
+| W12 Tests, Doku, Build, Release | implementiert, getestet (Windows-Start ungetestet) | dieser Bericht |
 
 ## 2. Automatisierte Tests
 
@@ -45,7 +45,12 @@ Aufruf: `scripts/linux/run_tests.sh` (Import, dann `godot --headless --fixed-fps
 Ein Test gilt nur als bestanden, wenn alle Prüfungen erfüllt sind **und** kein Engine-/Skriptfehler protokolliert wurde.
 Alle Integrationstests laufen auf der ausgelieferten OSM-Welt (Streaming synchron, 3 × 3 Sektoren).
 
-⟨SUITE_DETAIL⟩
+- **Gesamtlauf:** 138 Tests, 0 fehlgeschlagen, 0 Skriptfehler, 2 072 s, Exit-Code 0 (Welt-Stand v7, Commit `43686ab`).
+- **Nachtest nach der letzten Änderung** (Laufzeit-Vegetation spart Gebäude/Gewässer/Landmarken aus, Landmarken-Grundrisse in
+  `world.json.gz`): Unit 52/52 sowie test_city_world 6/6, test_animals 3/3, test_player 6/6, test_traffic 5/5,
+  test_transit 4/4, test_save_load 6/6 – alle grün, keine Skriptfehler.
+- Vorheriger Gesamtlauf auf der ersten OSM-Welt: 137/138 (m01: Fußweg zur Kanzleitür blockiert → Testhilfe `walk_to` geht über
+  das Wegenetz; danach grün). Testlogs liegen lokal in `artifacts/test-logs/` (nicht versioniert, Speicherbudget).
 
 | Testdatei | Tests | Inhalt (Auszug) |
 |---|---|---|
@@ -79,18 +84,55 @@ Einschränkungen der Tests (ehrlich):
 
 `python3 tools/worldgen/build_world.py --source osm` → `validate_world.py` (bricht den Build bei Verstößen ab).
 
-⟨WORLD⟩
+| Kennzahl | Wert |
+|---|---|
+| Quelle | OpenStreetMap, Abruf 2026-09-29 (Overpass, 240 Kacheln + ÖPNV-Relationen) |
+| Straßengraph | 42 238 Knoten, 45 612 Kanten |
+| Gebäude | 94 052 Grundrisse im Kartenausschnitt (96 522 aufbereitet; Gebäude mit Mittelpunkt außerhalb des Ausschnitts entfallen) |
+| Sektoren / LOD-Kacheln | 2 988 / 204 |
+| Größe | 11,5 MB (Budget ≤ 40 MB, größte Datei `map.webp` 2,0 MB) |
+| ÖPNV | 177 Linienverläufe (Starttest) |
+| Bauzeit | ≈ 7,5 min (4 CPU) |
+
+Validierung (`validate_world.py`, bricht den Build ab): Gebäude in Fahrspuren **0**, parkende Autos auf Fahrspuren **0**,
+Objekte auf Fahrbahnen **0**, Landmarken auf Fahrbahnen **0**, Objekte in Landmarken **0**. Zusätzlich geprüft (Skript im
+Arbeitslog beschrieben): 0 m² Überlappung von OSM-Gebäuden mit Landmarken-Grundrissen; Zoo-Gehege 0 m² Wasser/Gebäude.
 
 ## 4. Visuelle Kontrolle
 
 `scripts/linux/screenshot_tour.sh` unter Xvfb mit Vulkan (Mesa lavapipe, **Software-Rendering**), 1280×720.
 Die angezeigte Bildrate ist **nicht** aussagekräftig für echte Hardware.
 
-⟨TOUR_DETAIL⟩
+Abschluss-Tour: 46 Stationen, 0 Skriptfehler, alle Standpunkte aus Weltdaten (Landmarken, Straßennamen). Visuell geprüft und
+für gut befunden: Schlossplatz mit Schloss in der Achse, Marktplatz (Pyramide, Rathaus mit Portikus, Stadtkirche), Kaiserstraße,
+Europaplatz mit Brunnen, Durlacher Tor, Hauptbahnhof mit Uhrturm und Bogenhalle, Zoo (Gehege, Robbenbecken, Flamingos), Stadion,
+Gewächshäuser, Hafenkräne, Turmberg, Durlach (Pfinztalstraße), ÖPNV (Haltestelle mit Einsteigehinweis, Rampenportal, Mitfahrt in
+U-Station und Tunnel mit HUD), Tag/Nacht/Regen/Nebel, HUD-Fahrt, Ampelkreuzung, Vollkarte (reales Straßennetz), Optionen,
+Cheat-Konsole, Luftbild (Zirkel und Fächerblöcke), Hauptmenü mit Namensnennung „© OpenStreetMap-Mitwirkende … (ODbL)“.
+Während der Prüfung gefundene und behobene Mängel: siehe Arbeitslog (Zoo-Gehege im See, Bäume in Landmarken, Turmberg-Terrasse
+auf der Straße, verdeckte Standpunkte). Kleinere offene Schönheitsfehler: Kartenbeschriftung „Hauptbahnhof“ überlappt am unteren
+Rand die Legende; U-Strab-Zugänge sind schlichte Blöcke.
 
 ## 5. Windows-Export und Release
 
-⟨EXPORT_DETAIL⟩
+| Prüfung | Ergebnis |
+|---|---|
+| Export `godot --headless --export-release "Windows Desktop"` (lokal) | ok |
+| `Faecherstadt.exe` | 109 134 848 Bytes |
+| `Faecherstadt.pck` | Kennung `GDPC`, 18 956 800 Bytes; enthält Weltdaten, Sektoren, Missionen, Gruppen (Skriptprüfung) |
+| Starttest der PCK (Linux-Engine 4.7.2, `--headless --main-pack … -- --autostart --boot-check`) | `[boot] OK: Knoten 42238, Aufträge 15, ÖPNV-Linien 177, Quelle osm` |
+| ZIP `Faecherstadt_Windows_x64_v0.2.0.zip` | 56 485 101 Bytes; EXE, PCK, README, CONTROLS, ASSET_LICENSES, KNOWN_ISSUES, LICENSE |
+| Release-Paket (`package_release.sh`) | ZIP, Installer `GTA_KA_installieren_und_starten.bat`, `SHA256SUMS.txt` |
+
+SHA256 des lokalen Builds (2026-09-29, 09:07 UTC):
+```
+d9cad95cb1ec54ab4ecc883df78fe6ce763caa646371c81e485da39a9d5dabfc  Faecherstadt.exe
+532f9d74725ee4d4bbe30ab4d93d299ae2b08fa331d79f1731f0fd3a5abf0a35  Faecherstadt.pck
+44d6725bf690359f9778d4410610c39fe255710196cdd578d63c17a00d37ee20  Faecherstadt_Windows_x64_v0.2.0.zip
+```
+**GitHub-Release:** Der Build liegt nicht im Repository (Speicherbudget). Der Workflow `.github/workflows/windows-release.yml`
+baut unter Linux neu, führt die Unit-Tests aus und veröffentlicht ZIP, Installer und `SHA256SUMS.txt` als Release-Anhang
+(eigene Prüfsummen des CI-Builds). Status: ausgelöst durch den Commit mit diesem Bericht (Tag `v0.2.0`, Vorabversion); das Ergebnis wird hier nachgetragen.
 
 ## 6. Blockiert / nicht durchgeführt
 - **Start unter Windows 10/11 – ungetestet:** kein Windows verfügbar. Ein Wine-Rauchtest war schon in v0.1 blockiert

@@ -6,7 +6,7 @@ Von Hand: ZIP entpacken, `Faecherstadt\Faecherstadt.exe` starten (`Faecherstadt.
 Anleitung: `ANLEITUNG.md` im Repository.
 
 **Neu in 0.2:** Karlsruhe im Maßstab 1:1 aus OpenStreetMap über den gesamten Kartenausschnitt (≈ 17,5 × 10,4 km,
-reale Straßen und ≈ 96 500 Gebäudegrundrisse, Sektor-Streaming), Landmarken
+reale Straßen und ≈ 94 000 Gebäudegrundrisse, Sektor-Streaming), Landmarken
 (Schloss, Marktplatz, Hauptbahnhof, Zoo, Stadion, Botanischer Garten, Rheinhafen, Durlach/Turmberg u. a.),
 Tag/Nacht und Wetter, ÖPNV mit Stadtbahn, U-Strab-Tunnel und Bussen (Mitfahren möglich), Tiere, Ereignisse mit
 fiktiven Gruppen und Polizeieinsätzen, Kampagne mit 15 Aufträgen und wiederholbaren Jobs, eigene Cheat-Codes,

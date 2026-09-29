@@ -9,7 +9,7 @@
 
 | Quelle | Datei | Inhalt | Genauigkeit | Status |
 |---|---|---|---|---|
-| **OpenStreetMap** (im Build verwendet) | `tools/worldgen/fetch_osm.py` → `~/osm_cache` → `source_osm.py` | echte Straßen (Breite, Einbahn, Brücken), 96 513 Gebäudegrundrisse mit Höhen/Dachform, 17 500 Flächen, Gewässer, Gleise, 559 Ampelkreuzungen, 30 000 Einzelbäume, 573 Haltestellen, 177 ÖPNV-Linienverläufe (63 Bahn, 87 Bus, Rest Zug) mit U-Strab-Tunnel | Geodaten (ODbL), Stand des Abrufs 2026-09-29 | **implementiert, getestet** |
+| **OpenStreetMap** (im Build verwendet) | `tools/worldgen/fetch_osm.py` → `~/osm_cache` → `source_osm.py` | echte Straßen (Breite, Einbahn, Brücken), ≈ 94 000 Gebäudegrundrisse im Ausschnitt mit Höhen/Dachform, 17 500 Flächen, Gewässer, Gleise, 558 Ampelkreuzungen, ≈ 30 000 Einzelbäume, 573 Haltestellen, 177 ÖPNV-Linienverläufe (63 Bahn, 87 Bus, Rest Zug) mit U-Strab-Tunnel | Geodaten (ODbL), Stand des Abrufs 2026-09-29 | **implementiert, getestet** |
 | Handgezeichnete 1:1-Näherung (Rückfall) | `tools/worldgen/ka_authored.py` | Hauptachsen, Ringe, Fächer, Viertel mit typischem Raster, Landmarken, POIs, ÖPNV-Näherung | typ. ± 50–150 m | implementiert, getestet (nicht mehr im Build) |
 
 Beide Quellen liefern dasselbe Zwischenformat; `tools/worldgen/build_world.py` erzeugt daraus Straßengraph, 256-m-Sektoren,
